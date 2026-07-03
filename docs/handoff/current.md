@@ -48,6 +48,7 @@
 - 已增强 `/api/runs` 工具调用摘要，记录上下文召回、SQL 生成和 Guard 诊断信息。
 - 已为 `RetrievalContext.table_relationships` 接入 PostgreSQL 真实外键读取，换库后优先使用数据库约束生成 join hints，没有外键时退回命名推断，不新增固定 SQL 模板。
 - 已为标准评估报告接入 run trace 关联，每个 case 会写入 `run_id` 和 `run_detail_path`，便于从断言失败直接查看 `/api/runs/{run_id}`。
+- 已增强模型 SQL Generator 上下文 smoke，prompt payload 可结构化测试，模型编造字段会在 Guard/Validator smoke 中被拦截。
 
 ## 最近完成模块
 
@@ -857,6 +858,22 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 54. 模型 SQL Generator 上下文 Smoke
+
+- commit: `增强模型SQL生成上下文Smoke并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `model_sql_generator.build_sql_generation_payload()` 把模型 prompt payload 抽成结构化函数。
+  - `_user_prompt()` 复用结构化 payload 后序列化为 JSON，模型调用协议不变。
+  - `test_model_sql_generator.py` 覆盖指标口径、schema 字段、表关系、复用计划和 Validator/Guard 要求进入 payload。
+  - 新增模型编造字段 smoke，确认 `orders.not_exists` 会在执行前被 Guard/Validator 拦截。
+  - 更新 README、架构文档、Agent 工作流、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_model_sql_generator.py backend/tests/test_analysis_graph_sql_selection.py`，11 passed
+  - `npm run backend:test`，149 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -869,14 +886,14 @@
 
 ## 当前正在做
 
-“评估报告 Run Trace 关联” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增强开发者评估诊断闭环。
+“模型 SQL Generator 上下文 Smoke” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增强模型路径的 prompt 可验证性和执行前安全 smoke。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 增强模型 SQL Generator 的 prompt/validation smoke，验证外键关系、schema 字段和指标口径能被模型路径正确使用。
-2. 结合新报告里的 `run_detail_path`，分析当前 9 个断言失败项的 run payload，优先定位 schema 召回不足还是 SQL 生成策略不足。
+1. 结合新报告里的 `run_detail_path`，分析当前 9 个断言失败项的 run payload，优先定位 schema 召回不足还是 SQL 生成策略不足。
+2. 为模型 SQL Generator 增加可选的离线 provider smoke，使用 fake adapter 覆盖更多跨表场景，不调用真实模型。
 3. 继续评估是否需要为 `sync_embeddings.py` 增加分页游标、provider 限速和后台队列。
 
 ## 已知风险
@@ -885,6 +902,7 @@
 - `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator；通用 `rows` 和通用 Presenter 已完成，但 SQL 生成仍主要面向当前 V1 指标。
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
+- 模型 SQL Generator prompt payload 已有结构化 smoke，但真实模型输出质量仍未验证。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
 - 评估报告已带 `run_id` / `run_detail_path`，但当前通过串行评估后查询最近 runs 匹配问题；如果未来并发评估，需要请求级 correlation id。
 - EmbeddingAdapter 基础层、schema/metric embedding 同步、schema/metric pgvector 混合检索、SQL Memory embedding 写入和 question_embedding 检索已完成。

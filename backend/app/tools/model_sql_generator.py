@@ -64,6 +64,62 @@ def build_sql_generation_messages(
     ]
 
 
+def build_sql_generation_payload(
+    question: str,
+    retrieval_context: RetrievalContext,
+    reuse_plan: SqlReusePlan,
+) -> dict[str, Any]:
+    metrics = [
+        {
+            "metric_name": metric.metric_name,
+            "display_name": metric.display_name,
+            "description": metric.description,
+            "formula": metric.formula,
+            "required_tables": metric.required_tables,
+            "required_fields": metric.required_fields,
+        }
+        for metric in retrieval_context.metrics
+    ]
+    fields = [
+        {
+            "table": column.table_name,
+            "column": column.column_name,
+            "type": column.data_type,
+            "meaning": column.business_meaning or column.description,
+        }
+        for column in retrieval_context.schema_columns[:MAX_SCHEMA_FIELDS_IN_PROMPT]
+    ]
+    relationships = [
+        {
+            "left": f"{relationship.left_table}.{relationship.left_column}",
+            "right": f"{relationship.right_table}.{relationship.right_column}",
+            "type": relationship.relationship_type,
+            "confidence": relationship.confidence,
+            "reason": relationship.reason,
+        }
+        for relationship in retrieval_context.table_relationships
+    ]
+    return {
+        "question": question,
+        "reuse_plan": {
+            "path_type": reuse_plan.path_type,
+            "reuse_type": reuse_plan.reuse_type,
+            "selected_sql": reuse_plan.selected_sql,
+        },
+        "allowed_tables": retrieval_context.tables,
+        "allowed_fields": retrieval_context.fields,
+        "metrics": metrics,
+        "schema_fields": fields,
+        "table_relationships": relationships,
+        "requirements": [
+            "只能使用 allowed_tables 和 schema_fields 中出现的字段",
+            "跨表查询优先使用 table_relationships 中的高置信关系",
+            "不要编造表名、字段名或业务口径",
+            "输出 SQL 后还会经过 Validator 和 Guard",
+        ],
+    }
+
+
 def parse_model_sql_response(response: ModelResponse) -> dict[str, Any]:
     payload = _loads_json_object(response.content)
     sql = str(payload.get("sql") or "").strip().strip(";")
@@ -100,55 +156,7 @@ def _user_prompt(
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
 ) -> str:
-    metrics = [
-        {
-            "metric_name": metric.metric_name,
-            "display_name": metric.display_name,
-            "description": metric.description,
-            "formula": metric.formula,
-            "required_tables": metric.required_tables,
-            "required_fields": metric.required_fields,
-        }
-        for metric in retrieval_context.metrics
-    ]
-    fields = [
-        {
-            "table": column.table_name,
-            "column": column.column_name,
-            "type": column.data_type,
-            "meaning": column.business_meaning or column.description,
-        }
-        for column in retrieval_context.schema_columns[:MAX_SCHEMA_FIELDS_IN_PROMPT]
-    ]
-    relationships = [
-        {
-            "left": f"{relationship.left_table}.{relationship.left_column}",
-            "right": f"{relationship.right_table}.{relationship.right_column}",
-            "type": relationship.relationship_type,
-            "confidence": relationship.confidence,
-            "reason": relationship.reason,
-        }
-        for relationship in retrieval_context.table_relationships
-    ]
-    payload = {
-        "question": question,
-        "reuse_plan": {
-            "path_type": reuse_plan.path_type,
-            "reuse_type": reuse_plan.reuse_type,
-            "selected_sql": reuse_plan.selected_sql,
-        },
-        "allowed_tables": retrieval_context.tables,
-        "allowed_fields": retrieval_context.fields,
-        "metrics": metrics,
-        "schema_fields": fields,
-        "table_relationships": relationships,
-        "requirements": [
-            "只能使用 allowed_tables 和 schema_fields 中出现的字段",
-            "跨表查询优先使用 table_relationships 中的高置信关系",
-            "不要编造表名、字段名或业务口径",
-            "输出 SQL 后还会经过 Validator 和 Guard",
-        ],
-    }
+    payload = build_sql_generation_payload(question, retrieval_context, reuse_plan)
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 

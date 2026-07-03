@@ -7,10 +7,12 @@ from backend.app.schemas.retrieval import (
     TableRelationshipContext,
 )
 from backend.app.tools.model_sql_generator import (
+    build_sql_generation_payload,
     build_sql_generation_messages,
     generate_sql_with_model,
     parse_model_sql_response,
 )
+from backend.app.tools.sql_validation_tools import guard_sql
 
 
 class FakeAdapter:
@@ -38,6 +40,48 @@ def test_build_sql_generation_messages_uses_retrieved_context_only() -> None:
     assert "orders.id" in messages[1].content
     assert "payments.order_id" in messages[1].content
     assert "metric_definitions" not in messages[1].content
+
+
+def test_build_sql_generation_payload_contains_context_contract() -> None:
+    payload = build_sql_generation_payload(
+        "按支付方式统计销售额",
+        _context(relationship_type="foreign_key"),
+        _plan(
+            path_type="rewrite_path",
+            reuse_type="dimension_extend",
+            selected_sql="SELECT o.id FROM orders o LIMIT 10",
+        ),
+    )
+
+    assert payload["allowed_tables"] == ["orders", "payments"]
+    assert payload["allowed_fields"] == [
+        "orders.id",
+        "orders.created_at",
+        "orders.total_amount",
+        "payments.order_id",
+    ]
+    assert payload["metrics"][0]["metric_name"] == "sales_amount"
+    assert payload["schema_fields"][2] == {
+        "table": "orders",
+        "column": "total_amount",
+        "type": "numeric",
+        "meaning": "订单金额",
+    }
+    assert payload["table_relationships"] == [
+        {
+            "left": "orders.id",
+            "right": "payments.order_id",
+            "type": "foreign_key",
+            "confidence": 0.92,
+            "reason": "payments.order_id 命名上指向 orders.id",
+        }
+    ]
+    assert payload["reuse_plan"] == {
+        "path_type": "rewrite_path",
+        "reuse_type": "dimension_extend",
+        "selected_sql": "SELECT o.id FROM orders o LIMIT 10",
+    }
+    assert any("Validator" in requirement for requirement in payload["requirements"])
 
 
 def test_parse_model_sql_response_extracts_json_sql() -> None:
@@ -111,7 +155,27 @@ def test_generate_sql_with_model_returns_structured_model_error() -> None:
     assert result.warnings == ["timeout"]
 
 
-def _context() -> RetrievalContext:
+def test_model_generated_sql_is_still_checked_by_guard_and_validator() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content='{"sql":"SELECT o.not_exists FROM orders o LIMIT 10","warnings":[]}',
+            provider="local",
+            model="test-model",
+            latency_ms=8,
+        )
+    )
+
+    context = _context()
+    result = generate_sql_with_model("列出订单不存在字段", context, _plan(), adapter)
+    guard = guard_sql(result.sql, schema_fields=context.fields)
+
+    assert result.path == "model_generate"
+    assert guard.allowed is False
+    assert guard.errors == ["字段不存在或未在 schema_metadata 中登记：orders.not_exists"]
+
+
+def _context(relationship_type: str = "id_to_foreign_key") -> RetrievalContext:
     return RetrievalContext(
         metrics=[
             MetricContext(
@@ -160,7 +224,7 @@ def _context() -> RetrievalContext:
                 left_column="id",
                 right_table="payments",
                 right_column="order_id",
-                relationship_type="id_to_foreign_key",
+                relationship_type=relationship_type,
                 confidence=0.92,
                 reason="payments.order_id 命名上指向 orders.id",
             )
@@ -171,10 +235,15 @@ def _context() -> RetrievalContext:
     )
 
 
-def _plan() -> SqlReusePlan:
+def _plan(
+    path_type: str = "cold_path",
+    reuse_type: str = "regenerate",
+    selected_sql: str | None = None,
+) -> SqlReusePlan:
     return SqlReusePlan(
-        path_type="cold_path",
-        reuse_type="regenerate",
+        path_type=path_type,
+        reuse_type=reuse_type,
         memory_hit=False,
         candidate_count=0,
+        selected_sql=selected_sql,
     )

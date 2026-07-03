@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-03T18:50:25.917631+00:00",
+  "generated_at": "2026-07-03T18:57:26.393019+00:00",
   "total": 20,
   "success_count": 20,
   "strict_success_count": 11,
@@ -10,7 +10,7 @@
   "keyword_match_rate": 1.0,
   "memory_hit_rate": 0.6,
   "reuse_success_rate": 0.6,
-  "average_latency_ms": 1134,
+  "average_latency_ms": 1127,
   "path_counts": {
     "fast_path": 12,
     "rewrite_path": 8
@@ -24,7 +24,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1404,
+      "latency_ms": 981,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -40,8 +40,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "3dbf9919-9963-4b5a-880f-6ab9c1d68542",
-      "run_detail_path": "/api/runs/3dbf9919-9963-4b5a-880f-6ab9c1d68542",
+      "run_id": "f8b97ab5-44ee-4190-826f-1d807a105b0d",
+      "run_detail_path": "/api/runs/f8b97ab5-44ee-4190-826f-1d807a105b0d",
       "error": ""
     },
     {
@@ -51,7 +51,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1004,
+      "latency_ms": 959,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -69,8 +69,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "a38613d8-408d-4dab-806c-47c4d88f5bab",
-      "run_detail_path": "/api/runs/a38613d8-408d-4dab-806c-47c4d88f5bab",
+      "run_id": "79f2a579-0c68-432d-8552-c2b3f58896c1",
+      "run_detail_path": "/api/runs/79f2a579-0c68-432d-8552-c2b3f58896c1",
       "error": ""
     },
     {
@@ -80,7 +80,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 977,
+      "latency_ms": 974,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -98,8 +98,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "ae28bda0-96e0-487b-bbd2-65631aa4df1b",
-      "run_detail_path": "/api/runs/ae28bda0-96e0-487b-bbd2-65631aa4df1b",
+      "run_id": "8cf351fc-f8e9-4a9e-aefb-74fdae70accf",
+      "run_detail_path": "/api/runs/8cf351fc-f8e9-4a9e-aefb-74fdae70accf",
       "error": ""
     },
     {
@@ -109,7 +109,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1163,
+      "latency_ms": 1038,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -128,8 +128,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "4e0b0721-b7d6-4629-afb0-6dc099ac80d0",
-      "run_detail_path": "/api/runs/4e0b0721-b7d6-4629-afb0-6dc099ac80d0",
+      "run_id": "a126cdbe-25b8-45e9-b514-4b7fa62a0aae",
+      "run_detail_path": "/api/runs/a126cdbe-25b8-45e9-b514-4b7fa62a0aae",
       "error": ""
     },
     {
@@ -139,7 +139,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1090,
+      "latency_ms": 857,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -157,8 +157,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "6e9b43bd-67d3-4784-b364-487f08565fe0",
-      "run_detail_path": "/api/runs/6e9b43bd-67d3-4784-b364-487f08565fe0",
+      "run_id": "8d51e51f-d4ca-4cc9-bc57-ca02af532ed2",
+      "run_detail_path": "/api/runs/8d51e51f-d4ca-4cc9-bc57-ca02af532ed2",
       "error": ""
     },
     {
@@ -168,7 +168,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 925,
+      "latency_ms": 1057,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -186,8 +186,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "d341d722-7d55-4761-8efc-ce62954de90d",
-      "run_detail_path": "/api/runs/d341d722-7d55-4761-8efc-ce62954de90d",
+      "run_id": "3d52a7ac-e6aa-4de5-a40c-a1ccadc7d28a",
+      "run_detail_path": "/api/runs/3d52a7ac-e6aa-4de5-a40c-a1ccadc7d28a",
       "error": ""
     },
     {
@@ -197,7 +197,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 890,
+      "latency_ms": 866,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -214,8 +214,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "80fc6673-3696-4b0d-9610-fd563b212343",
-      "run_detail_path": "/api/runs/80fc6673-3696-4b0d-9610-fd563b212343",
+      "run_id": "a4d14833-3817-4783-936a-46266edcc95f",
+      "run_detail_path": "/api/runs/a4d14833-3817-4783-936a-46266edcc95f",
       "error": ""
     },
     {
@@ -225,7 +225,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1047,
+      "latency_ms": 1154,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -243,8 +243,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "01d9761a-1fc5-43a1-b1ce-e955c6f5a5d5",
-      "run_detail_path": "/api/runs/01d9761a-1fc5-43a1-b1ce-e955c6f5a5d5",
+      "run_id": "844599bc-9df3-45e9-bf89-76fd936ca515",
+      "run_detail_path": "/api/runs/844599bc-9df3-45e9-bf89-76fd936ca515",
       "error": ""
     },
     {
@@ -254,7 +254,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1055,
+      "latency_ms": 964,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -272,8 +272,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "758468ea-fd2a-44cf-8015-9b4466ad6d49",
-      "run_detail_path": "/api/runs/758468ea-fd2a-44cf-8015-9b4466ad6d49",
+      "run_id": "10ffe024-aa6d-43b0-9c0c-4faf638708da",
+      "run_detail_path": "/api/runs/10ffe024-aa6d-43b0-9c0c-4faf638708da",
       "error": ""
     }
   ],
@@ -337,7 +337,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1194,
+      "latency_ms": 1106,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -355,8 +355,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 7,
-      "run_id": "9d82fb20-62f9-4d72-8da1-0d55e9de2cd9",
-      "run_detail_path": "/api/runs/9d82fb20-62f9-4d72-8da1-0d55e9de2cd9",
+      "run_id": "7bf74d0e-f203-47c4-9c59-978e1ac9d800",
+      "run_detail_path": "/api/runs/7bf74d0e-f203-47c4-9c59-978e1ac9d800",
       "error": ""
     },
     {
@@ -366,7 +366,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 979,
+      "latency_ms": 964,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -384,8 +384,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "370f2ce9-680b-49de-b078-497a9b28ce75",
-      "run_detail_path": "/api/runs/370f2ce9-680b-49de-b078-497a9b28ce75",
+      "run_id": "b58abd38-15e0-4495-b487-6eeae6756a7c",
+      "run_detail_path": "/api/runs/b58abd38-15e0-4495-b487-6eeae6756a7c",
       "error": ""
     },
     {
@@ -395,7 +395,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1255,
+      "latency_ms": 1026,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -413,8 +413,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 3,
-      "run_id": "aa5a3b47-74ab-4d3b-994b-462519dc2637",
-      "run_detail_path": "/api/runs/aa5a3b47-74ab-4d3b-994b-462519dc2637",
+      "run_id": "79cd669e-d967-4f19-9007-2cbb83d3d206",
+      "run_detail_path": "/api/runs/79cd669e-d967-4f19-9007-2cbb83d3d206",
       "error": ""
     },
     {
@@ -424,7 +424,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1088,
+      "latency_ms": 1384,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -443,8 +443,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "13e0a3ff-a269-4c24-a1ce-892056ad568c",
-      "run_detail_path": "/api/runs/13e0a3ff-a269-4c24-a1ce-892056ad568c",
+      "run_id": "c8ff77f4-095f-472f-8968-5b12a4535f34",
+      "run_detail_path": "/api/runs/c8ff77f4-095f-472f-8968-5b12a4535f34",
       "error": ""
     },
     {
@@ -454,7 +454,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1359,
+      "latency_ms": 1257,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -472,8 +472,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "8686dd83-3493-4ce1-89d1-a6033cd27b7d",
-      "run_detail_path": "/api/runs/8686dd83-3493-4ce1-89d1-a6033cd27b7d",
+      "run_id": "f124114b-d9bc-41f8-b6ff-6f4016f2a46c",
+      "run_detail_path": "/api/runs/f124114b-d9bc-41f8-b6ff-6f4016f2a46c",
       "error": ""
     },
     {
@@ -483,7 +483,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1426,
+      "latency_ms": 1317,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -499,8 +499,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 5,
-      "run_id": "62622270-0cd4-4ffb-af8c-5fb77d7938bb",
-      "run_detail_path": "/api/runs/62622270-0cd4-4ffb-af8c-5fb77d7938bb",
+      "run_id": "bfab8373-4ecb-44f3-9bc6-10d3299f92e6",
+      "run_detail_path": "/api/runs/bfab8373-4ecb-44f3-9bc6-10d3299f92e6",
       "error": ""
     },
     {
@@ -510,7 +510,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1173,
+      "latency_ms": 1292,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -528,8 +528,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "2b2f2577-b6c4-4adc-805a-aaf46849fcd5",
-      "run_detail_path": "/api/runs/2b2f2577-b6c4-4adc-805a-aaf46849fcd5",
+      "run_id": "63f9761b-ad98-4fa5-8225-da62a7be68ac",
+      "run_detail_path": "/api/runs/63f9761b-ad98-4fa5-8225-da62a7be68ac",
       "error": ""
     },
     {
@@ -539,7 +539,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1057,
+      "latency_ms": 1273,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -556,8 +556,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "c2d1b6c7-bddf-4335-a187-ac7bae0a2219",
-      "run_detail_path": "/api/runs/c2d1b6c7-bddf-4335-a187-ac7bae0a2219",
+      "run_id": "615d8ea7-25de-40b4-ada1-0892e1c85094",
+      "run_detail_path": "/api/runs/615d8ea7-25de-40b4-ada1-0892e1c85094",
       "error": ""
     },
     {
@@ -567,7 +567,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1289,
+      "latency_ms": 1279,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -585,8 +585,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "15c866d8-af30-4470-ad9d-0338b6e768c2",
-      "run_detail_path": "/api/runs/15c866d8-af30-4470-ad9d-0338b6e768c2",
+      "run_id": "3dc37edd-db7a-488d-aefa-c25fc4fba4df",
+      "run_detail_path": "/api/runs/3dc37edd-db7a-488d-aefa-c25fc4fba4df",
       "error": ""
     },
     {
@@ -596,7 +596,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1138,
+      "latency_ms": 1230,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -612,8 +612,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 5,
-      "run_id": "5f5e8889-a9cc-444f-bd4e-66b72dfa8eb1",
-      "run_detail_path": "/api/runs/5f5e8889-a9cc-444f-bd4e-66b72dfa8eb1",
+      "run_id": "480615ab-eec7-42cb-809f-15556f5c40cd",
+      "run_detail_path": "/api/runs/480615ab-eec7-42cb-809f-15556f5c40cd",
       "error": ""
     },
     {
@@ -623,7 +623,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1404,
+      "latency_ms": 981,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -639,8 +639,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "3dbf9919-9963-4b5a-880f-6ab9c1d68542",
-      "run_detail_path": "/api/runs/3dbf9919-9963-4b5a-880f-6ab9c1d68542",
+      "run_id": "f8b97ab5-44ee-4190-826f-1d807a105b0d",
+      "run_detail_path": "/api/runs/f8b97ab5-44ee-4190-826f-1d807a105b0d",
       "error": ""
     },
     {
@@ -650,7 +650,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1004,
+      "latency_ms": 959,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -668,8 +668,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "a38613d8-408d-4dab-806c-47c4d88f5bab",
-      "run_detail_path": "/api/runs/a38613d8-408d-4dab-806c-47c4d88f5bab",
+      "run_id": "79f2a579-0c68-432d-8552-c2b3f58896c1",
+      "run_detail_path": "/api/runs/79f2a579-0c68-432d-8552-c2b3f58896c1",
       "error": ""
     },
     {
@@ -679,7 +679,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 977,
+      "latency_ms": 974,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -697,8 +697,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "ae28bda0-96e0-487b-bbd2-65631aa4df1b",
-      "run_detail_path": "/api/runs/ae28bda0-96e0-487b-bbd2-65631aa4df1b",
+      "run_id": "8cf351fc-f8e9-4a9e-aefb-74fdae70accf",
+      "run_detail_path": "/api/runs/8cf351fc-f8e9-4a9e-aefb-74fdae70accf",
       "error": ""
     },
     {
@@ -708,7 +708,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1163,
+      "latency_ms": 1038,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -727,8 +727,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "4e0b0721-b7d6-4629-afb0-6dc099ac80d0",
-      "run_detail_path": "/api/runs/4e0b0721-b7d6-4629-afb0-6dc099ac80d0",
+      "run_id": "a126cdbe-25b8-45e9-b514-4b7fa62a0aae",
+      "run_detail_path": "/api/runs/a126cdbe-25b8-45e9-b514-4b7fa62a0aae",
       "error": ""
     },
     {
@@ -738,7 +738,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1172,
+      "latency_ms": 1554,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -756,8 +756,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "09bb6784-8c72-4a05-af53-93320da1e255",
-      "run_detail_path": "/api/runs/09bb6784-8c72-4a05-af53-93320da1e255",
+      "run_id": "6bb02cc3-56b7-4345-9d45-d67b6427cf19",
+      "run_detail_path": "/api/runs/6bb02cc3-56b7-4345-9d45-d67b6427cf19",
       "error": ""
     },
     {
@@ -767,7 +767,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1090,
+      "latency_ms": 857,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -785,8 +785,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "6e9b43bd-67d3-4784-b364-487f08565fe0",
-      "run_detail_path": "/api/runs/6e9b43bd-67d3-4784-b364-487f08565fe0",
+      "run_id": "8d51e51f-d4ca-4cc9-bc57-ca02af532ed2",
+      "run_detail_path": "/api/runs/8d51e51f-d4ca-4cc9-bc57-ca02af532ed2",
       "error": ""
     },
     {
@@ -796,7 +796,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 925,
+      "latency_ms": 1057,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -814,8 +814,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "d341d722-7d55-4761-8efc-ce62954de90d",
-      "run_detail_path": "/api/runs/d341d722-7d55-4761-8efc-ce62954de90d",
+      "run_id": "3d52a7ac-e6aa-4de5-a40c-a1ccadc7d28a",
+      "run_detail_path": "/api/runs/3d52a7ac-e6aa-4de5-a40c-a1ccadc7d28a",
       "error": ""
     },
     {
@@ -825,7 +825,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 890,
+      "latency_ms": 866,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -842,8 +842,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "80fc6673-3696-4b0d-9610-fd563b212343",
-      "run_detail_path": "/api/runs/80fc6673-3696-4b0d-9610-fd563b212343",
+      "run_id": "a4d14833-3817-4783-936a-46266edcc95f",
+      "run_detail_path": "/api/runs/a4d14833-3817-4783-936a-46266edcc95f",
       "error": ""
     },
     {
@@ -853,7 +853,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1047,
+      "latency_ms": 1154,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -871,8 +871,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "01d9761a-1fc5-43a1-b1ce-e955c6f5a5d5",
-      "run_detail_path": "/api/runs/01d9761a-1fc5-43a1-b1ce-e955c6f5a5d5",
+      "run_id": "844599bc-9df3-45e9-bf89-76fd936ca515",
+      "run_detail_path": "/api/runs/844599bc-9df3-45e9-bf89-76fd936ca515",
       "error": ""
     },
     {
@@ -882,7 +882,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1055,
+      "latency_ms": 964,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -900,8 +900,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "758468ea-fd2a-44cf-8015-9b4466ad6d49",
-      "run_detail_path": "/api/runs/758468ea-fd2a-44cf-8015-9b4466ad6d49",
+      "run_id": "10ffe024-aa6d-43b0-9c0c-4faf638708da",
+      "run_detail_path": "/api/runs/10ffe024-aa6d-43b0-9c0c-4faf638708da",
       "error": ""
     }
   ]

@@ -42,8 +42,9 @@ POST /api/analyze
 5. `_select_generated_sql()` 选择 SQL：
    - 默认走确定性 SQL 生成/改写。
    - 开启 `MODEL_SQL_GENERATOR_ENABLED=true` 且 `cold_path` 时尝试模型 SQL 生成。
+   - 模型 SQL Generator 的 prompt payload 只包含已召回字段、指标口径、复用计划和表关系上下文。
    - 模型失败或无 SQL 时回退确定性路径。
-6. `guard_sql()` 做 SQL 安全拦截。
+6. `guard_sql()` 做 SQL 安全拦截；即使 SQL 来自模型，也会经过字段存在性、只读、白名单表、`SELECT *` 和 LIMIT 等校验。
 7. `execute_guarded_sql()` 用只读连接执行。
 8. `present_sales_trend_result()` 组织业务结果：
    - 基于 SQL Executor 返回的真实列生成 `rows`。
@@ -67,6 +68,7 @@ MODEL_SQL_GENERATOR_ENABLED=false
 ```
 
 默认关闭。开启后只影响 `cold_path`，并且生成 SQL 仍然进入 Guard 和 Executor。
+模型 prompt payload 有后端测试覆盖，验证 schema 字段、指标口径、表关系和复用计划会进入模型上下文；模型如果编造字段，仍会被 Validator / Guard 阻断。
 
 ## 日志与追踪
 

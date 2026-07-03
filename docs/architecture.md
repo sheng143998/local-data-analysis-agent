@@ -45,7 +45,7 @@ React ChatPage
 - `/api/analyze` 已执行真实 PostgreSQL 查询。
 - SQL 必经 Guard 和只读 Executor。
 - SQL Memory 已支持检索、复用、写入和 fast_path 关键表约束。
-- ModelAdapter 和 model-backed SQL Generator 已有基础层。
+- ModelAdapter 和 model-backed SQL Generator 已有基础层，prompt payload 由结构化函数生成并有测试覆盖。
 - `MODEL_SQL_GENERATOR_ENABLED=false` 默认关闭真实模型 SQL 生成，开启后仅 `cold_path` 尝试模型生成，失败会回退。
 - 标准问题评估已可运行，并区分链路成功和严格断言成功。
 
@@ -54,5 +54,5 @@ React ChatPage
 - 普通用户界面只展示可信分析结果。
 - 开发者调试信息进入 `/api/runs`、`/api/memories`、日志和评估报告。
 - LLM 不能直接执行 SQL。
-- 模型生成 SQL 仍必须经过 Validator、Guard 和只读 Executor。
+- 模型生成 SQL 仍必须经过 Validator、Guard 和只读 Executor；编造字段、`SELECT *`、非白名单表和写操作会在执行前被拦截。
 - 换库或表结构变化后先运行 schema metadata 同步脚本。
