@@ -18,6 +18,7 @@
 - `/api/analyze` 已接入退款率 / 支付成功率查询切片，可识别“哪个商品品类退款率最高？”和“每个支付方式的成功率是多少？”。
 - `/api/analyze` 已接入毛利率查询切片，可识别“最近 30 天毛利率最高的商品品类是什么？”。
 - `/api/analyze` 已接入复购率 / 城市客单价查询切片，可识别“最近 90 天复购率是多少？”和“每个城市的客单价是多少？”。
+- 已新增 Schema Metadata 自动同步能力，换库、导入新表或字段变化后可运行 `py -3 backend/scripts/sync_schema_metadata.py` 刷新 `schema_metadata`，避免继续堆固定 SQL 模板。
 
 ## 最近完成模块
 
@@ -261,6 +262,22 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 17. Schema Metadata 自动同步
+
+- commit: 本模块待提交并推送，建议提交信息为 `实现Schema元数据自动同步并通过测试`。
+- 内容：
+  - 新增 `SchemaSyncService`，从 PostgreSQL `information_schema.columns` 同步当前 `public` schema 的真实表字段
+  - 新增 `backend/scripts/sync_schema_metadata.py`，用于换库、导入新表或字段变化后的手动刷新
+  - 新增 `004_schema_metadata_unique.sql`，清理重复元数据并创建 `(table_name, column_name)` 唯一索引
+  - `seed_metadata.py` 改为复用同步服务，减少重复 schema 写入逻辑
+  - 新增 `test_schema_sync_service.py`，覆盖过滤、字段读取和 upsert 保留人工说明逻辑
+- 验证：
+  - `npm run backend:test`，54 个测试通过
+  - `py -3 backend/scripts/init_db.py`
+  - `py -3 backend/scripts/sync_schema_metadata.py`，同步 12 张表、78 个字段
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -273,15 +290,15 @@
 
 ## 当前正在做
 
-复购率 / 城市客单价查询切片已完成验证，正在提交并推送。
+Schema Metadata 自动同步模块已完成实现、测试和文档更新，正在提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 扩展 SQL Rewriter / Generator，覆盖新增用户趋势、购买次数最多用户、访问转化率等标准问题。
-2. 扩展 SQL Memory 参数化模板，支持流量来源、优惠券等过滤和维度。
-3. 后续再接 embedding / pgvector，让 schema/metric 和 SQL Memory 从关键词召回升级为混合检索。
+1. 接入统一 ModelAdapter / SQL Generator，让问题到 SQL 不再依赖新增固定模板。
+2. 将 Schema Retriever 从关键词召回升级为 schema metadata + embedding / pgvector 混合召回。
+3. 建立标准问题评估集，按执行成功率、Guard 通过率、记忆命中率和失败样例持续验证。
 
 ## 已知风险
 
@@ -289,6 +306,7 @@
 - `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator，但仍未接入真实 LLM SQL Generator / Rewriter。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
+- Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。
 - 支付成功率当前基于 `payments.status = 'paid'`，真实失败状态样本仍需后续数据增强。
 - 毛利率当前基于合成 `product_costs.unit_cost`，后续可替换为真实成本口径。

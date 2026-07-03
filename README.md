@@ -9,6 +9,7 @@
 - 聊天式数据问答：`POST /api/analyze` 已接入真实 PostgreSQL 查询链路。
 - 指标口径 CRUD：`GET/POST/PUT/DELETE /api/metrics` 已持久化到 `metric_definitions`。
 - Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文。
+- Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新。
 - SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
@@ -56,7 +57,18 @@ npm run test:e2e
 npm run frontend:build
 npm run backend:dev
 npm run frontend:dev
+py -3 backend/scripts/init_db.py
+py -3 backend/scripts/sync_schema_metadata.py
 ```
+
+换库、导入新表或调整字段后，先运行：
+
+```bash
+py -3 backend/scripts/init_db.py
+py -3 backend/scripts/sync_schema_metadata.py
+```
+
+同步脚本会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。
 
 ## API 入口
 

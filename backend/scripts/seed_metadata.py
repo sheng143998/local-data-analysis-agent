@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from backend.app.db.connection import get_connection
+from backend.app.services.schema_sync_service import SchemaSyncService
 
 
 METRICS = [
@@ -97,26 +98,23 @@ def seed_metrics(cursor) -> None:
 
 
 def seed_schema_metadata(cursor) -> None:
-    cursor.execute(
-        """
-        INSERT INTO schema_metadata (table_name, column_name, data_type, description, business_meaning)
-        SELECT
-          table_name,
-          column_name,
-          data_type,
-          table_name || '.' || column_name,
-          '业务表字段：' || table_name || '.' || column_name
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name IN (
-            'users', 'products', 'orders', 'order_items', 'payments', 'refunds',
-            'reviews', 'traffic_events', 'coupons', 'coupon_usages',
-            'inventory_snapshots', 'product_costs'
-          )
-        ON CONFLICT DO NOTHING
-        """
+    result = SchemaSyncService().sync_public_schema(
+        include_tables=[
+            "users",
+            "products",
+            "orders",
+            "order_items",
+            "payments",
+            "refunds",
+            "reviews",
+            "traffic_events",
+            "coupons",
+            "coupon_usages",
+            "inventory_snapshots",
+            "product_costs",
+        ]
     )
-    print("schema_metadata seeded from information_schema")
+    print(f"schema_metadata synced from information_schema: {result.synced_columns}")
 
 
 def main() -> None:
