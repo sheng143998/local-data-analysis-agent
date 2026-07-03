@@ -106,9 +106,11 @@ py -3 backend/scripts/sync_schema_metadata.py
 py -3 backend/scripts/sync_embeddings.py
 py -3 backend/scripts/sync_embeddings.py --target memory --limit 20
 py -3 backend/scripts/sync_embeddings.py --target schema --limit 100 --batch-size 16
+py -3 backend/scripts/sync_embeddings.py --target schema --limit 100 --batch-size 16 --sleep-ms 200
 py -3 backend/scripts/refresh_context.py
 py -3 backend/scripts/refresh_context.py --embedding-limit 20
 py -3 backend/scripts/refresh_context.py --embedding-limit 100 --embedding-batch-size 16
+py -3 backend/scripts/refresh_context.py --embedding-limit 100 --embedding-batch-size 16 --embedding-sleep-ms 200
 ```
 
 换库、导入新表或调整字段后，先运行：
@@ -125,7 +127,7 @@ py -3 backend/scripts/sync_embeddings.py
 npm run context:refresh
 ```
 
-`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。可用 `--limit 20` 限制每个目标本次最多同步的记录数，适合先小批量验证；可用 `--batch-size 16` 控制每次 embedding 请求包含的记录数。批量请求失败时会默认退回单条重试，尽量只把真正失败的记录写入错误摘要。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标，或用 `--embedding-limit 20` / `--embedding-batch-size 16` 控制本次 embedding 同步规模和请求批次。
+`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。可用 `--limit 20` 限制每个目标本次最多同步的记录数，适合先小批量验证；可用 `--batch-size 16` 控制每次 embedding 请求包含的记录数；可用 `--sleep-ms 200` 在连续请求之间等待，降低真实 provider 限流风险。批量请求失败时会默认退回单条重试，尽量只把真正失败的记录写入错误摘要。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标，或用 `--embedding-limit 20` / `--embedding-batch-size 16` / `--embedding-sleep-ms 200` 控制本次 embedding 同步规模、请求批次和请求间隔。
 
 ## API 入口
 
@@ -157,7 +159,7 @@ npm run context:refresh
 
 - 模型调用统一通过 `backend/app/core/model_adapter.py`。
 - embedding 调用统一通过 `backend/app/core/embedding_adapter.py`。
-- schema/metric/SQL Memory 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行，支持 `--limit` 控制本次同步规模，支持 `--batch-size` 降低真实 provider 请求次数。
+- schema/metric/SQL Memory 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行，支持 `--limit` 控制本次同步规模，支持 `--batch-size` 降低真实 provider 请求次数，支持 `--sleep-ms` 做固定间隔限速。
 - schema/metric/SQL Memory 混合检索通过 `backend/app/tools/vector_retrieval.py` 查询 pgvector 候选；失败时自动退回原文本检索。
 - SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段和指标口径，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。

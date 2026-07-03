@@ -39,6 +39,7 @@
 - 已为 embedding 同步增加 `--limit` / `--embedding-limit` 控制，方便真实 provider 下先小批量刷新和验证。
 - 已为 embedding 同步增加 `--batch-size` / `--embedding-batch-size` 控制，减少真实 provider 下的逐条请求开销。
 - 已为 embedding batch 失败增加单条重试，避免单条坏数据拖垮整批同步。
+- 已为 embedding 同步增加 `--sleep-ms` / `--embedding-sleep-ms` 固定间隔限速，降低真实 provider 限流风险。
 
 ## 最近完成模块
 
@@ -698,6 +699,25 @@
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 45. Embedding 同步批次限速
+
+- commit: 本模块随本次提交推送完成，提交信息为 `新增Embedding同步批次限速并通过验证`。
+- 内容：
+  - `EmbeddingSyncService` 的 schema、metric、memory 和 all 同步入口新增 `sleep_ms`，默认 0。
+  - 同步服务支持注入 `sleeper`，测试无需真实等待。
+  - batch 之间会按 `sleep_ms` 等待；batch 失败后的单条重试也会按 `sleep_ms` 等待。
+  - `sync_embeddings.py` 新增 `--sleep-ms` 参数。
+  - `refresh_context.py` 和 `ContextRefreshService` 新增 `--embedding-sleep-ms` / `embedding_sleep_ms`。
+  - 新增 focused tests，覆盖 sleep 参数、批次间等待、单条重试等待和 context refresh 透传。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_embedding_sync_service.py backend/tests/test_context_refresh_service.py`，32 passed
+  - `py -3 backend/scripts/sync_embeddings.py --help` 已通过
+  - `py -3 backend/scripts/refresh_context.py --help` 已通过
+  - `npm run backend:test`，133 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -710,7 +730,7 @@
 
 ## 当前正在做
 
-“Embedding 批量失败单条重试” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，让 batch 同步在失败时自动退回单条重试，减少坏记录对整批同步的影响。
+“Embedding 同步批次限速” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，让 `sync_embeddings.py` 和 `refresh_context.py` 支持固定间隔限速，降低真实 embedding provider 的限流风险。
 
 ## 下一步建议
 

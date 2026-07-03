@@ -52,6 +52,12 @@ def main() -> None:
         default=16,
         help="每次 embedding 请求包含的记录数，默认 16",
     )
+    parser.add_argument(
+        "--embedding-sleep-ms",
+        type=int,
+        default=0,
+        help="embedding 批次请求之间的等待毫秒数，默认 0",
+    )
     args = parser.parse_args()
 
     result = ContextRefreshService().refresh(
@@ -61,6 +67,7 @@ def main() -> None:
         embedding_targets=args.embedding_target,
         embedding_limit=args.embedding_limit,
         embedding_batch_size=args.embedding_batch_size,
+        embedding_sleep_ms=args.embedding_sleep_ms,
     )
     _print_schema_result(result.schema_result)
     for embedding_result in result.embedding_results:

@@ -32,17 +32,23 @@ def main() -> None:
         default=16,
         help="每次 embedding 请求包含的记录数，默认 16",
     )
+    parser.add_argument(
+        "--sleep-ms",
+        type=int,
+        default=0,
+        help="批次请求之间的等待毫秒数，默认 0",
+    )
     args = parser.parse_args()
 
     service = EmbeddingSyncService()
     if args.target == "schema":
-        results = [service.sync_schema_embeddings(limit=args.limit, batch_size=args.batch_size)]
+        results = [service.sync_schema_embeddings(limit=args.limit, batch_size=args.batch_size, sleep_ms=args.sleep_ms)]
     elif args.target == "metric":
-        results = [service.sync_metric_embeddings(limit=args.limit, batch_size=args.batch_size)]
+        results = [service.sync_metric_embeddings(limit=args.limit, batch_size=args.batch_size, sleep_ms=args.sleep_ms)]
     elif args.target == "memory":
-        results = [service.sync_sql_memory_embeddings(limit=args.limit, batch_size=args.batch_size)]
+        results = [service.sync_sql_memory_embeddings(limit=args.limit, batch_size=args.batch_size, sleep_ms=args.sleep_ms)]
     else:
-        results = service.sync_all(limit=args.limit, batch_size=args.batch_size)
+        results = service.sync_all(limit=args.limit, batch_size=args.batch_size, sleep_ms=args.sleep_ms)
 
     for result in results:
         _print_result(result)

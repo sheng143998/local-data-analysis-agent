@@ -37,6 +37,7 @@ class ContextRefreshService:
         embedding_limit: int | None = None,
         embedding_batch_size: int = 16,
         retry_single_on_batch_failure: bool = True,
+        embedding_sleep_ms: int = 0,
     ) -> ContextRefreshResult:
         schema_result = self.schema_service.sync_public_schema(
             include_tables=include_tables,
@@ -48,6 +49,7 @@ class ContextRefreshService:
                 limit=embedding_limit,
                 batch_size=embedding_batch_size,
                 retry_single_on_batch_failure=retry_single_on_batch_failure,
+                sleep_ms=embedding_sleep_ms,
             )
             if sync_embeddings
             else []
@@ -64,6 +66,7 @@ class ContextRefreshService:
         limit: int | None = None,
         batch_size: int = 16,
         retry_single_on_batch_failure: bool = True,
+        sleep_ms: int = 0,
     ) -> list[EmbeddingSyncResult]:
         targets = _normalize_targets(embedding_targets)
         if targets == ["schema", "metric", "memory"]:
@@ -71,6 +74,7 @@ class ContextRefreshService:
                 limit=limit,
                 batch_size=batch_size,
                 retry_single_on_batch_failure=retry_single_on_batch_failure,
+                sleep_ms=sleep_ms,
             )
 
         results: list[EmbeddingSyncResult] = []
@@ -81,6 +85,7 @@ class ContextRefreshService:
                         limit=limit,
                         batch_size=batch_size,
                         retry_single_on_batch_failure=retry_single_on_batch_failure,
+                        sleep_ms=sleep_ms,
                     )
                 )
             elif target == "metric":
@@ -89,6 +94,7 @@ class ContextRefreshService:
                         limit=limit,
                         batch_size=batch_size,
                         retry_single_on_batch_failure=retry_single_on_batch_failure,
+                        sleep_ms=sleep_ms,
                     )
                 )
             elif target == "memory":
@@ -97,6 +103,7 @@ class ContextRefreshService:
                         limit=limit,
                         batch_size=batch_size,
                         retry_single_on_batch_failure=retry_single_on_batch_failure,
+                        sleep_ms=sleep_ms,
                     )
                 )
         return results

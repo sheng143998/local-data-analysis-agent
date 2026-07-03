@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from time import sleep
+from typing import Any, Callable, Literal
 
 from backend.app.core.embedding_adapter import EmbeddingAdapter, EmbeddingRequest
 from backend.app.db.connection import get_connection
@@ -51,36 +52,47 @@ class EmbeddingSyncResult:
 class EmbeddingSyncService:
     """同步 schema 和 metric 文档 embedding 到 PostgreSQL pgvector 字段。"""
 
-    def __init__(self, adapter: EmbeddingAdapter | None = None) -> None:
+    def __init__(
+        self,
+        adapter: EmbeddingAdapter | None = None,
+        sleeper: Callable[[float], None] = sleep,
+    ) -> None:
         self.adapter = adapter or EmbeddingAdapter()
+        self.sleeper = sleeper
 
     def sync_schema_embeddings(
         self,
         limit: int | None = None,
         batch_size: int = 16,
         retry_single_on_batch_failure: bool = True,
+        sleep_ms: int = 0,
     ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="schema")
         with get_connection() as conn:
             cursor = conn.cursor()
             records = self._load_schema_records(cursor, limit=limit)
             result.scanned = len(records)
-            for batch in _chunks(records, _batch_size_value(batch_size)):
+            batches = _chunks(records, _batch_size_value(batch_size))
+            for batch_index, batch in enumerate(batches):
                 documents = [build_schema_embedding_document(record) for record in batch]
                 response = self.adapter.embed(EmbeddingRequest(texts=documents))
                 if not response.ok or len(response.vectors) < len(batch):
                     if retry_single_on_batch_failure and len(batch) > 1:
-                        self._retry_schema_records(cursor, batch, result)
+                        self._retry_schema_records(cursor, batch, result, sleep_ms=sleep_ms)
                     else:
                         result.failed += len(batch)
                         for record in batch:
                             result.errors.append(
                                 _error_summary("schema", record.table_name, record.column_name, response.error_message)
                             )
+                    if batch_index < len(batches) - 1:
+                        self._sleep_between_requests(sleep_ms)
                     continue
                 for record, vector in zip(batch, response.vectors, strict=False):
                     self._update_schema_embedding(cursor, record, vector)
                     result.updated += 1
+                if batch_index < len(batches) - 1:
+                    self._sleep_between_requests(sleep_ms)
         return result
 
     def sync_metric_embeddings(
@@ -88,26 +100,32 @@ class EmbeddingSyncService:
         limit: int | None = None,
         batch_size: int = 16,
         retry_single_on_batch_failure: bool = True,
+        sleep_ms: int = 0,
     ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="metric")
         with get_connection() as conn:
             cursor = conn.cursor()
             records = self._load_metric_records(cursor, limit=limit)
             result.scanned = len(records)
-            for batch in _chunks(records, _batch_size_value(batch_size)):
+            batches = _chunks(records, _batch_size_value(batch_size))
+            for batch_index, batch in enumerate(batches):
                 documents = [build_metric_embedding_document(record) for record in batch]
                 response = self.adapter.embed(EmbeddingRequest(texts=documents))
                 if not response.ok or len(response.vectors) < len(batch):
                     if retry_single_on_batch_failure and len(batch) > 1:
-                        self._retry_metric_records(cursor, batch, result)
+                        self._retry_metric_records(cursor, batch, result, sleep_ms=sleep_ms)
                     else:
                         result.failed += len(batch)
                         for record in batch:
                             result.errors.append(_error_summary("metric", record.metric_name, None, response.error_message))
+                    if batch_index < len(batches) - 1:
+                        self._sleep_between_requests(sleep_ms)
                     continue
                 for record, vector in zip(batch, response.vectors, strict=False):
                     self._update_metric_embedding(cursor, record, vector)
                     result.updated += 1
+                if batch_index < len(batches) - 1:
+                    self._sleep_between_requests(sleep_ms)
         return result
 
     def sync_all(
@@ -115,22 +133,26 @@ class EmbeddingSyncService:
         limit: int | None = None,
         batch_size: int = 16,
         retry_single_on_batch_failure: bool = True,
+        sleep_ms: int = 0,
     ) -> list[EmbeddingSyncResult]:
         return [
             self.sync_schema_embeddings(
                 limit=limit,
                 batch_size=batch_size,
                 retry_single_on_batch_failure=retry_single_on_batch_failure,
+                sleep_ms=sleep_ms,
             ),
             self.sync_metric_embeddings(
                 limit=limit,
                 batch_size=batch_size,
                 retry_single_on_batch_failure=retry_single_on_batch_failure,
+                sleep_ms=sleep_ms,
             ),
             self.sync_sql_memory_embeddings(
                 limit=limit,
                 batch_size=batch_size,
                 retry_single_on_batch_failure=retry_single_on_batch_failure,
+                sleep_ms=sleep_ms,
             ),
         ]
 
@@ -139,13 +161,15 @@ class EmbeddingSyncService:
         limit: int | None = None,
         batch_size: int = 16,
         retry_single_on_batch_failure: bool = True,
+        sleep_ms: int = 0,
     ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="memory")
         with get_connection() as conn:
             cursor = conn.cursor()
             records = self._load_sql_memory_records(cursor, limit=limit)
             result.scanned = len(records)
-            for batch in _chunks(records, _batch_size_value(batch_size)):
+            batches = _chunks(records, _batch_size_value(batch_size))
+            for batch_index, batch in enumerate(batches):
                 texts: list[str] = []
                 for record in batch:
                     texts.extend([record.canonical_question, record.final_sql])
@@ -153,11 +177,13 @@ class EmbeddingSyncService:
                 expected_vectors = len(batch) * 2
                 if not response.ok or len(response.vectors) < expected_vectors:
                     if retry_single_on_batch_failure and len(batch) > 1:
-                        self._retry_sql_memory_records(cursor, batch, result)
+                        self._retry_sql_memory_records(cursor, batch, result, sleep_ms=sleep_ms)
                     else:
                         result.failed += len(batch)
                         for record in batch:
                             result.errors.append(_error_summary("memory", record.id, None, response.error_message))
+                    if batch_index < len(batches) - 1:
+                        self._sleep_between_requests(sleep_ms)
                     continue
                 for index, record in enumerate(batch):
                     self._update_sql_memory_embeddings(
@@ -167,6 +193,8 @@ class EmbeddingSyncService:
                         sql_vector=response.vectors[index * 2 + 1],
                     )
                     result.updated += 1
+                if batch_index < len(batches) - 1:
+                    self._sleep_between_requests(sleep_ms)
         return result
 
     def _retry_schema_records(
@@ -174,8 +202,11 @@ class EmbeddingSyncService:
         cursor,
         records: list[SchemaEmbeddingRecord],
         result: EmbeddingSyncResult,
+        *,
+        sleep_ms: int = 0,
     ) -> None:
-        for record in records:
+        for index, record in enumerate(records):
+            self._sleep_between_requests(sleep_ms)
             document = build_schema_embedding_document(record)
             response = self.adapter.embed(EmbeddingRequest(texts=[document]))
             if not response.ok or not response.vectors:
@@ -184,14 +215,19 @@ class EmbeddingSyncService:
                 continue
             self._update_schema_embedding(cursor, record, response.vectors[0])
             result.updated += 1
+            if index < len(records) - 1:
+                self._sleep_between_requests(sleep_ms)
 
     def _retry_metric_records(
         self,
         cursor,
         records: list[MetricEmbeddingRecord],
         result: EmbeddingSyncResult,
+        *,
+        sleep_ms: int = 0,
     ) -> None:
-        for record in records:
+        for index, record in enumerate(records):
+            self._sleep_between_requests(sleep_ms)
             document = build_metric_embedding_document(record)
             response = self.adapter.embed(EmbeddingRequest(texts=[document]))
             if not response.ok or not response.vectors:
@@ -200,14 +236,19 @@ class EmbeddingSyncService:
                 continue
             self._update_metric_embedding(cursor, record, response.vectors[0])
             result.updated += 1
+            if index < len(records) - 1:
+                self._sleep_between_requests(sleep_ms)
 
     def _retry_sql_memory_records(
         self,
         cursor,
         records: list[SqlMemoryEmbeddingRecord],
         result: EmbeddingSyncResult,
+        *,
+        sleep_ms: int = 0,
     ) -> None:
-        for record in records:
+        for index, record in enumerate(records):
+            self._sleep_between_requests(sleep_ms)
             response = self.adapter.embed(EmbeddingRequest(texts=[record.canonical_question, record.final_sql]))
             if not response.ok or len(response.vectors) < 2:
                 result.failed += 1
@@ -220,6 +261,13 @@ class EmbeddingSyncService:
                 sql_vector=response.vectors[1],
             )
             result.updated += 1
+            if index < len(records) - 1:
+                self._sleep_between_requests(sleep_ms)
+
+    def _sleep_between_requests(self, sleep_ms: int) -> None:
+        seconds = _sleep_seconds(sleep_ms)
+        if seconds > 0:
+            self.sleeper(seconds)
 
     def _load_schema_records(self, cursor, limit: int | None = None) -> list[SchemaEmbeddingRecord]:
         sql = """
@@ -393,6 +441,12 @@ def _batch_size_value(batch_size: int) -> int:
     if batch_size <= 0:
         raise ValueError("batch_size must be greater than 0")
     return batch_size
+
+
+def _sleep_seconds(sleep_ms: int) -> float:
+    if sleep_ms < 0:
+        raise ValueError("sleep_ms must be greater than or equal to 0")
+    return sleep_ms / 1000
 
 
 def _chunks[T](values: list[T], size: int) -> list[list[T]]:

@@ -13,6 +13,7 @@ from backend.app.services.embedding_sync_service import (
     _json_object,
     _batch_size_value,
     _limit_params,
+    _sleep_seconds,
     _vector_literal,
     build_metric_embedding_document,
     build_schema_embedding_document,
@@ -178,6 +179,13 @@ def _patch_connection(monkeypatch, cursor: FakeCursor) -> None:
     monkeypatch.setattr(embedding_sync_service, "get_connection", fake_get_connection)
 
 
+def _fake_sleeper(calls: list[float]):
+    def sleep_call(seconds: float) -> None:
+        calls.append(seconds)
+
+    return sleep_call
+
+
 def test_build_schema_embedding_document_contains_business_context() -> None:
     document = build_schema_embedding_document(
         SchemaEmbeddingRecord(
@@ -249,6 +257,18 @@ def test_batch_size_value_rejects_non_positive_values() -> None:
         _batch_size_value(0)
 
 
+def test_sleep_seconds_accepts_zero_and_positive_values() -> None:
+    assert _sleep_seconds(0) == 0
+    assert _sleep_seconds(250) == 0.25
+
+
+def test_sleep_seconds_rejects_negative_values() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="sleep_ms must be greater than or equal to 0"):
+        _sleep_seconds(-1)
+
+
 def test_sync_schema_embeddings_updates_pgvector(monkeypatch) -> None:
     cursor = FakeCursor(
         rows=[
@@ -287,6 +307,26 @@ def test_sync_schema_embeddings_batches_documents(monkeypatch) -> None:
     assert len(adapter.calls) == 3
     update_calls = [call for call in cursor.executed if "UPDATE schema_metadata" in call[0]]
     assert [call[1][0] for call in update_calls] == ["[0.10000000]", "[0.20000000]", "[0.10000000]"]
+
+
+def test_sync_schema_embeddings_sleeps_between_batches(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("orders", "total_amount", "numeric", "订单金额", "销售额分析"),
+            ("orders", "created_at", "timestamp", "下单时间", "时间分析"),
+            ("users", "city", "text", "城市", "地域分析"),
+        ]
+    )
+    sleep_calls: list[float] = []
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(
+        adapter=FakeAdapter(vectors=[[0.1]]),
+        sleeper=_fake_sleeper(sleep_calls),
+    ).sync_schema_embeddings(batch_size=1, sleep_ms=100)
+
+    assert result.updated == 3
+    assert sleep_calls == [0.1, 0.1]
 
 
 def test_sync_schema_embeddings_applies_limit_to_select(monkeypatch) -> None:
@@ -341,6 +381,26 @@ def test_sync_schema_embeddings_retries_single_records_after_batch_failure(monke
     assert len(adapter.calls) == 3
     update_calls = [call for call in cursor.executed if "UPDATE schema_metadata" in call[0]]
     assert update_calls[0][1] == ("[0.90000000,0.80000000]", "orders", "ok_column")
+
+
+def test_sync_schema_embeddings_sleeps_during_single_retry(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("orders", "bad_column", "text", "会失败", ""),
+            ("orders", "ok_column", "text", "可同步", ""),
+        ]
+    )
+    sleep_calls: list[float] = []
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(
+        adapter=BatchThenSingleFakeAdapter(fail_single_text="bad_column"),
+        sleeper=_fake_sleeper(sleep_calls),
+    ).sync_schema_embeddings(batch_size=2, sleep_ms=50)
+
+    assert result.updated == 1
+    assert result.failed == 1
+    assert sleep_calls == [0.05, 0.05]
 
 
 def test_sync_metric_embeddings_updates_pgvector(monkeypatch) -> None:
