@@ -70,6 +70,19 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 4. 指标口径 PostgreSQL Repository
+
+- commit: 本模块准备提交，提交信息为 `切换指标口径为PostgreSQL仓储并补全文档`
+- 内容：
+  - 补充 DataGrip 连接说明：`docs/database-datagrip.md`
+  - 补充 PostgreSQL 数据基础模块完成文档
+  - 将 `MetricRepository` 从内存仓储切换为 PostgreSQL `metric_definitions` 表
+  - 更新指标 CRUD 测试，使用唯一测试指标名避免冲突
+- 验证：
+  - `npm run backend:test`
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -82,20 +95,19 @@
 
 ## 当前正在做
 
-PostgreSQL 数据基础模块已完成，已提交并推送。
+指标口径 PostgreSQL Repository 模块已完成，准备提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M1/M2：
 
-1. 将指标 CRUD 从内存 repository 替换为 PostgreSQL repository。
-2. 让 `/api/metrics` 读取真实 `metric_definitions` 表。
-3. 增加 metric repository 集成/烟雾测试。
-4. 开始 SQL Guard / SQL Validator 模块。
+1. 开始 SQL Guard / SQL Validator 模块。
+2. 实现只读 SQL Executor。
+3. 让 `/api/analyze` 从 mock graph 逐步接入真实 schema/metric/sql 工具。
 
 ## 已知风险
 
-- 当前指标 CRUD 仍使用内存仓储，尚未接入 PostgreSQL。
+- 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
 - SQL Guard、SQL Validator、只读 Executor 尚未实现。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。

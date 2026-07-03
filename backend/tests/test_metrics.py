@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from uuid import uuid4
 
 from backend.app.main import app
 
@@ -7,6 +8,7 @@ client = TestClient(app)
 
 
 def test_metric_crud_flow() -> None:
+    metric_name = f"gross_margin_rate_test_{uuid4().hex[:8]}"
     list_response = client.get("/api/metrics")
     assert list_response.status_code == 200
     assert len(list_response.json()) >= 1
@@ -14,7 +16,7 @@ def test_metric_crud_flow() -> None:
     create_response = client.post(
         "/api/metrics",
         json={
-            "metric_name": "gross_margin_rate_test",
+            "metric_name": metric_name,
             "display_name": "测试毛利率",
             "description": "测试用毛利率指标",
             "formula": "(sales - cost) / sales",
@@ -40,7 +42,7 @@ def test_metric_crud_flow() -> None:
 
     get_response = client.get(f"/api/metrics/{metric_id}")
     assert get_response.status_code == 200
-    assert get_response.json()["metric_name"] == "gross_margin_rate_test"
+    assert get_response.json()["metric_name"] == metric_name
 
     delete_response = client.delete(f"/api/metrics/{metric_id}")
     assert delete_response.status_code == 200
