@@ -422,12 +422,25 @@
 
 ### 28. 接口变更流程与版本维护文档
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口变更流程文档并通过验证`。
+- commit: `5bfab1e 补齐接口变更流程文档并通过验证`
 - 内容：
   - 新增 `docs/api_change_process.md`，说明 API 兼容变更、破坏性变更、同步清单、验证门槛、版本策略和回滚记录格式。
   - README、`docs/api.md`、`docs/api_frontend_mapping.md`、`docs/api_error_auth.md` 增加该文档入口。
   - 明确 V1 当前使用 `/api` 前缀和 `app_version=0.1.0`，暂不引入 `/api/v1` 路径。
   - 本模块只更新中文文档，不修改 API 实现、前端类型、测试代码或数据库结构。
+- 验证：
+  - `npm run backend:test`，73 个测试通过
+  - `npm run frontend:build`
+  - `npm run test:e2e`
+
+### 29. 接口联调与 Smoke 示例文档
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口联调Smoke文档并通过验证`。
+- 内容：
+  - 新增 `docs/api_smoke_examples.md`，说明本地启动、PowerShell/curl 调用示例、自动 smoke 检查点、验证命令分层和常见问题。
+  - README、`docs/api.md`、`docs/api_frontend_mapping.md`、`docs/api_error_auth.md`、`docs/api_change_process.md` 增加该文档入口。
+  - 明确 `npm run test:e2e` 当前检查 `/api/health` 和一次 `/api/analyze` 最小链路，不等于完整标准问题评估。
+  - 本模块只更新中文文档，不修改接口实现、测试脚本、前端 API client 或数据库结构。
 - 验证：
   - `npm run backend:test`，73 个测试通过
   - `npm run frontend:build`
@@ -445,7 +458,7 @@
 
 ## 当前正在做
 
-接口变更流程与版本维护文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
+接口联调与 Smoke 示例文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
 
 ## 下一步建议
 
@@ -453,7 +466,7 @@
 
 1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
 2. 后续如增加登录、角色或 API token，优先同步 `docs/api_error_auth.md` 和 `docs/api_change_process.md`。
-3. 后续如果建设开发者调试页，再补 `/api/runs`、`/api/memories` 的前端映射说明。
+3. 如果 smoke 脚本或本地端口变化，优先同步 `docs/api_smoke_examples.md`。
 
 ## 已知风险
 

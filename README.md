@@ -45,6 +45,7 @@ eval/       标准问题评估集、评估脚本和最新报告
 - [前后端接口映射文档](docs/api_frontend_mapping.md)
 - [接口错误码与权限边界文档](docs/api_error_auth.md)
 - [接口变更流程与版本维护文档](docs/api_change_process.md)
+- [接口联调与 Smoke 示例文档](docs/api_smoke_examples.md)
 - [SQL Guard 与只读执行说明](docs/sql_guard.md)
 - [SQL Memory 机制说明](docs/sql_memory.md)
 - [标准问题评估说明](docs/evaluation.md)
@@ -98,7 +99,7 @@ py -3 backend/scripts/sync_schema_metadata.py
 
 ## API 入口
 
-完整字段说明、请求示例、响应结构和错误边界见 [V1 接口文档](docs/api.md)。前端 API client 与后端接口字段关系见 [前后端接口映射文档](docs/api_frontend_mapping.md)。错误码、权限边界和上线前鉴权建议见 [接口错误码与权限边界文档](docs/api_error_auth.md)。接口字段、路径或权限发生变化时，按 [接口变更流程与版本维护文档](docs/api_change_process.md) 同步。
+完整字段说明、请求示例、响应结构和错误边界见 [V1 接口文档](docs/api.md)。前端 API client 与后端接口字段关系见 [前后端接口映射文档](docs/api_frontend_mapping.md)。错误码、权限边界和上线前鉴权建议见 [接口错误码与权限边界文档](docs/api_error_auth.md)。接口字段、路径或权限发生变化时，按 [接口变更流程与版本维护文档](docs/api_change_process.md) 同步。手工联调命令和 smoke 检查点见 [接口联调与 Smoke 示例文档](docs/api_smoke_examples.md)。
 
 - `GET /api/health`：服务健康检查。
 - `POST /api/analyze`：聊天式数据问答。

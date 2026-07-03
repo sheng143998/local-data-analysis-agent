@@ -1,6 +1,6 @@
 # 接口变更流程与版本维护文档
 
-本文档说明 V1 API 契约变化时应该如何分类、同步、验证、记录和回滚。它是 [V1 接口文档](api.md)、[前后端接口映射文档](api_frontend_mapping.md) 与 [接口错误码与权限边界文档](api_error_auth.md) 的补充。
+本文档说明 V1 API 契约变化时应该如何分类、同步、验证、记录和回滚。它是 [V1 接口文档](api.md)、[前后端接口映射文档](api_frontend_mapping.md)、[接口错误码与权限边界文档](api_error_auth.md) 与 [接口联调与 Smoke 示例文档](api_smoke_examples.md) 的补充。
 
 ## 当前版本策略
 
