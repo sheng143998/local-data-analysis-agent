@@ -54,11 +54,11 @@ class EmbeddingSyncService:
     def __init__(self, adapter: EmbeddingAdapter | None = None) -> None:
         self.adapter = adapter or EmbeddingAdapter()
 
-    def sync_schema_embeddings(self) -> EmbeddingSyncResult:
+    def sync_schema_embeddings(self, limit: int | None = None) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="schema")
         with get_connection() as conn:
             cursor = conn.cursor()
-            records = self._load_schema_records(cursor)
+            records = self._load_schema_records(cursor, limit=limit)
             result.scanned = len(records)
             for record in records:
                 document = build_schema_embedding_document(record)
@@ -71,11 +71,11 @@ class EmbeddingSyncService:
                 result.updated += 1
         return result
 
-    def sync_metric_embeddings(self) -> EmbeddingSyncResult:
+    def sync_metric_embeddings(self, limit: int | None = None) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="metric")
         with get_connection() as conn:
             cursor = conn.cursor()
-            records = self._load_metric_records(cursor)
+            records = self._load_metric_records(cursor, limit=limit)
             result.scanned = len(records)
             for record in records:
                 document = build_metric_embedding_document(record)
@@ -88,18 +88,18 @@ class EmbeddingSyncService:
                 result.updated += 1
         return result
 
-    def sync_all(self) -> list[EmbeddingSyncResult]:
+    def sync_all(self, limit: int | None = None) -> list[EmbeddingSyncResult]:
         return [
-            self.sync_schema_embeddings(),
-            self.sync_metric_embeddings(),
-            self.sync_sql_memory_embeddings(),
+            self.sync_schema_embeddings(limit=limit),
+            self.sync_metric_embeddings(limit=limit),
+            self.sync_sql_memory_embeddings(limit=limit),
         ]
 
-    def sync_sql_memory_embeddings(self) -> EmbeddingSyncResult:
+    def sync_sql_memory_embeddings(self, limit: int | None = None) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="memory")
         with get_connection() as conn:
             cursor = conn.cursor()
-            records = self._load_sql_memory_records(cursor)
+            records = self._load_sql_memory_records(cursor, limit=limit)
             result.scanned = len(records)
             for record in records:
                 response = self.adapter.embed(
@@ -118,14 +118,16 @@ class EmbeddingSyncService:
                 result.updated += 1
         return result
 
-    def _load_schema_records(self, cursor) -> list[SchemaEmbeddingRecord]:
-        cursor.execute(
-            """
+    def _load_schema_records(self, cursor, limit: int | None = None) -> list[SchemaEmbeddingRecord]:
+        sql = """
             SELECT table_name, column_name, data_type, description, business_meaning
             FROM schema_metadata
             ORDER BY table_name, column_name
             """
-        )
+        params = _limit_params(limit)
+        if params:
+            sql += "\nLIMIT %s"
+        cursor.execute(sql, params or None)
         return [
             SchemaEmbeddingRecord(
                 table_name=row[0],
@@ -137,16 +139,18 @@ class EmbeddingSyncService:
             for row in cursor.fetchall()
         ]
 
-    def _load_metric_records(self, cursor) -> list[MetricEmbeddingRecord]:
-        cursor.execute(
-            """
+    def _load_metric_records(self, cursor, limit: int | None = None) -> list[MetricEmbeddingRecord]:
+        sql = """
             SELECT id, metric_name, display_name, description, formula,
                    required_tables, required_fields, default_filters
             FROM metric_definitions
             WHERE status = 'enabled'
             ORDER BY display_name
             """
-        )
+        params = _limit_params(limit)
+        if params:
+            sql += "\nLIMIT %s"
+        cursor.execute(sql, params or None)
         return [
             MetricEmbeddingRecord(
                 id=str(row[0]),
@@ -193,15 +197,17 @@ class EmbeddingSyncService:
             (_vector_literal(vector), record.id),
         )
 
-    def _load_sql_memory_records(self, cursor) -> list[SqlMemoryEmbeddingRecord]:
-        cursor.execute(
-            """
+    def _load_sql_memory_records(self, cursor, limit: int | None = None) -> list[SqlMemoryEmbeddingRecord]:
+        sql = """
             SELECT id, canonical_question, final_sql
             FROM sql_memories
             WHERE question_embedding IS NULL OR sql_embedding IS NULL
             ORDER BY last_used_at DESC NULLS LAST, created_at DESC
             """
-        )
+        params = _limit_params(limit)
+        if params:
+            sql += "\nLIMIT %s"
+        cursor.execute(sql, params or None)
         return [
             SqlMemoryEmbeddingRecord(
                 id=str(row[0]),
@@ -270,6 +276,14 @@ def _json_object(value: Any) -> dict[str, Any]:
             return {}
         return parsed if isinstance(parsed, dict) else {}
     return {}
+
+
+def _limit_params(limit: int | None) -> tuple[int] | None:
+    if limit is None:
+        return None
+    if limit <= 0:
+        raise ValueError("limit must be greater than 0")
+    return (limit,)
 
 
 def _error_summary(target: str, name: str, column: str | None, error: str | None) -> str:

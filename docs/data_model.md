@@ -63,7 +63,10 @@ py -3 backend/scripts/sync_schema_metadata.py
 ```bash
 py -3 backend/scripts/sync_embeddings.py
 py -3 backend/scripts/sync_embeddings.py --target memory
+py -3 backend/scripts/sync_embeddings.py --target memory --limit 20
 ```
+
+`--limit` 是每个目标本次同步的记录数上限，适合在真实 embedding provider 配置后先小批量验证。
 
 ## 指标口径
 

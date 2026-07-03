@@ -40,6 +40,12 @@ def main() -> None:
         default=None,
         help="指定 embedding 同步目标，可重复传入；默认同步 schema、metric、memory",
     )
+    parser.add_argument(
+        "--embedding-limit",
+        type=int,
+        default=None,
+        help="限制每个 embedding 目标本次最多同步的记录数",
+    )
     args = parser.parse_args()
 
     result = ContextRefreshService().refresh(
@@ -47,6 +53,7 @@ def main() -> None:
         exclude_tables=args.exclude_table,
         sync_embeddings=not args.skip_embeddings,
         embedding_targets=args.embedding_target,
+        embedding_limit=args.embedding_limit,
     )
     _print_schema_result(result.schema_result)
     for embedding_result in result.embedding_results:

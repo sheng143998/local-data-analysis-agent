@@ -30,7 +30,7 @@
 - 前端接口契约补齐：`AnalysisResponse` 已声明后端返回的 `trace` 和 `steps`，但普通用户页面不展示内部调试细节。
 - 统一检索评分基础层：metric、schema、SQL Memory 检索已复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
 - EmbeddingAdapter 基础层：已提供 OpenAI-compatible embeddings 统一入口和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须通过该入口。
-- Schema / Metric / SQL Memory Embedding 同步：可运行脚本把 `schema_metadata.embedding`、`metric_definitions.embedding` 和旧 `sql_memories` 的 question/sql embedding 写入 pgvector 字段，为后续混合检索准备向量资产。
+- Schema / Metric / SQL Memory Embedding 同步：可运行脚本把 `schema_metadata.embedding`、`metric_definitions.embedding` 和旧 `sql_memories` 的 question/sql embedding 写入 pgvector 字段，支持 `--limit` 小批量验证，为后续混合检索准备向量资产。
 - pgvector 混合检索：metric/schema retriever 会用 `EmbeddingAdapter` 生成问题向量，并结合 pgvector 候选分与原有关键词、文本和结构化分数排序。
 - SQL Memory 混合检索：`semantic_similarity` 已优先使用 `sql_memories.question_embedding` 的 pgvector 分数，向量不可用时回退文本相似。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
@@ -104,7 +104,9 @@ npm run frontend:dev
 py -3 backend/scripts/init_db.py
 py -3 backend/scripts/sync_schema_metadata.py
 py -3 backend/scripts/sync_embeddings.py
+py -3 backend/scripts/sync_embeddings.py --target memory --limit 20
 py -3 backend/scripts/refresh_context.py
+py -3 backend/scripts/refresh_context.py --embedding-limit 20
 ```
 
 换库、导入新表或调整字段后，先运行：
@@ -121,7 +123,7 @@ py -3 backend/scripts/sync_embeddings.py
 npm run context:refresh
 ```
 
-`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标。
+`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。可用 `--limit 20` 限制每个目标本次最多同步的记录数，适合先小批量验证。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标，或用 `--embedding-limit 20` 控制本次 embedding 同步规模。
 
 ## API 入口
 
@@ -153,7 +155,7 @@ npm run context:refresh
 
 - 模型调用统一通过 `backend/app/core/model_adapter.py`。
 - embedding 调用统一通过 `backend/app/core/embedding_adapter.py`。
-- schema/metric/SQL Memory 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行。
+- schema/metric/SQL Memory 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行，支持 `--limit` 控制本次同步规模。
 - schema/metric/SQL Memory 混合检索通过 `backend/app/tools/vector_retrieval.py` 查询 pgvector 候选；失败时自动退回原文本检索。
 - SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段和指标口径，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。

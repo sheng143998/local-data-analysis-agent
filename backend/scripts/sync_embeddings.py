@@ -20,17 +20,23 @@ def main() -> None:
         default="all",
         help="同步目标，默认 all",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="限制每个目标本次最多同步的记录数",
+    )
     args = parser.parse_args()
 
     service = EmbeddingSyncService()
     if args.target == "schema":
-        results = [service.sync_schema_embeddings()]
+        results = [service.sync_schema_embeddings(limit=args.limit)]
     elif args.target == "metric":
-        results = [service.sync_metric_embeddings()]
+        results = [service.sync_metric_embeddings(limit=args.limit)]
     elif args.target == "memory":
-        results = [service.sync_sql_memory_embeddings()]
+        results = [service.sync_sql_memory_embeddings(limit=args.limit)]
     else:
-        results = service.sync_all()
+        results = service.sync_all(limit=args.limit)
 
     for result in results:
         _print_result(result)

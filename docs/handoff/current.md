@@ -36,6 +36,7 @@
 - 已新增 SQL Memory 历史向量补齐能力，`py -3 backend/scripts/sync_embeddings.py --target memory` 可为旧 memory 回填 question/sql embedding。
 - 已新增通用分析结果 Presenter，能根据 SQL 返回列动态识别维度列、数值列和比例列，生成中文摘要和指标卡，减少对固定销售趋势字段的依赖。
 - 已新增数据上下文刷新命令，把 schema metadata 同步和 embedding 同步串成一个入口，服务于换库、换表后的检索资产刷新。
+- 已为 embedding 同步增加 `--limit` / `--embedding-limit` 控制，方便真实 provider 下先小批量刷新和验证。
 
 ## 最近完成模块
 
@@ -70,7 +71,7 @@
 
 - commit: 本模块已提交并推送，提交信息为 `建立PostgreSQL数据基础并导入真实Olist数据`。具体 hash 以 `git log --oneline -1` 为准。
 - 内容：
-  - 创建本地 `backend/.env`，使用可连接账号 `postgres` / `123456` 指向 `local_data_agent`
+  - 创建本地 `backend/.env`，使用本机可连接 PostgreSQL 账号指向 `local_data_agent`；真实密码只保存在本机 `.env`，不写入文档。
   - 添加 PostgreSQL 连接、migration runner、Olist 下载脚本、Olist 导入脚本、metadata seed 和数据库检查脚本
   - 创建业务表：`users`, `products`, `orders`, `order_items`, `payments`, `refunds`, `reviews`, `traffic_events`, `coupons`, `coupon_usages`, `inventory_snapshots`, `product_costs`
   - 创建 Agent 元数据表：`schema_metadata`, `metric_definitions`, `sql_memories`, `query_runs`, `tool_calls`, `embedding_documents`
@@ -641,6 +642,24 @@
   - `py -3 backend/scripts/refresh_context.py --help` 已通过
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 42. Embedding 同步限量参数
+
+- commit: 本模块随本次提交推送完成，提交信息为 `新增Embedding同步限量参数并通过验证`。
+- 内容：
+  - `EmbeddingSyncService` 的 schema、metric、memory 和 all 同步入口新增 `limit` 参数。
+  - schema、metric、memory 读取 SQL 会用参数化 `LIMIT %s` 控制本次扫描数量。
+  - `sync_embeddings.py` 新增 `--limit` 参数。
+  - `refresh_context.py` 和 `ContextRefreshService` 新增 `--embedding-limit` / `embedding_limit`。
+  - 新增 focused tests，覆盖 limit 归一化、SQL 参数化和 context refresh 透传。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_embedding_sync_service.py backend/tests/test_context_refresh_service.py`，19 passed
+  - `py -3 backend/scripts/sync_embeddings.py --help` 已通过
+  - `py -3 backend/scripts/refresh_context.py --help` 已通过
+  - `npm run backend:test`，120 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -653,14 +672,14 @@
 
 ## 当前正在做
 
-“数据上下文刷新命令” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，目标是让换库、换表后可以用一个命令刷新 schema metadata 和 embedding 检索资产。
+“Embedding 同步限量参数” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，让 `sync_embeddings.py` 和 `refresh_context.py` 支持小批量同步，降低真实 embedding provider 下的一次全量同步风险。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
 1. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
-2. 评估是否需要为 `sync_embeddings.py` 增加分页、批量大小和限速参数。
+2. 继续评估是否需要为 `sync_embeddings.py` 增加分页游标、真正批量 embedding 请求和限速参数。
 3. 后续可接入 ModelAdapter 做可控自然语言洞察，但必须保留当前通用 Presenter fallback。
 
 ## 已知风险

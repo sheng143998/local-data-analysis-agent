@@ -25,26 +25,26 @@ class FakeSchemaService:
 
 class FakeEmbeddingService:
     def __init__(self) -> None:
-        self.calls: list[str] = []
+        self.calls: list[tuple[str, int | None]] = []
 
-    def sync_all(self) -> list[EmbeddingSyncResult]:
-        self.calls.append("all")
+    def sync_all(self, limit=None) -> list[EmbeddingSyncResult]:
+        self.calls.append(("all", limit))
         return [
             EmbeddingSyncResult(target="schema", scanned=3, updated=3),
             EmbeddingSyncResult(target="metric", scanned=1, updated=1),
             EmbeddingSyncResult(target="memory", scanned=2, updated=2),
         ]
 
-    def sync_schema_embeddings(self) -> EmbeddingSyncResult:
-        self.calls.append("schema")
+    def sync_schema_embeddings(self, limit=None) -> EmbeddingSyncResult:
+        self.calls.append(("schema", limit))
         return EmbeddingSyncResult(target="schema", scanned=3, updated=3)
 
-    def sync_metric_embeddings(self) -> EmbeddingSyncResult:
-        self.calls.append("metric")
+    def sync_metric_embeddings(self, limit=None) -> EmbeddingSyncResult:
+        self.calls.append(("metric", limit))
         return EmbeddingSyncResult(target="metric", scanned=1, updated=1)
 
-    def sync_sql_memory_embeddings(self) -> EmbeddingSyncResult:
-        self.calls.append("memory")
+    def sync_sql_memory_embeddings(self, limit=None) -> EmbeddingSyncResult:
+        self.calls.append(("memory", limit))
         return EmbeddingSyncResult(target="memory", scanned=2, updated=2)
 
 
@@ -59,7 +59,7 @@ def test_refresh_syncs_schema_then_all_embeddings_by_default() -> None:
     result = service.refresh()
 
     assert schema_service.calls == [{"include_tables": None, "exclude_tables": None}]
-    assert embedding_service.calls == ["all"]
+    assert embedding_service.calls == [("all", None)]
     assert result.schema_result.synced_columns == 3
     assert [item.target for item in result.embedding_results] == ["schema", "metric", "memory"]
 
@@ -95,9 +95,9 @@ def test_refresh_syncs_selected_embedding_targets_in_order() -> None:
         embedding_service=embedding_service,
     )
 
-    result = service.refresh(embedding_targets=["memory", "schema", "memory"])
+    result = service.refresh(embedding_targets=["memory", "schema", "memory"], embedding_limit=10)
 
-    assert embedding_service.calls == ["memory", "schema"]
+    assert embedding_service.calls == [("memory", 10), ("schema", 10)]
     assert [item.target for item in result.embedding_results] == ["memory", "schema"]
 
 
