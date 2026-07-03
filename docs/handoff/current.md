@@ -409,12 +409,25 @@
 
 ### 27. 接口错误码与权限边界文档
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口错误码权限文档并通过验证`。
+- commit: `5015999 补齐接口错误码权限文档并通过验证`
 - 内容：
   - 新增 `docs/api_error_auth.md`，说明当前 API 错误响应、状态码、前端错误处理现状、权限边界和上线前检查清单。
   - README、`docs/api.md`、`docs/api_frontend_mapping.md` 增加该文档入口。
   - 明确当前没有登录鉴权层，`/api/runs` 和 `/api/memories` 属于开发者调试接口，不进入普通用户主导航。
   - 本模块只更新中文文档，不修改后端接口、前端错误展示、鉴权逻辑或数据库结构。
+- 验证：
+  - `npm run backend:test`，73 个测试通过
+  - `npm run frontend:build`
+  - `npm run test:e2e`
+
+### 28. 接口变更流程与版本维护文档
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口变更流程文档并通过验证`。
+- 内容：
+  - 新增 `docs/api_change_process.md`，说明 API 兼容变更、破坏性变更、同步清单、验证门槛、版本策略和回滚记录格式。
+  - README、`docs/api.md`、`docs/api_frontend_mapping.md`、`docs/api_error_auth.md` 增加该文档入口。
+  - 明确 V1 当前使用 `/api` 前缀和 `app_version=0.1.0`，暂不引入 `/api/v1` 路径。
+  - 本模块只更新中文文档，不修改 API 实现、前端类型、测试代码或数据库结构。
 - 验证：
   - `npm run backend:test`，73 个测试通过
   - `npm run frontend:build`
@@ -432,14 +445,14 @@
 
 ## 当前正在做
 
-接口错误码与权限边界文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
+接口变更流程与版本维护文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
 
 ## 下一步建议
 
 按用户最新目标继续推进 V1 文档类任务，优先补齐接口相关中文说明：
 
 1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
-2. 后续如增加登录、角色或 API token，优先同步 `docs/api_error_auth.md`。
+2. 后续如增加登录、角色或 API token，优先同步 `docs/api_error_auth.md` 和 `docs/api_change_process.md`。
 3. 后续如果建设开发者调试页，再补 `/api/runs`、`/api/memories` 的前端映射说明。
 
 ## 已知风险
