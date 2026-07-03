@@ -64,9 +64,10 @@ py -3 backend/scripts/sync_schema_metadata.py
 py -3 backend/scripts/sync_embeddings.py
 py -3 backend/scripts/sync_embeddings.py --target memory
 py -3 backend/scripts/sync_embeddings.py --target memory --limit 20
+py -3 backend/scripts/sync_embeddings.py --target schema --limit 100 --batch-size 16
 ```
 
-`--limit` 是每个目标本次同步的记录数上限，适合在真实 embedding provider 配置后先小批量验证。
+`--limit` 是每个目标本次同步的记录数上限，适合在真实 embedding provider 配置后先小批量验证。`--batch-size` 控制每次 embedding 请求包含的记录数，用于降低真实 provider 请求次数。
 
 ## 指标口径
 

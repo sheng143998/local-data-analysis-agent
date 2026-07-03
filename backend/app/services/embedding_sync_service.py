@@ -54,68 +54,94 @@ class EmbeddingSyncService:
     def __init__(self, adapter: EmbeddingAdapter | None = None) -> None:
         self.adapter = adapter or EmbeddingAdapter()
 
-    def sync_schema_embeddings(self, limit: int | None = None) -> EmbeddingSyncResult:
+    def sync_schema_embeddings(
+        self,
+        limit: int | None = None,
+        batch_size: int = 16,
+    ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="schema")
         with get_connection() as conn:
             cursor = conn.cursor()
             records = self._load_schema_records(cursor, limit=limit)
             result.scanned = len(records)
-            for record in records:
-                document = build_schema_embedding_document(record)
-                response = self.adapter.embed(EmbeddingRequest(texts=[document]))
-                if not response.ok or not response.vectors:
-                    result.failed += 1
-                    result.errors.append(_error_summary("schema", record.table_name, record.column_name, response.error_message))
+            for batch in _chunks(records, _batch_size_value(batch_size)):
+                documents = [build_schema_embedding_document(record) for record in batch]
+                response = self.adapter.embed(EmbeddingRequest(texts=documents))
+                if not response.ok or len(response.vectors) < len(batch):
+                    result.failed += len(batch)
+                    for record in batch:
+                        result.errors.append(
+                            _error_summary("schema", record.table_name, record.column_name, response.error_message)
+                        )
                     continue
-                self._update_schema_embedding(cursor, record, response.vectors[0])
-                result.updated += 1
+                for record, vector in zip(batch, response.vectors, strict=False):
+                    self._update_schema_embedding(cursor, record, vector)
+                    result.updated += 1
         return result
 
-    def sync_metric_embeddings(self, limit: int | None = None) -> EmbeddingSyncResult:
+    def sync_metric_embeddings(
+        self,
+        limit: int | None = None,
+        batch_size: int = 16,
+    ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="metric")
         with get_connection() as conn:
             cursor = conn.cursor()
             records = self._load_metric_records(cursor, limit=limit)
             result.scanned = len(records)
-            for record in records:
-                document = build_metric_embedding_document(record)
-                response = self.adapter.embed(EmbeddingRequest(texts=[document]))
-                if not response.ok or not response.vectors:
-                    result.failed += 1
-                    result.errors.append(_error_summary("metric", record.metric_name, None, response.error_message))
+            for batch in _chunks(records, _batch_size_value(batch_size)):
+                documents = [build_metric_embedding_document(record) for record in batch]
+                response = self.adapter.embed(EmbeddingRequest(texts=documents))
+                if not response.ok or len(response.vectors) < len(batch):
+                    result.failed += len(batch)
+                    for record in batch:
+                        result.errors.append(_error_summary("metric", record.metric_name, None, response.error_message))
                     continue
-                self._update_metric_embedding(cursor, record, response.vectors[0])
-                result.updated += 1
+                for record, vector in zip(batch, response.vectors, strict=False):
+                    self._update_metric_embedding(cursor, record, vector)
+                    result.updated += 1
         return result
 
-    def sync_all(self, limit: int | None = None) -> list[EmbeddingSyncResult]:
+    def sync_all(
+        self,
+        limit: int | None = None,
+        batch_size: int = 16,
+    ) -> list[EmbeddingSyncResult]:
         return [
-            self.sync_schema_embeddings(limit=limit),
-            self.sync_metric_embeddings(limit=limit),
-            self.sync_sql_memory_embeddings(limit=limit),
+            self.sync_schema_embeddings(limit=limit, batch_size=batch_size),
+            self.sync_metric_embeddings(limit=limit, batch_size=batch_size),
+            self.sync_sql_memory_embeddings(limit=limit, batch_size=batch_size),
         ]
 
-    def sync_sql_memory_embeddings(self, limit: int | None = None) -> EmbeddingSyncResult:
+    def sync_sql_memory_embeddings(
+        self,
+        limit: int | None = None,
+        batch_size: int = 16,
+    ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="memory")
         with get_connection() as conn:
             cursor = conn.cursor()
             records = self._load_sql_memory_records(cursor, limit=limit)
             result.scanned = len(records)
-            for record in records:
-                response = self.adapter.embed(
-                    EmbeddingRequest(texts=[record.canonical_question, record.final_sql])
-                )
-                if not response.ok or len(response.vectors) < 2:
-                    result.failed += 1
-                    result.errors.append(_error_summary("memory", record.id, None, response.error_message))
+            for batch in _chunks(records, _batch_size_value(batch_size)):
+                texts: list[str] = []
+                for record in batch:
+                    texts.extend([record.canonical_question, record.final_sql])
+                response = self.adapter.embed(EmbeddingRequest(texts=texts))
+                expected_vectors = len(batch) * 2
+                if not response.ok or len(response.vectors) < expected_vectors:
+                    result.failed += len(batch)
+                    for record in batch:
+                        result.errors.append(_error_summary("memory", record.id, None, response.error_message))
                     continue
-                self._update_sql_memory_embeddings(
-                    cursor,
-                    record,
-                    question_vector=response.vectors[0],
-                    sql_vector=response.vectors[1],
-                )
-                result.updated += 1
+                for index, record in enumerate(batch):
+                    self._update_sql_memory_embeddings(
+                        cursor,
+                        record,
+                        question_vector=response.vectors[index * 2],
+                        sql_vector=response.vectors[index * 2 + 1],
+                    )
+                    result.updated += 1
         return result
 
     def _load_schema_records(self, cursor, limit: int | None = None) -> list[SchemaEmbeddingRecord]:
@@ -284,6 +310,16 @@ def _limit_params(limit: int | None) -> tuple[int] | None:
     if limit <= 0:
         raise ValueError("limit must be greater than 0")
     return (limit,)
+
+
+def _batch_size_value(batch_size: int) -> int:
+    if batch_size <= 0:
+        raise ValueError("batch_size must be greater than 0")
+    return batch_size
+
+
+def _chunks[T](values: list[T], size: int) -> list[list[T]]:
+    return [values[index : index + size] for index in range(0, len(values), size)]
 
 
 def _error_summary(target: str, name: str, column: str | None, error: str | None) -> str:

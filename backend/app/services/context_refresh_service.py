@@ -35,13 +35,18 @@ class ContextRefreshService:
         sync_embeddings: bool = True,
         embedding_targets: Iterable[RefreshEmbeddingTarget] | None = None,
         embedding_limit: int | None = None,
+        embedding_batch_size: int = 16,
     ) -> ContextRefreshResult:
         schema_result = self.schema_service.sync_public_schema(
             include_tables=include_tables,
             exclude_tables=exclude_tables,
         )
         embedding_results = (
-            self._sync_embeddings(embedding_targets, limit=embedding_limit)
+            self._sync_embeddings(
+                embedding_targets,
+                limit=embedding_limit,
+                batch_size=embedding_batch_size,
+            )
             if sync_embeddings
             else []
         )
@@ -55,19 +60,20 @@ class ContextRefreshService:
         embedding_targets: Iterable[RefreshEmbeddingTarget] | None,
         *,
         limit: int | None = None,
+        batch_size: int = 16,
     ) -> list[EmbeddingSyncResult]:
         targets = _normalize_targets(embedding_targets)
         if targets == ["schema", "metric", "memory"]:
-            return self.embedding_service.sync_all(limit=limit)
+            return self.embedding_service.sync_all(limit=limit, batch_size=batch_size)
 
         results: list[EmbeddingSyncResult] = []
         for target in targets:
             if target == "schema":
-                results.append(self.embedding_service.sync_schema_embeddings(limit=limit))
+                results.append(self.embedding_service.sync_schema_embeddings(limit=limit, batch_size=batch_size))
             elif target == "metric":
-                results.append(self.embedding_service.sync_metric_embeddings(limit=limit))
+                results.append(self.embedding_service.sync_metric_embeddings(limit=limit, batch_size=batch_size))
             elif target == "memory":
-                results.append(self.embedding_service.sync_sql_memory_embeddings(limit=limit))
+                results.append(self.embedding_service.sync_sql_memory_embeddings(limit=limit, batch_size=batch_size))
         return results
 
 

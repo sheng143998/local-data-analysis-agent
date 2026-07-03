@@ -11,6 +11,7 @@ from backend.app.services.embedding_sync_service import (
     SchemaEmbeddingRecord,
     SqlMemoryEmbeddingRecord,
     _json_object,
+    _batch_size_value,
     _limit_params,
     _vector_literal,
     build_metric_embedding_document,
@@ -25,8 +26,8 @@ class FakeAdapter:
         self.calls: list[str] = []
 
     def embed(self, request):
-        text = request.texts[0]
-        self.calls.append(text)
+        text = "\n".join(request.texts)
+        self.calls.extend(request.texts)
         if self.fail_on and self.fail_on in text:
             return EmbeddingResponse(
                 ok=False,
@@ -38,7 +39,10 @@ class FakeAdapter:
             )
         return EmbeddingResponse(
             ok=True,
-            vectors=[self.vectors[min(len(self.calls) - 1, len(self.vectors) - 1)]],
+            vectors=[
+                self.vectors[min(index, len(self.vectors) - 1)]
+                for index, _ in enumerate(request.texts)
+            ],
             provider="deterministic",
             model="test",
             dimension=3,
@@ -47,8 +51,9 @@ class FakeAdapter:
 
 
 class MultiTextFakeAdapter:
-    def __init__(self, fail: bool = False) -> None:
+    def __init__(self, fail: bool = False, short_response: bool = False) -> None:
         self.fail = fail
+        self.short_response = short_response
         self.calls: list[list[str]] = []
 
     def embed(self, request):
@@ -62,9 +67,12 @@ class MultiTextFakeAdapter:
                 latency_ms=1,
                 error_message="boom",
             )
+        vectors = [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8]]
+        if self.short_response:
+            vectors = vectors[:1]
         return EmbeddingResponse(
             ok=True,
-            vectors=[[0.1, 0.2], [0.3, 0.4]],
+            vectors=vectors[: len(request.texts)],
             provider="deterministic",
             model="test",
             dimension=2,
@@ -160,6 +168,17 @@ def test_limit_params_rejects_non_positive_values() -> None:
         _limit_params(0)
 
 
+def test_batch_size_value_accepts_positive_values() -> None:
+    assert _batch_size_value(2) == 2
+
+
+def test_batch_size_value_rejects_non_positive_values() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="batch_size must be greater than 0"):
+        _batch_size_value(0)
+
+
 def test_sync_schema_embeddings_updates_pgvector(monkeypatch) -> None:
     cursor = FakeCursor(
         rows=[
@@ -180,6 +199,26 @@ def test_sync_schema_embeddings_updates_pgvector(monkeypatch) -> None:
     assert update_calls[0][1] == ("[0.10000000]", "orders", "total_amount")
 
 
+def test_sync_schema_embeddings_batches_documents(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("orders", "total_amount", "numeric", "订单金额", "销售额分析"),
+            ("orders", "created_at", "timestamp", "下单时间", "时间分析"),
+            ("users", "city", "text", "城市", "地域分析"),
+        ]
+    )
+    adapter = FakeAdapter(vectors=[[0.1], [0.2]])
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_schema_embeddings(batch_size=2)
+
+    assert result.scanned == 3
+    assert result.updated == 3
+    assert len(adapter.calls) == 3
+    update_calls = [call for call in cursor.executed if "UPDATE schema_metadata" in call[0]]
+    assert [call[1][0] for call in update_calls] == ["[0.10000000]", "[0.20000000]", "[0.10000000]"]
+
+
 def test_sync_schema_embeddings_applies_limit_to_select(monkeypatch) -> None:
     cursor = FakeCursor(rows=[("orders", "total_amount", "numeric", "订单金额", "销售额分析")])
     _patch_connection(monkeypatch, cursor)
@@ -190,6 +229,24 @@ def test_sync_schema_embeddings_applies_limit_to_select(monkeypatch) -> None:
     assert result.scanned == 1
     assert "LIMIT %s" in select_sql
     assert select_params == (1,)
+
+
+def test_sync_schema_embeddings_marks_whole_batch_failed_on_short_response(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("orders", "total_amount", "numeric", "订单金额", "销售额分析"),
+            ("orders", "created_at", "timestamp", "下单时间", "时间分析"),
+        ]
+    )
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=MultiTextFakeAdapter(short_response=True)).sync_schema_embeddings(batch_size=2)
+
+    assert result.scanned == 2
+    assert result.updated == 0
+    assert result.failed == 2
+    assert len(result.errors) == 2
+    assert not [call for call in cursor.executed if "UPDATE schema_metadata" in call[0]]
 
 
 def test_sync_metric_embeddings_updates_pgvector(monkeypatch) -> None:
@@ -241,6 +298,23 @@ def test_sync_metric_embeddings_applies_limit_to_select(monkeypatch) -> None:
     assert select_params == (3,)
 
 
+def test_sync_metric_embeddings_batches_documents(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("m1", "sales_amount", "销售额", "金额", "sum(amount)", ["orders"], ["orders.total_amount"], "{}"),
+            ("m2", "order_count", "订单数", "订单", "count(*)", ["orders"], ["orders.id"], "{}"),
+        ]
+    )
+    adapter = FakeAdapter(vectors=[[0.4], [0.5]])
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_metric_embeddings(batch_size=2)
+
+    assert result.updated == 2
+    update_calls = [call for call in cursor.executed if "UPDATE metric_definitions" in call[0]]
+    assert [call[1] for call in update_calls] == [("[0.40000000]", "m1"), ("[0.50000000]", "m2")]
+
+
 def test_sync_records_embedding_failures_without_stopping(monkeypatch) -> None:
     cursor = FakeCursor(
         rows=[
@@ -250,7 +324,7 @@ def test_sync_records_embedding_failures_without_stopping(monkeypatch) -> None:
     )
     _patch_connection(monkeypatch, cursor)
 
-    result = EmbeddingSyncService(adapter=FakeAdapter(fail_on="bad_column")).sync_schema_embeddings()
+    result = EmbeddingSyncService(adapter=FakeAdapter(fail_on="bad_column")).sync_schema_embeddings(batch_size=1)
 
     assert result.scanned == 2
     assert result.updated == 1
@@ -280,6 +354,25 @@ def test_sync_sql_memory_embeddings_updates_question_and_sql_vectors(monkeypatch
     assert select_params is None
     update_calls = [call for call in cursor.executed if "UPDATE sql_memories" in call[0]]
     assert update_calls[0][1] == ("[0.10000000,0.20000000]", "[0.30000000,0.40000000]", "mem-1")
+
+
+def test_sync_sql_memory_embeddings_batches_question_sql_pairs(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("mem-1", "问题一", "SELECT 1"),
+            ("mem-2", "问题二", "SELECT 2"),
+        ]
+    )
+    adapter = MultiTextFakeAdapter()
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_sql_memory_embeddings(batch_size=2)
+
+    assert result.updated == 2
+    assert adapter.calls == [["问题一", "SELECT 1", "问题二", "SELECT 2"]]
+    update_calls = [call for call in cursor.executed if "UPDATE sql_memories" in call[0]]
+    assert update_calls[0][1] == ("[0.10000000,0.20000000]", "[0.30000000,0.40000000]", "mem-1")
+    assert update_calls[1][1] == ("[0.50000000,0.60000000]", "[0.70000000,0.80000000]", "mem-2")
 
 
 def test_sync_sql_memory_embeddings_applies_limit_to_select(monkeypatch) -> None:

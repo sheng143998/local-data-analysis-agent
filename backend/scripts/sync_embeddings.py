@@ -26,17 +26,23 @@ def main() -> None:
         default=None,
         help="限制每个目标本次最多同步的记录数",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=16,
+        help="每次 embedding 请求包含的记录数，默认 16",
+    )
     args = parser.parse_args()
 
     service = EmbeddingSyncService()
     if args.target == "schema":
-        results = [service.sync_schema_embeddings(limit=args.limit)]
+        results = [service.sync_schema_embeddings(limit=args.limit, batch_size=args.batch_size)]
     elif args.target == "metric":
-        results = [service.sync_metric_embeddings(limit=args.limit)]
+        results = [service.sync_metric_embeddings(limit=args.limit, batch_size=args.batch_size)]
     elif args.target == "memory":
-        results = [service.sync_sql_memory_embeddings(limit=args.limit)]
+        results = [service.sync_sql_memory_embeddings(limit=args.limit, batch_size=args.batch_size)]
     else:
-        results = service.sync_all(limit=args.limit)
+        results = service.sync_all(limit=args.limit, batch_size=args.batch_size)
 
     for result in results:
         _print_result(result)

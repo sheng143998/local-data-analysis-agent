@@ -46,6 +46,12 @@ def main() -> None:
         default=None,
         help="限制每个 embedding 目标本次最多同步的记录数",
     )
+    parser.add_argument(
+        "--embedding-batch-size",
+        type=int,
+        default=16,
+        help="每次 embedding 请求包含的记录数，默认 16",
+    )
     args = parser.parse_args()
 
     result = ContextRefreshService().refresh(
@@ -54,6 +60,7 @@ def main() -> None:
         sync_embeddings=not args.skip_embeddings,
         embedding_targets=args.embedding_target,
         embedding_limit=args.embedding_limit,
+        embedding_batch_size=args.embedding_batch_size,
     )
     _print_schema_result(result.schema_result)
     for embedding_result in result.embedding_results:

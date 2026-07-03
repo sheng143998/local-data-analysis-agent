@@ -37,6 +37,7 @@
 - 已新增通用分析结果 Presenter，能根据 SQL 返回列动态识别维度列、数值列和比例列，生成中文摘要和指标卡，减少对固定销售趋势字段的依赖。
 - 已新增数据上下文刷新命令，把 schema metadata 同步和 embedding 同步串成一个入口，服务于换库、换表后的检索资产刷新。
 - 已为 embedding 同步增加 `--limit` / `--embedding-limit` 控制，方便真实 provider 下先小批量刷新和验证。
+- 已为 embedding 同步增加 `--batch-size` / `--embedding-batch-size` 控制，减少真实 provider 下的逐条请求开销。
 
 ## 最近完成模块
 
@@ -660,6 +661,25 @@
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 43. Embedding 同步批量请求
+
+- commit: 本模块随本次提交推送完成，提交信息为 `新增Embedding同步批量请求并通过验证`。
+- 内容：
+  - `EmbeddingSyncService` 的 schema、metric、memory 和 all 同步入口新增 `batch_size` 参数。
+  - schema/metric 同步会按文档 batch 调用 `EmbeddingAdapter.embed()`。
+  - SQL Memory 同步会按“问题 + SQL”成对 batch，并按返回向量顺序写回。
+  - `sync_embeddings.py` 新增 `--batch-size` 参数。
+  - `refresh_context.py` 和 `ContextRefreshService` 新增 `--embedding-batch-size` / `embedding_batch_size`。
+  - 新增 focused tests，覆盖批量写回、memory 成对向量、短响应失败和 context refresh 透传。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_embedding_sync_service.py backend/tests/test_context_refresh_service.py`，25 passed
+  - `py -3 backend/scripts/sync_embeddings.py --help` 已通过
+  - `py -3 backend/scripts/refresh_context.py --help` 已通过
+  - `npm run backend:test`，126 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -672,14 +692,14 @@
 
 ## 当前正在做
 
-“Embedding 同步限量参数” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，让 `sync_embeddings.py` 和 `refresh_context.py` 支持小批量同步，降低真实 embedding provider 下的一次全量同步风险。
+“Embedding 同步批量请求” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，让 `sync_embeddings.py` 和 `refresh_context.py` 支持 batch 请求，降低真实 embedding provider 下逐条同步的网络开销。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
 1. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
-2. 继续评估是否需要为 `sync_embeddings.py` 增加分页游标、真正批量 embedding 请求和限速参数。
+2. 继续评估是否需要为 `sync_embeddings.py` 增加分页游标、batch 失败单条重试和限速参数。
 3. 后续可接入 ModelAdapter 做可控自然语言洞察，但必须保留当前通用 Presenter fallback。
 
 ## 已知风险
