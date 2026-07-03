@@ -395,7 +395,7 @@
 
 ### 26. 前后端接口映射文档
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐前后端接口映射文档并通过验证`。
+- commit: `8339e03 补齐前后端接口映射文档并通过验证`
 - 内容：
   - 新增 `docs/api_frontend_mapping.md`，说明前端 API client、TypeScript 类型和后端接口的映射关系。
   - 记录 `analysisClient.ts`、`metricClient.ts` 当前调用的后端路径和页面入口。
@@ -405,6 +405,19 @@
 - 验证：
   - `npm run frontend:build`
   - `npm run backend:test`，73 个测试通过
+  - `npm run test:e2e`
+
+### 27. 接口错误码与权限边界文档
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口错误码权限文档并通过验证`。
+- 内容：
+  - 新增 `docs/api_error_auth.md`，说明当前 API 错误响应、状态码、前端错误处理现状、权限边界和上线前检查清单。
+  - README、`docs/api.md`、`docs/api_frontend_mapping.md` 增加该文档入口。
+  - 明确当前没有登录鉴权层，`/api/runs` 和 `/api/memories` 属于开发者调试接口，不进入普通用户主导航。
+  - 本模块只更新中文文档，不修改后端接口、前端错误展示、鉴权逻辑或数据库结构。
+- 验证：
+  - `npm run backend:test`，73 个测试通过
+  - `npm run frontend:build`
   - `npm run test:e2e`
 
 ## 当前架构边界
@@ -419,14 +432,14 @@
 
 ## 当前正在做
 
-前后端接口映射文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
+接口错误码与权限边界文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
 
 ## 下一步建议
 
 按用户最新目标继续推进 V1 文档类任务，优先补齐接口相关中文说明：
 
 1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
-2. 后续可补充错误码、权限边界和上线前鉴权说明。
+2. 后续如增加登录、角色或 API token，优先同步 `docs/api_error_auth.md`。
 3. 后续如果建设开发者调试页，再补 `/api/runs`、`/api/memories` 的前端映射说明。
 
 ## 已知风险
