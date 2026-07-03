@@ -10,6 +10,7 @@
   - `docs/`: 草案、计划、handoff
 - 当前普通用户产品方向：聊天式数据问答 + 指标口径 CRUD，不默认展示模型、数据库连接状态、SQL 记忆细节和评估报告。
 - `/api/analyze` 已接入 PostgreSQL 指标口径和表结构上下文召回，当前仍使用固定销售趋势 SQL 模板。
+- `/api/analyze` 已写入 `query_runs` 和 `tool_calls`，开发者可通过 `/api/runs` 查看运行记录。
 
 ## 最近完成模块
 
@@ -126,7 +127,7 @@
 
 ### 8. Schema + Metric Retriever 最小切片
 
-- commit: 本模块准备提交，提交信息为 `接入Schema和指标检索并通过测试`
+- commit: `9956194 接入Schema和指标检索并通过测试`
 - 内容：
   - 新增 `MetricContext`、`SchemaColumnContext`、`RetrievalContext`
   - 新增 `metric_retriever.py`，从 PostgreSQL `metric_definitions` 召回相关指标口径
@@ -136,6 +137,21 @@
   - `AnalyzeResponse.source` 中的指标口径、表、字段改由召回上下文生成
 - 验证：
   - `npm run backend:test`，18 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
+### 9. Query Run Logging 运行记录
+
+- commit: 本模块已提交并推送，提交信息为 `实现Query Run日志落库并通过测试`。
+- 内容：
+  - 新增 `QueryRunRecord`、`QueryRunDetail`、`ToolCallRecord`
+  - 新增 `RunRepository`、`RunService` 和 `QueryRunLogger`
+  - 新增开发者调试接口 `GET /api/runs`、`GET /api/runs/{run_id}`
+  - `/api/analyze` 每次运行写入 `query_runs`
+  - 关键工具调用写入 `tool_calls`：上下文召回、SQL Guard、SQL Executor、结果整理
+  - README 已更新当前能力、API 入口和开发约定
+- 验证：
+  - `npm run backend:test`，20 个测试通过
   - `npm run test:e2e`
   - `npm run frontend:build`
 
@@ -151,14 +167,14 @@
 
 ## 当前正在做
 
-Schema + Metric Retriever 最小切片已完成，准备提交并推送。
+Query Run Logging 运行记录模块已完成，已提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 增加 `query_runs` 和 `tool_calls` 写入，把 analyze 每次运行和工具调用落库。
-2. 开始 SQL Memory Retriever / Reuse Planner。
+1. 开始 SQL Memory Retriever / Reuse Planner。
+2. 增加 SQL Memory 写入条件和复用路径。
 3. 后续再接 embedding / pgvector，让 schema/metric retriever 从关键词召回升级为混合检索。
 
 ## 已知风险
@@ -166,6 +182,7 @@ Schema + Metric Retriever 最小切片已完成，准备提交并推送。
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
 - `/api/analyze` 已接入真实 Guard + Executor 和 schema/metric retriever，但仍是固定 SQL 模板，尚未接入 LLM SQL Generator 和 SQL Memory。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
+- `/api/runs` 是开发者调试接口，暂不放入普通用户主导航。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。
 

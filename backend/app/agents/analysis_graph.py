@@ -3,6 +3,7 @@ from time import perf_counter
 from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.tools.analysis_presenter import present_sales_trend_result
 from backend.app.tools.context_builder import build_retrieval_context
+from backend.app.tools.run_logger import QueryRunLogger
 from backend.app.tools.sql_execution_tools import execute_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 
@@ -32,11 +33,79 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
     guard = guard_sql(SALES_TREND_SQL, max_rows=30)
     execution = execute_guarded_sql(guard)
     latency_ms = int((perf_counter() - started) * 1000)
-    return present_sales_trend_result(
+    response = present_sales_trend_result(
         question=question,
         sql=guard.final_sql or SALES_TREND_SQL,
         execution=execution,
         guard_warnings=guard.warnings,
         latency_ms=latency_ms,
         retrieval_context=retrieval_context,
+    )
+    _log_analysis_run(
+        question=question,
+        final_sql=guard.final_sql or SALES_TREND_SQL,
+        guard_status="allowed" if guard.allowed else "blocked",
+        execution_status=execution.status,
+        row_count=execution.row_count,
+        latency_ms=latency_ms,
+        error_message=execution.error_message or "; ".join(guard.errors) or None,
+        metric_count=len(retrieval_context.metrics),
+        schema_column_count=len(retrieval_context.schema_columns),
+    )
+    return response
+
+
+def _log_analysis_run(
+    *,
+    question: str,
+    final_sql: str,
+    guard_status: str,
+    execution_status: str,
+    row_count: int,
+    latency_ms: int,
+    error_message: str | None,
+    metric_count: int,
+    schema_column_count: int,
+) -> None:
+    logger = QueryRunLogger()
+    run = logger.log_run(
+        user_question=question,
+        generated_sql=SALES_TREND_SQL,
+        final_sql=final_sql,
+        guard_status=guard_status,
+        execution_status=execution_status,
+        row_count=row_count,
+        latency_ms=latency_ms,
+        error_message=error_message,
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="context_builder.build_retrieval_context",
+        input_payload={"question": question},
+        output_payload={
+            "metric_count": metric_count,
+            "schema_column_count": schema_column_count,
+        },
+        status="success",
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="sql_validation_tools.guard_sql",
+        input_payload={"max_rows": 30},
+        output_payload={"guard_status": guard_status},
+        status="success" if guard_status == "allowed" else "blocked",
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="sql_execution_tools.execute_guarded_sql",
+        input_payload={"guard_status": guard_status},
+        output_payload={"execution_status": execution_status, "row_count": row_count},
+        status=execution_status,
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="analysis_presenter.present_sales_trend_result",
+        input_payload={"row_count": row_count},
+        output_payload={"response_status": "success" if not error_message else "error"},
+        status="success" if not error_message else "error",
     )
