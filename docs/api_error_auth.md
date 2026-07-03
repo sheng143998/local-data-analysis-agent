@@ -7,7 +7,7 @@
 - 当前 API 没有登录鉴权层，适合本地单机开发和受控演示环境。
 - 普通业务接口和开发者调试接口都挂在 `/api` 下。
 - `/api/runs` 和 `/api/memories` 会暴露运行记录、工具调用摘要、SQL 和 SQL Memory，应视为开发者调试接口。
-- 前端当前只根据 `response.ok` 抛出中文通用错误，没有解析后端 `detail`。
+- 前端已通过 `frontend/src/api/client.ts` 统一解析后端 `detail`，并把错误收敛为中文业务提示。
 - 后端错误响应主要使用 FastAPI 默认结构：
 
 ```json
@@ -21,9 +21,9 @@
 | 状态码 | 来源 | 当前含义 | 前端现状 |
 | --- | --- | --- | --- |
 | `200` | FastAPI 路由正常返回 | 请求成功。 | 前端读取 JSON 并渲染页面。 |
-| `404` | `MetricService`、`RunService`、`MemoryService` | 指标、运行记录或 SQL Memory 不存在。 | 前端指标 CRUD 当前会抛出通用错误，不展示具体 `detail`。 |
-| `422` | FastAPI / Pydantic | 请求体、路径参数或查询参数类型不合法；必填字段不满足校验。 | 前端当前会抛出通用错误。 |
-| `500` | 未捕获运行时异常 | 数据库连接、执行链路或其他未处理异常。 | 前端当前会抛出通用错误。 |
+| `404` | `MetricService`、`RunService`、`MemoryService` | 指标、运行记录或 SQL Memory 不存在。 | 前端会优先展示安全的中文 `detail`，例如“指标不存在”。 |
+| `422` | FastAPI / Pydantic | 请求体、路径参数或查询参数类型不合法；必填字段不满足校验。 | 前端会收敛为“请求参数不完整或格式不正确”类提示。 |
+| `500` | 未捕获运行时异常 | 数据库连接、执行链路或其他未处理异常。 | 前端展示业务兜底错误，不暴露内部异常。 |
 
 ## 资源不存在错误
 
@@ -108,52 +108,47 @@ FastAPI 和 Pydantic 会自动处理字段类型、UUID 格式和必填字段校
 说明：
 
 - `detail` 可能是字符串，也可能是数组。
-- 前端当前没有解析 `detail`，只显示通用错误。
-- 如果后续要对业务用户展示更友好的校验信息，应在前端 API client 层统一解析。
+- 前端统一 client 会从数组中提取第一条 `msg`，拼成中文参数错误提示。
+- 普通用户页面不展示完整 Pydantic 错误对象。
 
 ## 前端错误处理现状
 
 当前文件：
 
+- `frontend/src/api/client.ts`
 - `frontend/src/api/analysisClient.ts`
 - `frontend/src/api/metricClient.ts`
 
 当前策略：
 
 ```ts
-if (!response.ok) {
-  throw new Error('分析接口调用失败');
-}
+apiRequest<T>('/api/analyze', {
+  method: 'POST',
+  body: { question },
+  fallbackMessage: '分析接口调用失败'
+})
 ```
 
-指标接口也使用类似通用错误：
+业务 client 只提供动作级中文兜底错误：
 
 - `获取指标列表失败`
 - `创建指标失败`
 - `更新指标失败`
 - `删除指标失败`
 
-当前限制：
-
-- 没有读取后端 `detail`。
-- 没有区分 `404`、`422`、`500`。
-- 没有统一超时处理。
-- 没有统一鉴权失败处理，因为当前尚无鉴权层。
-
-建议后续抽象统一 client：
-
-```text
-frontend/src/api/client.ts
-```
-
-统一处理：
+统一 client 已处理：
 
 - base URL。
-- JSON 解析。
-- FastAPI `detail`。
-- 网络异常。
-- 鉴权 header。
+- JSON 请求体和响应解析。
+- FastAPI `detail` 字符串和数组。
 - `401`、`403`、`404`、`422`、`500` 的中文提示。
+- 网络异常的中文提示。
+
+当前仍未实现：
+
+- 鉴权 header。
+- 请求超时和取消。
+- 自动重试。
 
 ## 权限边界
 

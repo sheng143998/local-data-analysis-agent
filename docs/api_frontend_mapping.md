@@ -10,16 +10,17 @@
 
 | 文件 | 作用 | 后端接口 |
 | --- | --- | --- |
+| `frontend/src/api/client.ts` | 统一请求入口、base URL、JSON 解析和 FastAPI 错误解析 | 所有前端业务 client 复用 |
 | `frontend/src/api/analysisClient.ts` | 数据问答 | `POST /api/analyze` |
 | `frontend/src/api/metricClient.ts` | 指标口径 CRUD | `GET/POST/PUT/DELETE /api/metrics` |
 
-当前没有统一的 `frontend/src/api/client.ts`。两个 client 文件都各自读取：
+当前前端 API client 已统一读取：
 
 ```ts
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 ```
 
-后续如果要统一错误处理、鉴权 header、请求超时或 base URL，建议先抽出统一 client，再让 `analysisClient.ts` 和 `metricClient.ts` 复用。
+`analysisClient.ts` 和 `metricClient.ts` 不再直接调用 `fetch`，而是复用 `apiRequest<T>()`。后续如果要增加鉴权 header、请求超时、统一重试或开发者接口隔离，优先在 `frontend/src/api/client.ts` 修改。
 
 ## 页面到接口映射
 
@@ -169,9 +170,10 @@ export type MetricPayload = Omit<MetricDefinition, 'id' | 'created_at' | 'update
 
 错误处理现状：
 
-- 前端当前只根据 `response.ok` 抛出中文通用错误，例如“创建指标失败”。
-- 前端暂未读取后端 `detail` 字段。
-- 后续如果要展示更精确错误，需要在 client 层解析 FastAPI 错误响应。
+- 前端通过 `frontend/src/api/client.ts` 统一解析 FastAPI `detail`。
+- `detail` 为中文字符串时，普通业务错误会直接展示，例如“指标不存在”。
+- `detail` 为 Pydantic 数组时，会收敛为“请求参数不完整或格式不正确”类中文提示。
+- `500` 和网络异常不会把内部异常、数据库连接状态、模型状态或调试 payload 暴露给普通用户。
 
 ## 开发者调试接口前端状态
 
@@ -199,6 +201,6 @@ export type MetricPayload = Omit<MetricDefinition, 'id' | 'created_at' | 'update
 
 ## 当前风险
 
-- 前端 API client 尚未统一封装，后续鉴权、超时、错误解析可能出现重复实现。
+- 前端 API client 已统一封装，但尚未实现请求超时、取消请求和鉴权 header。
 - 前端 `AnalysisResponse` 没有声明后端返回的 `trace` 和 `steps`，如果页面要展示执行步骤，需要补类型。
 - `/api/analyze` 的 `rows` 类型还不是通用表格结构，后续扩展任意 SQL 结果时要更新前后端类型和文档。

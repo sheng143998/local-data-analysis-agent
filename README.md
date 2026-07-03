@@ -23,6 +23,7 @@
 - 复杂指标切片：可识别“哪个商品品类退款率最高？”和“每个支付方式的成功率是多少？”，执行真实退款率与支付成功率查询。
 - 毛利率切片：可识别“最近 30 天毛利率最高的商品品类是什么？”，基于商品明细销售额和商品成本表计算品类毛利率。
 - 用户维度切片：可识别“最近 90 天复购率是多少？”和“每个城市的客单价是多少？”，执行真实用户复购率与城市客单价查询。
+- 前端统一 API Client：数据问答和指标 CRUD 已统一通过 `frontend/src/api/client.ts` 调用后端，支持 FastAPI `detail` 解析和中文错误提示。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 - 标准问题评估：`npm run eval:standard` 可运行 20 个 V1 标准问题，并生成 `eval/reports/latest_eval_report.json`。
@@ -152,10 +153,9 @@ npm run eval:standard
 最近一次模块验证通过：
 
 ```bash
-npm run backend:test
-npm run eval:standard
-npm run test:e2e
 npm run frontend:build
+npm run backend:test
+npm run test:e2e
 ```
 
 ## 开发约定

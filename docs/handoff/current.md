@@ -25,6 +25,7 @@
 - 已新增标准问题评估集基础设施，`npm run eval:standard` 可运行 20 个 V1 标准问题并生成 `eval/reports/latest_eval_report.json`。
 - 标准问题评估已增强断言指标，报告区分 `execution_success_rate` 和 `strict_success_rate`，并输出表/关键词断言失败案例。
 - SQL Memory `fast_path` 已增加关键表约束，用户、流量、优惠券等问题缺少关键表时不再直接复用历史 SQL。
+- 前端已新增统一 API Client，数据问答和指标 CRUD 都通过 `frontend/src/api/client.ts` 调用后端，并统一解析 FastAPI `detail` 为中文业务错误。
 
 ## 最近完成模块
 
@@ -448,7 +449,7 @@
 
 ### 30. 接口文档索引与阅读顺序
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口文档索引并通过验证`。
+- commit: `b479fa3 补齐接口文档索引并通过验证`
 - 内容：
   - 新增 `docs/api_index.md`，说明接口文档阅读顺序、角色路径、文档职责表和维护规则。
   - README 和所有接口主题文档增加索引入口。
@@ -458,6 +459,19 @@
   - `npm run backend:test`，73 个测试通过
   - `npm run frontend:build`
   - `npm run test:e2e`
+
+### 31. 统一前端 API Client 与错误解析
+
+- commit: 本模块随本次提交推送完成，提交信息为 `统一前端APIClient并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- 内容：
+  - 新增 `frontend/src/api/client.ts`，统一 base URL、JSON 请求体、响应解析和 FastAPI `detail` 错误解析。
+  - `analysisClient.ts` 和 `metricClient.ts` 改为复用 `apiRequest<T>()`，不再分散直接调用 `fetch`。
+  - 错误提示保持中文业务表达，`500` 和网络异常不会暴露数据库、模型、SQL Memory 或调试 payload。
+  - 更新 `docs/api_frontend_mapping.md`、`docs/api_error_auth.md`、README、计划文档和模块完成说明。
+- 验证：
+  - `npm run frontend:build` 已通过
+  - `npm run backend:test`，73 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run test:e2e` 已通过
 
 ## 当前架构边界
 
@@ -471,15 +485,15 @@
 
 ## 当前正在做
 
-接口文档索引与阅读顺序已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
+“统一前端 API Client 与错误解析”模块已完成并通过验证，随本次提交推送完成。
 
 ## 下一步建议
 
-按用户最新目标继续推进 V1 文档类任务，优先补齐接口相关中文说明：
+按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
-2. 后续如增加登录、角色或 API token，优先同步 `docs/api_error_auth.md` 和 `docs/api_change_process.md`。
-3. 如果新增接口主题文档，优先同步 `docs/api_index.md`。
+1. 继续补齐前端 `AnalysisResponse` 与后端 `trace`、`steps` 的类型契约，但普通用户页面不展示内部调试细节。
+2. 推进 `/api/analyze.rows` 通用表格结构，减少前端对固定销售趋势字段的依赖。
+3. 推进 schema/metric/memory 的 embedding 或混合检索能力，让换库后依赖自动检索而不是固定模板。
 
 ## 已知风险
 
