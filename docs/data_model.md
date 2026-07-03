@@ -30,7 +30,7 @@ Olist 真实数据和合成增强表包括：
 
 ## Agent 元数据表
 
-- `schema_metadata`：表字段说明，用于 Schema Retriever；`embedding` 字段用于 pgvector 语义候选召回。
+- `schema_metadata`：表字段说明，用于 Schema Retriever；新增或空说明字段会由 schema 同步按字段名生成基础中文业务含义；`embedding` 字段用于 pgvector 语义候选召回。
 - `metric_definitions`：指标口径，支持 API CRUD；`embedding` 字段用于 pgvector 语义候选召回。
 - `sql_memories`：历史成功问题、SQL、参数、表、指标和复用统计；`question_embedding` / `sql_embedding` 用于 SQL Memory 混合检索。
 - `query_runs`：每次分析运行记录。
@@ -64,6 +64,8 @@ py -3 backend/scripts/init_db.py
 ```bash
 py -3 backend/scripts/sync_schema_metadata.py
 ```
+
+schema 同步会保留已有人工 `description` / `business_meaning`，只在字段说明为空时写入自动推断的基础含义。
 
 同步 schema/metric/SQL Memory embedding：
 

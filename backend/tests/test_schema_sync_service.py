@@ -2,6 +2,8 @@ from backend.app.services.schema_sync_service import (
     DEFAULT_EXCLUDED_TABLES,
     SchemaColumnSnapshot,
     SchemaSyncService,
+    infer_schema_business_meaning,
+    infer_schema_description,
     _normalize_filter,
 )
 
@@ -64,6 +66,33 @@ def test_upsert_schema_metadata_preserves_existing_descriptions() -> None:
         "orders",
         "created_at",
         "timestamp with time zone",
-        "orders.created_at",
-        "业务表字段：orders.created_at",
+        "orders.created_at，时间字段，类型为 timestamp with time zone",
+        "orders的创建时间，可用于时间趋势、近 N 天筛选和分组。",
+    )
+
+
+def test_infer_schema_description_labels_common_field_types() -> None:
+    assert "金额字段" in infer_schema_description(
+        SchemaColumnSnapshot("orders", "total_amount", "numeric")
+    )
+    assert "关联标识字段" in infer_schema_description(
+        SchemaColumnSnapshot("orders", "user_id", "text")
+    )
+    assert "时间字段" in infer_schema_description(
+        SchemaColumnSnapshot("orders", "paid_at", "timestamp with time zone")
+    )
+
+
+def test_infer_schema_business_meaning_for_common_analysis_fields() -> None:
+    assert "金额类指标字段" in infer_schema_business_meaning(
+        SchemaColumnSnapshot("orders", "total_amount", "numeric")
+    )
+    assert "关联user的标识字段" in infer_schema_business_meaning(
+        SchemaColumnSnapshot("orders", "user_id", "text")
+    )
+    assert "地域维度字段" in infer_schema_business_meaning(
+        SchemaColumnSnapshot("users", "city", "text")
+    )
+    assert "分类维度字段" in infer_schema_business_meaning(
+        SchemaColumnSnapshot("traffic_events", "source", "text")
     )

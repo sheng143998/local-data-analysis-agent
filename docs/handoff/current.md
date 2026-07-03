@@ -43,6 +43,7 @@
 - 已为标准评估报告增加断言失败聚合诊断，帮助定位缺失表、失败类别和路径。
 - 已新增 Schema 表关系上下文，从已召回字段推断 join hints 并提供给模型 SQL Generator，不新增固定 SQL 模板。
 - 已为 SQL Validator 接入 `schema_metadata` 字段存在性校验，提前拦截模型编造字段。
+- 已为 Schema Metadata 同步增加字段名启发式中文业务含义，提升换库后 schema 检索和 embedding 文档质量。
 
 ## 最近完成模块
 
@@ -770,6 +771,22 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 49. Schema 字段业务含义提示
+
+- commit: `增强Schema字段业务含义提示并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `SchemaSyncService` 新增字段名启发式说明生成。
+  - 新增 `infer_schema_description()` 和 `infer_schema_business_meaning()`。
+  - 支持常见字段类型：主键、外键、时间、状态、金额、数量、比例、地域、分类、名称、评分和文本说明。
+  - `schema_metadata` upsert 继续保留已有人工说明，只补齐空说明字段。
+  - 更新 README、数据模型文档、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_schema_sync_service.py backend/tests/test_embedding_sync_service.py`，33 passed
+  - `npm run backend:test`，141 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -782,7 +799,7 @@
 
 ## 当前正在做
 
-“SQL Validator 字段存在性校验” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强 Guard 执行前安全校验，避免后续模型 SQL 编造字段直接进入 Executor。
+“Schema 字段业务含义提示” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强换库或新增字段后的 schema metadata 默认说明，让后续检索、embedding 和模型 SQL prompt 有更好的字段语义基础。
 
 ## 下一步建议
 

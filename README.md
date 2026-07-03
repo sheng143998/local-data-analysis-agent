@@ -9,7 +9,7 @@
 - 聊天式数据问答：`POST /api/analyze` 已接入真实 PostgreSQL 查询链路。
 - 指标口径 CRUD：`GET/POST/PUT/DELETE /api/metrics` 已持久化到 `metric_definitions`。
 - Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文，已接入文本分数 + pgvector 语义候选的混合检索；向量不可用时自动退回文本检索。
-- Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新。
+- Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新；新增字段会按字段名生成基础中文说明，已有人工说明不会被覆盖。
 - 数据上下文刷新命令：`npm run context:refresh` 会先同步 `schema_metadata`，再同步 schema、metric、SQL Memory embedding，用于换库、换表后的检索资产刷新。
 - 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。
 - Model-backed SQL Generator 基础工具：已能基于召回到的 schema/metric 构造受控 prompt、调用 ModelAdapter、解析模型 JSON SQL；当前尚未替换 `/api/analyze` 主链路。
@@ -128,7 +128,7 @@ py -3 backend/scripts/sync_embeddings.py
 npm run context:refresh
 ```
 
-`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。可用 `--limit 20` 限制每个目标本次最多同步的记录数，适合先小批量验证；可用 `--batch-size 16` 控制每次 embedding 请求包含的记录数；可用 `--sleep-ms 200` 在连续请求之间等待，降低真实 provider 限流风险。批量请求失败时会默认退回单条重试，尽量只把真正失败的记录写入错误摘要。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标，或用 `--embedding-limit 20` / `--embedding-batch-size 16` / `--embedding-sleep-ms 200` 控制本次 embedding 同步规模、请求批次和请求间隔。
+`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，为新增或空说明字段生成基础中文业务含义，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。可用 `--limit 20` 限制每个目标本次最多同步的记录数，适合先小批量验证；可用 `--batch-size 16` 控制每次 embedding 请求包含的记录数；可用 `--sleep-ms 200` 在连续请求之间等待，降低真实 provider 限流风险。批量请求失败时会默认退回单条重试，尽量只把真正失败的记录写入错误摘要。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标，或用 `--embedding-limit 20` / `--embedding-batch-size 16` / `--embedding-sleep-ms 200` 控制本次 embedding 同步规模、请求批次和请求间隔。
 
 ## API 入口
 
