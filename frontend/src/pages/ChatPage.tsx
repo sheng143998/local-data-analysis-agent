@@ -1,0 +1,208 @@
+import { useMemo, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Bot, Copy, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
+import { analyzeQuestion } from '../api/analysisClient';
+import type { AnalysisResponse } from '../types/analysis';
+
+type ChatItem = {
+  id: string;
+  role: 'user' | 'assistant';
+  title?: string;
+  text: string;
+  sql?: string;
+  rows?: AnalysisResponse['rows'];
+  summary?: string;
+  streaming?: boolean;
+};
+
+type Session = {
+  id: string;
+  title: string;
+  lastAt: string;
+  question: string;
+};
+
+const sessions: Session[] = [
+  { id: 's1', title: '近 30 天销售趋势', lastAt: '刚刚', question: '最近 30 天销售额按天变化如何？' },
+  { id: 's2', title: '退款率分析', lastAt: '12 分钟前', question: '哪个商品品类退款率最高？' },
+  { id: 's3', title: '新增用户趋势', lastAt: '昨天', question: '按月查看新增用户趋势' },
+];
+
+export function ChatPage() {
+  const [activeSession, setActiveSession] = useState(sessions[0].id);
+  const [draft, setDraft] = useState('最近 30 天销售额按天变化如何？');
+  const [messages, setMessages] = useState<ChatItem[]>([
+    {
+      id: 'a1',
+      role: 'assistant',
+      title: '本次分析',
+      text: '你好，我可以帮你直接问本地业务数据。你可以像聊天一样提问，比如“最近 30 天销售额按天变化如何？”',
+      streaming: false,
+    },
+  ]);
+
+  const mutation = useMutation({
+    mutationFn: analyzeQuestion,
+    onSuccess: (data) => {
+      setMessages((current) => [
+        ...current.filter((item) => !item.streaming),
+        {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          title: '分析结果',
+          text: data.summary,
+          sql: data.sql,
+          rows: data.rows.slice(0, 5),
+          summary: data.summary,
+        },
+      ]);
+    },
+  });
+
+  const activeQuestion = useMemo(
+    () => sessions.find((session) => session.id === activeSession)?.question ?? draft,
+    [activeSession, draft],
+  );
+
+  const run = () => {
+    const question = draft.trim() || activeQuestion;
+    setMessages((current) => [
+      ...current,
+      { id: `u-${Date.now()}`, role: 'user', text: question },
+      { id: `a-${Date.now()}`, role: 'assistant', text: '正在分析中...', streaming: true },
+    ]);
+    mutation.mutate(question);
+  };
+
+  return (
+    <>
+      <PageHeader title="数据问答" description="像聊天一样提问，系统会逐步给出自然语言结论、SQL 和简洁结果表。" />
+      <div className="grid gap-5 xl:grid-cols-[260px_1fr]">
+        <aside className="panel p-4">
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <MessageSquareText className="h-4 w-4 text-cyan-600" /> 会话历史
+          </div>
+          <div className="space-y-2">
+            {sessions.map((session) => (
+              <button
+                key={session.id}
+                onClick={() => setActiveSession(session.id)}
+                className={[
+                  'w-full rounded-md border px-3 py-3 text-left transition',
+                  activeSession === session.id ? 'border-cyan-300 bg-cyan-50' : 'border-slate-200 bg-white hover:bg-slate-50',
+                ].join(' ')}
+              >
+                <p className="text-sm font-semibold text-slate-900">{session.title}</p>
+                <p className="mt-1 text-xs text-slate-500">{session.lastAt}</p>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="panel flex min-h-[780px] flex-col overflow-hidden">
+          <div className="border-b border-slate-200 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">当前会话</p>
+                <p className="text-xs text-slate-500">{activeQuestion}</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="status-dot" />
+                本地 PostgreSQL / 只读执行
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-5 overflow-auto p-5">
+            {messages.map((message) => (
+              <article key={message.id} className="space-y-3">
+                {message.role === 'user' ? (
+                  <div className="ml-auto max-w-3xl rounded-md bg-slate-950 px-4 py-3 text-white" style={{ borderRadius: 8 }}>
+                    {message.text}
+                  </div>
+                ) : (
+                  <div className="max-w-5xl space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                      <Bot className="h-4 w-4 text-cyan-600" /> {message.title ?? '助手'}
+                      {message.streaming ? <Loader2 className="h-4 w-4 animate-spin text-cyan-600" /> : null}
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-700" style={{ borderRadius: 8 }}>
+                      {message.text}
+                    </div>
+                    {message.summary ? (
+                      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+                        <div className="sub-panel p-4">
+                          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <Sparkles className="h-4 w-4 text-emerald-600" /> 自然语言分析
+                          </div>
+                          <p className="text-sm leading-7 text-slate-600">{message.summary}</p>
+                        </div>
+                        <div className="sub-panel p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                              <Copy className="h-4 w-4 text-cyan-600" /> SQL
+                            </div>
+                            <button className="text-xs font-semibold text-cyan-700">复制</button>
+                          </div>
+                          <pre className="max-h-48 overflow-auto rounded-md bg-slate-950 p-3 font-mono text-xs text-cyan-100">
+                            <code>{message.sql}</code>
+                          </pre>
+                        </div>
+                      </div>
+                    ) : null}
+                    {message.rows ? (
+                      <div className="sub-panel overflow-hidden">
+                        <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
+                          <Table2 className="h-4 w-4 text-cyan-600" /> 简单结果表
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[640px] text-sm">
+                            <thead className="bg-slate-50 text-left text-xs text-slate-500">
+                              <tr>
+                                <th className="px-4 py-3">日期</th>
+                                <th className="px-4 py-3 text-right">日销售额</th>
+                                <th className="px-4 py-3 text-right">订单数</th>
+                                <th className="px-4 py-3 text-right">平均客单价</th>
+                                <th className="px-4 py-3 text-right">退款率</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {message.rows.map((row) => (
+                                <tr key={row.date} className="border-t border-slate-100">
+                                  <td className="px-4 py-3 text-slate-700">{row.date}</td>
+                                  <td className="px-4 py-3 text-right font-mono">¥{row.amount.toLocaleString()}</td>
+                                  <td className="px-4 py-3 text-right font-mono">{row.orders.toLocaleString()}</td>
+                                  <td className="px-4 py-3 text-right font-mono">¥{row.avg.toLocaleString()}</td>
+                                  <td className="px-4 py-3 text-right font-mono">{row.refundRate}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+
+          <div className="border-t border-slate-200 p-4">
+            <div className="flex items-end gap-3">
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="control min-h-20 flex-1 resize-none text-base"
+                placeholder="输入你的问题，比如：最近 30 天销售额按天变化如何？"
+              />
+              <button onClick={run} disabled={mutation.isPending} className="primary-btn h-12 px-5">
+                {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} 发送
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
