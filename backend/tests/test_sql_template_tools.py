@@ -48,3 +48,20 @@ def test_render_sales_trend_sql_supports_monthly_bucket_limit() -> None:
     assert "GROUP BY DATE_TRUNC('month', o.created_at)::date" in sql
     assert "COUNT(DISTINCT o.id) AS order_count" in sql
     assert "LIMIT 3" in sql
+
+
+def test_parse_sales_trend_parameters_supports_top_product_sales() -> None:
+    params = parse_sales_trend_parameters("销售额最高的前 10 个商品是什么？")
+
+    assert params.metric == "top_product_sales"
+    assert params.limit == 10
+
+
+def test_render_sales_trend_sql_supports_top_category_sales() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("哪个商品品类销售额最高？"))
+
+    assert "category_label" in sql
+    assert "order_items oi" in sql
+    assert "products p" in sql
+    assert "ORDER BY daily_sales DESC" in sql
+    assert "LIMIT 10" in sql

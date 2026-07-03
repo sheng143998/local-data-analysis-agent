@@ -28,14 +28,20 @@ def present_sales_trend_result(
 
     period_label = _period_label(sql)
     main_metric_label = _main_metric_label(question)
+    leading_label = analysis_rows[0]["date"] if analysis_rows else "无"
 
     return AnalyzeResponse(
         question=question,
         path=_path_type(reuse_plan),
-        summary=(
-            f"已基于真实 PostgreSQL 数据查询最近 {len(analysis_rows)} 个{period_label}的{main_metric_label}。"
-            f"区间内总销售额约为 ¥{total_sales:,.0f}，订单数 {total_orders:,}，"
-            f"平均客单价约 ¥{avg_order_value:,}，平均退款率 {avg_refund_rate:.2f}%。"
+        summary=_summary_text(
+            row_count=len(analysis_rows),
+            period_label=period_label,
+            main_metric_label=main_metric_label,
+            total_sales=total_sales,
+            total_orders=total_orders,
+            avg_order_value=avg_order_value,
+            avg_refund_rate=avg_refund_rate,
+            leading_label=leading_label,
         ),
         sql=sql,
         metrics=[
@@ -79,12 +85,20 @@ def _to_analysis_row(row: dict) -> dict:
     amount = round(float(row.get("daily_sales") or 0))
     orders = int(row.get("order_count") or 0)
     return {
-        "date": str(row.get("order_date")),
+        "date": _row_label(row),
         "amount": amount,
         "orders": orders,
         "avg": round(float(row.get("avg_order_value") or 0)),
         "refundRate": f"{float(row.get('refund_rate') or 0):.2f}%",
     }
+
+
+def _row_label(row: dict) -> str:
+    for key in ["product_label", "category_label", "product_category", "order_date"]:
+        value = row.get(key)
+        if value:
+            return str(value)
+    return "未知"
 
 
 def _average_refund_rate(rows: list[dict]) -> float:
@@ -173,12 +187,44 @@ def _template_step_name(reuse_plan: SqlReusePlan | None) -> str:
 
 
 def _period_label(sql: str) -> str:
+    if "PRODUCT_LABEL" in sql.upper():
+        return "商品"
+    if "CATEGORY_LABEL" in sql.upper():
+        return "品类"
     if "DATE_TRUNC('MONTH'" in sql.upper():
         return "月份"
     return "有交易日期"
 
 
 def _main_metric_label(question: str) -> str:
+    if any(keyword in question for keyword in ["品类", "类目", "分类"]):
+        return "销售额排行"
+    if any(keyword in question for keyword in ["商品", "产品", "sku", "SKU"]):
+        return "销售额排行"
     if any(keyword in question for keyword in ["订单数", "订单量", "下单数", "下单量"]):
         return "订单数趋势"
     return "销售趋势"
+
+
+def _summary_text(
+    *,
+    row_count: int,
+    period_label: str,
+    main_metric_label: str,
+    total_sales: int,
+    total_orders: int,
+    avg_order_value: int,
+    avg_refund_rate: float,
+    leading_label: str,
+) -> str:
+    if period_label in {"商品", "品类"}:
+        return (
+            f"已基于真实 PostgreSQL 数据查询销售额最高的 {row_count} 个{period_label}。"
+            f"当前第一名是 {leading_label}，入选范围合计销售额约为 ¥{total_sales:,.0f}，"
+            f"关联订单数 {total_orders:,}，平均客单价约 ¥{avg_order_value:,}。"
+        )
+    return (
+        f"已基于真实 PostgreSQL 数据查询最近 {row_count} 个{period_label}的{main_metric_label}。"
+        f"区间内总销售额约为 ¥{total_sales:,.0f}，订单数 {total_orders:,}，"
+        f"平均客单价约 ¥{avg_order_value:,}，平均退款率 {avg_refund_rate:.2f}%。"
+    )

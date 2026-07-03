@@ -160,8 +160,8 @@ export function ChatPage() {
                           <table className="w-full min-w-[640px] text-sm">
                             <thead className="bg-slate-50 text-left text-xs text-slate-500">
                               <tr>
-                                <th className="px-4 py-3">日期</th>
-                                <th className="px-4 py-3 text-right">日销售额</th>
+                                <th className="px-4 py-3">维度</th>
+                                <th className="px-4 py-3 text-right">销售额</th>
                                 <th className="px-4 py-3 text-right">订单数</th>
                                 <th className="px-4 py-3 text-right">平均客单价</th>
                                 <th className="px-4 py-3 text-right">退款率</th>

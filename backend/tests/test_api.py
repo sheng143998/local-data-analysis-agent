@@ -39,3 +39,25 @@ def test_analyze_supports_monthly_order_count_slice() -> None:
     assert len(body["rows"]) <= 3
     assert "订单数" in body["summary"]
     assert "月份" in body["summary"]
+
+
+def test_analyze_supports_top_product_sales_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "销售额最高的前 10 个商品是什么？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "ORDER BY daily_sales DESC" in body["sql"]
+    assert "order_items" in body["sql"]
+    assert len(body["rows"]) == 10
+    assert "商品" in body["summary"]
+
+
+def test_analyze_supports_top_category_sales_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "哪个商品品类销售额最高？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "category_label" in body["sql"]
+    assert "products" in body["sql"]
+    assert len(body["rows"]) <= 10
+    assert "品类" in body["summary"]

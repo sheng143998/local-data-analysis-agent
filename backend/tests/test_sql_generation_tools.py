@@ -42,6 +42,18 @@ def test_generate_or_rewrite_sales_sql_renders_cold_path_template() -> None:
     assert "LIMIT 7" in result.sql
 
 
+def test_generate_or_rewrite_sales_sql_renders_top_product_sales() -> None:
+    plan = plan_sql_reuse([])
+
+    result = generate_or_rewrite_sales_sql("销售额最高的前 10 个商品是什么？", plan)
+
+    assert result.parameters is not None
+    assert result.parameters.metric == "top_product_sales"
+    assert result.parameters.limit == 10
+    assert "product_label" in result.sql
+    assert "ORDER BY daily_sales DESC" in result.sql
+
+
 def _memory() -> SqlMemoryRecord:
     return SqlMemoryRecord(
         id=uuid4(),
