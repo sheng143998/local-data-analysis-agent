@@ -50,6 +50,9 @@ def _related_tables(question: str, metrics: list[MetricContext]) -> list[str]:
 
     if any(token in question for token in ["退款", "退款率", "售后"]) and "refunds" not in tables:
         tables.append("refunds")
+        for table in ["order_items", "products", "payments"]:
+            if table not in tables:
+                tables.append(table)
     if any(token in question for token in ["支付", "已支付", "销售额"]) and "payments" not in tables:
         tables.append("payments")
     if any(token in question for token in ["商品", "产品", "SKU", "sku", "品类", "类目", "分类"]):

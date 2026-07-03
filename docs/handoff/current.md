@@ -15,6 +15,7 @@
 - `/api/analyze` 已支持销售趋势 SQL 参数化模板，可解析“最近 N 天”并写入 `sql_memories.parameters`。
 - `/api/analyze` 已接入 SQL Rewriter / Generator 最小切片，可识别“最近 90 天每月订单数是多少？”并生成月度订单数 SQL。
 - `/api/analyze` 已接入 Top N 商品/品类销售额查询切片，可识别“销售额最高的前 10 个商品是什么？”和“哪个商品品类销售额最高？”。
+- `/api/analyze` 已接入退款率 / 支付成功率查询切片，可识别“哪个商品品类退款率最高？”和“每个支付方式的成功率是多少？”。
 
 ## 最近完成模块
 
@@ -217,6 +218,20 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 14. 退款率 / 支付成功率查询切片
+
+- commit: 本模块待提交并推送，建议提交信息为 `实现退款率支付成功率查询并通过测试`。
+- 内容：
+  - 扩展 `SalesTrendParameters.metric`，支持 `category_refund_rate`、`payment_success_rate`、`payment_failure_rate`
+  - 支持“哪个商品品类退款率最高？”生成品类退款率 SQL
+  - 支持“每个支付方式的成功率是多少？”生成支付方式成功率 SQL
+  - 退款类问题自动召回 `refunds`、`order_items`、`products`、`payments` 相关 schema
+  - Presenter 兼容 `refund_rate`、`success_rate`、`failure_rate` 结果列
+- 验证：
+  - `npm run backend:test`，43 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -229,14 +244,14 @@
 
 ## 当前正在做
 
-Top N 商品/品类销售额查询切片已完成，已提交并推送。
+退款率 / 支付成功率查询切片已完成验证，正在提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 扩展 SQL Rewriter / Generator，覆盖退款率、支付成功率、毛利率等复杂指标标准问题。
-2. 扩展 SQL Memory 参数化模板，支持城市、支付方式、流量来源等过滤和维度。
+1. 扩展 SQL Rewriter / Generator，覆盖毛利率、用户复购率、城市客单价等标准问题。
+2. 扩展 SQL Memory 参数化模板，支持城市、流量来源、优惠券等过滤和维度。
 3. 后续再接 embedding / pgvector，让 schema/metric 和 SQL Memory 从关键词召回升级为混合检索。
 
 ## 已知风险
@@ -245,7 +260,8 @@ Top N 商品/品类销售额查询切片已完成，已提交并推送。
 - `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator，但仍未接入真实 LLM SQL Generator / Rewriter。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
-- 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 商品/品类销售额当前暂不带时间窗口。
+- 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。
+- 支付成功率当前基于 `payments.status = 'paid'`，真实失败状态样本仍需后续数据增强。
 - `/api/runs` 是开发者调试接口，暂不放入普通用户主导航。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。

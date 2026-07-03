@@ -54,6 +54,20 @@ def test_generate_or_rewrite_sales_sql_renders_top_product_sales() -> None:
     assert "ORDER BY daily_sales DESC" in result.sql
 
 
+def test_generate_or_rewrite_sales_sql_renders_refund_and_payment_rates() -> None:
+    plan = plan_sql_reuse([])
+
+    refund = generate_or_rewrite_sales_sql("哪个商品品类退款率最高？", plan)
+    payment = generate_or_rewrite_sales_sql("每个支付方式的成功率是多少？", plan)
+
+    assert refund.parameters is not None
+    assert refund.parameters.metric == "category_refund_rate"
+    assert "refund_rate" in refund.sql
+    assert payment.parameters is not None
+    assert payment.parameters.metric == "payment_success_rate"
+    assert "success_rate" in payment.sql
+
+
 def _memory() -> SqlMemoryRecord:
     return SqlMemoryRecord(
         id=uuid4(),

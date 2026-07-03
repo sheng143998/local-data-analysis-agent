@@ -61,3 +61,25 @@ def test_analyze_supports_top_category_sales_slice() -> None:
     assert "products" in body["sql"]
     assert len(body["rows"]) <= 10
     assert "品类" in body["summary"]
+
+
+def test_analyze_supports_category_refund_rate_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "哪个商品品类退款率最高？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "refund_rate" in body["sql"]
+    assert "ORDER BY refund_rate DESC" in body["sql"]
+    assert len(body["rows"]) <= 10
+    assert "退款率" in body["summary"]
+
+
+def test_analyze_supports_payment_success_rate_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "每个支付方式的成功率是多少？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "payment_method_label" in body["sql"]
+    assert "success_rate" in body["sql"]
+    assert len(body["rows"]) <= 20
+    assert "支付成功率" in body["summary"]

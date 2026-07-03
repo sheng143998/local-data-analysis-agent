@@ -6,7 +6,15 @@ from typing import Literal
 DEFAULT_SALES_TREND_DAYS = 30
 MAX_SALES_TREND_DAYS = 365
 Granularity = Literal["day", "month"]
-MetricIntent = Literal["sales_amount", "order_count", "top_product_sales", "top_category_sales"]
+MetricIntent = Literal[
+    "sales_amount",
+    "order_count",
+    "top_product_sales",
+    "top_category_sales",
+    "category_refund_rate",
+    "payment_success_rate",
+    "payment_failure_rate",
+]
 
 
 @dataclass(frozen=True)
@@ -42,6 +50,12 @@ def render_sales_trend_sql(parameters: SalesTrendParameters) -> str:
         return _render_top_product_sales_sql(parameters)
     if parameters.metric == "top_category_sales":
         return _render_top_category_sales_sql(parameters)
+    if parameters.metric == "category_refund_rate":
+        return _render_category_refund_rate_sql(parameters)
+    if parameters.metric == "payment_success_rate":
+        return _render_payment_success_rate_sql(success=True)
+    if parameters.metric == "payment_failure_rate":
+        return _render_payment_success_rate_sql(success=False)
 
     days = max(1, min(parameters.days, MAX_SALES_TREND_DAYS))
     time_bucket = _time_bucket_expression(parameters.granularity)
@@ -85,6 +99,12 @@ def _parse_granularity(question: str) -> Granularity:
 
 
 def _parse_metric(question: str) -> MetricIntent:
+    if any(keyword in question for keyword in ["支付失败率", "失败率"]):
+        return "payment_failure_rate"
+    if any(keyword in question for keyword in ["支付成功率", "成功率", "支付方式"]):
+        return "payment_success_rate"
+    if any(keyword in question for keyword in ["退款率", "退款", "售后"]):
+        return "category_refund_rate"
     if any(keyword in question for keyword in ["品类", "类目", "分类"]):
         return "top_category_sales"
     if any(keyword in question for keyword in ["商品", "产品", "sku", "SKU"]):
@@ -157,4 +177,44 @@ WHERE pay.status = 'paid'
 GROUP BY COALESCE(p.category, '未分类')
 ORDER BY daily_sales DESC
 LIMIT {limit}
+"""
+
+
+def _render_category_refund_rate_sql(parameters: SalesTrendParameters) -> str:
+    limit = max(1, min(parameters.limit, 50))
+    return f"""
+SELECT
+  COALESCE(p.category, '未分类') AS category_label,
+  SUM(oi.price) AS daily_sales,
+  COUNT(DISTINCT o.id) AS order_count,
+  ROUND(SUM(oi.price) / NULLIF(COUNT(DISTINCT o.id), 0), 2) AS avg_order_value,
+  ROUND(COUNT(DISTINCT r.id)::numeric / NULLIF(COUNT(DISTINCT o.id), 0) * 100, 2) AS refund_rate
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+LEFT JOIN products p ON p.id = oi.product_id
+LEFT JOIN payments pay ON pay.order_id = o.id
+LEFT JOIN refunds r ON r.order_id = o.id
+WHERE pay.status = 'paid'
+GROUP BY COALESCE(p.category, '未分类')
+HAVING COUNT(DISTINCT o.id) > 0
+ORDER BY refund_rate DESC, daily_sales DESC
+LIMIT {limit}
+"""
+
+
+def _render_payment_success_rate_sql(*, success: bool) -> str:
+    rate_alias = "success_rate" if success else "failure_rate"
+    rate_condition = "pay.status = 'paid'" if success else "pay.status <> 'paid'"
+    return f"""
+SELECT
+  COALESCE(pay.payment_type, '未知支付方式') AS payment_method_label,
+  SUM(pay.amount) AS daily_sales,
+  COUNT(DISTINCT pay.order_id) AS order_count,
+  ROUND(SUM(pay.amount) / NULLIF(COUNT(DISTINCT pay.order_id), 0), 2) AS avg_order_value,
+  ROUND(COUNT(DISTINCT CASE WHEN {rate_condition} THEN pay.order_id END)::numeric / NULLIF(COUNT(DISTINCT pay.order_id), 0) * 100, 2) AS {rate_alias}
+FROM payments pay
+GROUP BY COALESCE(pay.payment_type, '未知支付方式')
+HAVING COUNT(DISTINCT pay.order_id) > 0
+ORDER BY {rate_alias} DESC, order_count DESC
+LIMIT 20
 """

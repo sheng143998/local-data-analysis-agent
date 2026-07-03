@@ -84,17 +84,22 @@ def present_sales_trend_result(
 def _to_analysis_row(row: dict) -> dict:
     amount = round(float(row.get("daily_sales") or 0))
     orders = int(row.get("order_count") or 0)
+    rate_value = row.get("refund_rate")
+    if rate_value is None:
+        rate_value = row.get("success_rate")
+    if rate_value is None:
+        rate_value = row.get("failure_rate")
     return {
         "date": _row_label(row),
         "amount": amount,
         "orders": orders,
         "avg": round(float(row.get("avg_order_value") or 0)),
-        "refundRate": f"{float(row.get('refund_rate') or 0):.2f}%",
+        "refundRate": f"{float(rate_value or 0):.2f}%",
     }
 
 
 def _row_label(row: dict) -> str:
-    for key in ["product_label", "category_label", "product_category", "order_date"]:
+    for key in ["payment_method_label", "product_label", "category_label", "product_category", "order_date"]:
         value = row.get(key)
         if value:
             return str(value)
@@ -187,6 +192,8 @@ def _template_step_name(reuse_plan: SqlReusePlan | None) -> str:
 
 
 def _period_label(sql: str) -> str:
+    if "PAYMENT_METHOD_LABEL" in sql.upper():
+        return "支付方式"
     if "PRODUCT_LABEL" in sql.upper():
         return "商品"
     if "CATEGORY_LABEL" in sql.upper():
@@ -197,6 +204,12 @@ def _period_label(sql: str) -> str:
 
 
 def _main_metric_label(question: str) -> str:
+    if any(keyword in question for keyword in ["支付失败率", "失败率"]):
+        return "支付失败率"
+    if any(keyword in question for keyword in ["支付成功率", "成功率", "支付方式"]):
+        return "支付成功率"
+    if any(keyword in question for keyword in ["退款率", "退款", "售后"]):
+        return "退款率排行"
     if any(keyword in question for keyword in ["品类", "类目", "分类"]):
         return "销售额排行"
     if any(keyword in question for keyword in ["商品", "产品", "sku", "SKU"]):
@@ -217,6 +230,18 @@ def _summary_text(
     avg_refund_rate: float,
     leading_label: str,
 ) -> str:
+    if main_metric_label in {"支付成功率", "支付失败率"}:
+        return (
+            f"已基于真实 PostgreSQL 数据按支付方式查询{main_metric_label}。"
+            f"当前最高的是 {leading_label}，覆盖订单数 {total_orders:,}，"
+            f"相关支付金额约为 ¥{total_sales:,.0f}。"
+        )
+    if main_metric_label == "退款率排行":
+        return (
+            f"已基于真实 PostgreSQL 数据查询退款率最高的 {row_count} 个{period_label}。"
+            f"当前最高的是 {leading_label}，入选范围关联订单数 {total_orders:,}，"
+            f"合计销售额约为 ¥{total_sales:,.0f}。"
+        )
     if period_label in {"商品", "品类"}:
         return (
             f"已基于真实 PostgreSQL 数据查询销售额最高的 {row_count} 个{period_label}。"

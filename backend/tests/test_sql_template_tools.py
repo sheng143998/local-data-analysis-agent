@@ -65,3 +65,19 @@ def test_render_sales_trend_sql_supports_top_category_sales() -> None:
     assert "products p" in sql
     assert "ORDER BY daily_sales DESC" in sql
     assert "LIMIT 10" in sql
+
+
+def test_render_sales_trend_sql_supports_category_refund_rate() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("哪个商品品类退款率最高？"))
+
+    assert "category_label" in sql
+    assert "refund_rate" in sql
+    assert "ORDER BY refund_rate DESC" in sql
+
+
+def test_render_sales_trend_sql_supports_payment_success_rate() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("每个支付方式的成功率是多少？"))
+
+    assert "payment_method_label" in sql
+    assert "success_rate" in sql
+    assert "payments pay" in sql
