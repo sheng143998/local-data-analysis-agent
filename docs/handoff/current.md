@@ -31,6 +31,7 @@
 - 已新增统一检索评分基础层，metric、schema、SQL Memory 检索复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
 - 已新增 EmbeddingAdapter 基础层，支持 OpenAI-compatible embeddings 和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须走统一入口。
 - 已新增 Schema / Metric Embedding 同步能力，可把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 写入 pgvector 字段；本模块不改普通用户 UI、不展示向量状态、不新增固定 SQL 模板。
+- 已新增 pgvector 混合检索基础层，metric/schema retriever 会结合语义候选、文本相似、关键词和结构化分数排序；向量不可用时自动退回文本检索。
 
 ## 最近完成模块
 
@@ -551,6 +552,23 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 37. pgvector 混合检索接入
+
+- commit: 本模块随本次提交推送完成，提交信息为 `接入pgvector混合检索并通过验证`。
+- 内容：
+  - 新增 `backend/app/tools/vector_retrieval.py`，统一用 `EmbeddingAdapter` 生成问题向量并查询 pgvector 候选。
+  - `metric_retriever.py` 将 `metric_definitions.embedding` 语义候选分纳入指标总分。
+  - `schema_retriever.py` 将 `schema_metadata.embedding` 语义候选表并入加载范围，并将字段语义分纳入排序。
+  - `retrieval.py` 为 `MetricContext` 和 `SchemaColumnContext` 增加内部 `semantic_score`，普通用户响应不展示该字段。
+  - 新增 `backend/tests/test_vector_retrieval.py`，扩展 `test_retrieval_scoring.py`。
+  - 更新 README、Agent 工作流、数据模型、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_vector_retrieval.py backend/tests/test_retrieval_scoring.py backend/tests/test_retrieval_tools.py`，17 passed
+  - `npm run backend:test`，101 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -563,15 +581,15 @@
 
 ## 当前正在做
 
-“Schema / Metric Embedding 同步” 模块已完成并通过验证，随本次提交推送完成。该模块只补齐向量写入能力，不改 `/api/analyze` 行为，不新增固定 SQL 模板。
+“pgvector 混合检索接入” 模块已完成并通过验证，随本次提交推送完成。该模块只改后端检索排序基础层，不改普通用户前端，不新增固定 SQL 模板。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 在统一检索评分基础上接入 pgvector 查询，形成 schema、metric、memory 的真正混合检索。
+1. 后续单独实现 SQL Memory question/sql embedding，并接入 SQL Memory 混合检索。
 2. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
-3. 后续单独实现 SQL Memory question/sql embedding，同样不依赖固定 SQL 模板扩展。
+3. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
 
 ## 已知风险
 
@@ -580,8 +598,8 @@
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
-- EmbeddingAdapter 基础层已完成，schema/metric embedding 同步模块正在收尾；retriever 尚未接入 pgvector 混合检索。
-- schema/metric retriever 已有统一确定性评分基础层，但尚未接入 embedding / pgvector 查询排序。
+- EmbeddingAdapter 基础层、schema/metric embedding 同步和 pgvector 混合检索基础层已完成；SQL Memory 尚未接入 embedding / pgvector。
+- schema/metric retriever 已接入 pgvector 语义候选，但真实质量依赖先运行 `sync_embeddings.py` 并配置真实 embedding provider。
 - SQL Memory 当前 semantic similarity 仍暂用统一文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。

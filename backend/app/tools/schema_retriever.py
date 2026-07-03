@@ -6,6 +6,7 @@ from backend.app.tools.retrieval_scoring import (
     text_similarity,
     weighted_score,
 )
+from backend.app.tools.vector_retrieval import retrieve_schema_vector_candidates
 
 
 DEFAULT_ANALYSIS_TABLES = ["orders", "payments", "refunds"]
@@ -24,9 +25,22 @@ def retrieve_schema(
         for field in metric.required_fields
         if "." in field
     }
-    columns = _load_schema_columns(tables)
+    semantic_scores = retrieve_schema_vector_candidates(question, limit=max(limit_per_table * 4, 48))
+    vector_tables = [
+        field_name.split(".", 1)[0]
+        for field_name in semantic_scores
+        if "." in field_name
+    ]
+    load_tables = _unique_ordered([*tables, *vector_tables])
+    columns = _load_schema_columns(load_tables)
     scored_columns = [
-        _score_column(column, question, related_tables=tables, required_fields=required_fields)
+        _score_column(
+            column,
+            question,
+            related_tables=tables,
+            required_fields=required_fields,
+            semantic_score=semantic_scores.get(f"{column.table_name}.{column.column_name}", 0),
+        )
         for column in columns
     ]
     ranked = sorted(
@@ -84,6 +98,14 @@ def _related_tables(question: str, metrics: list[MetricContext]) -> list[str]:
     return tables or DEFAULT_ANALYSIS_TABLES
 
 
+def _unique_ordered(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        if value and value not in unique:
+            unique.append(value)
+    return unique
+
+
 def _load_schema_columns(tables: list[str]) -> list[SchemaColumnContext]:
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -103,6 +125,7 @@ def _load_schema_columns(tables: list[str]) -> list[SchemaColumnContext]:
                 data_type=row[2],
                 description=row[3],
                 business_meaning=row[4],
+                semantic_score=0,
             )
             for row in cursor.fetchall()
         ]
@@ -125,6 +148,7 @@ def _score_column(
     *,
     related_tables: list[str],
     required_fields: set[str],
+    semantic_score: float = 0,
 ) -> SchemaColumnContext:
     field_name = f"{column.table_name}.{column.column_name}"
     document = build_search_document(
@@ -155,8 +179,9 @@ def _score_column(
             "required_field_match": (required_field_match, 1.0),
             "related_table_match": (related_table_match, 0.2),
             "keyword_score": (keyword_score, 0.8),
+            "semantic_score": (semantic_score, 0.6),
             "text_similarity": (similarity, 0.4),
             "priority_score": (priority_score, 0.2),
         }
     )
-    return column.model_copy(update={"score": score})
+    return column.model_copy(update={"semantic_score": semantic_score, "score": score})

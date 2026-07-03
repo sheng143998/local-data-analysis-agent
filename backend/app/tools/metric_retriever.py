@@ -7,6 +7,7 @@ from backend.app.tools.retrieval_scoring import (
     text_similarity,
     weighted_score,
 )
+from backend.app.tools.vector_retrieval import retrieve_metric_vector_candidates
 
 
 METRIC_KEYWORDS = {
@@ -20,8 +21,16 @@ METRIC_KEYWORDS = {
 def retrieve_metrics(question: str, limit: int = 4) -> list[MetricContext]:
     """从 metric_definitions 召回与问题相关的业务指标。"""
     metrics = _load_enabled_metrics()
+    semantic_scores = retrieve_metric_vector_candidates(question, limit=max(limit * 2, 8))
     ranked = sorted(
-        (_score_metric(metric, question) for metric in metrics),
+        (
+            _score_metric(
+                metric,
+                question,
+                semantic_score=semantic_scores.get(metric.metric_name, 0),
+            )
+            for metric in metrics
+        ),
         key=lambda item: (-item.score, item.display_name),
     )
     return [metric for metric in ranked if metric.score > 0][:limit]
@@ -47,13 +56,14 @@ def _load_enabled_metrics() -> list[MetricContext]:
                 formula=row[3],
                 required_tables=list(row[4] or []),
                 required_fields=list(row[5] or []),
+                semantic_score=0,
                 score=0,
             )
             for row in cursor.fetchall()
         ]
 
 
-def _score_metric(metric: MetricContext, question: str) -> MetricContext:
+def _score_metric(metric: MetricContext, question: str, *, semantic_score: float = 0) -> MetricContext:
     normalized_question = normalize_search_text(question)
     document = build_search_document(
         [
@@ -83,8 +93,9 @@ def _score_metric(metric: MetricContext, question: str) -> MetricContext:
         {
             "name_match": (name_match, 1.0),
             "keyword_score": (keyword_score, 1.0),
+            "semantic_score": (semantic_score, 0.8),
             "text_similarity": (similarity, 0.4),
             "trend_intent": (trend_intent, 0.2),
         }
     )
-    return metric.model_copy(update={"score": score})
+    return metric.model_copy(update={"semantic_score": semantic_score, "score": score})

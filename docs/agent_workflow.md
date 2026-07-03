@@ -29,7 +29,10 @@ POST /api/analyze
 `backend/app/agents/analysis_graph.py` 是 V1 主链路。
 
 1. 读取用户问题。
-2. `build_retrieval_context()` 召回指标口径和 schema。
+2. `build_retrieval_context()` 召回指标口径和 schema：
+   - metric/schema retriever 先用 `EmbeddingAdapter` 生成问题向量。
+   - pgvector 候选分与关键词、文本相似度、必需表字段等规则分融合排序。
+   - embedding 或 pgvector 不可用时自动退回原文本检索，不中断分析。
 3. `retrieve_sql_memory()` 检索历史成功 SQL。
 4. `plan_sql_reuse()` 决定 `fast_path`、`rewrite_path` 或 `cold_path`。
 5. `_select_generated_sql()` 选择 SQL：
@@ -73,3 +76,9 @@ MODEL_SQL_GENERATOR_ENABLED=false
 - `GET /api/memories/{memory_id}`
 
 普通用户界面不展示原始工具 payload。
+
+## 检索边界
+
+- 普通用户响应只展示表、字段、SQL、结果和安全状态，不展示 embedding provider、向量分数或数据库连接状态。
+- `semantic_score` 只作为后端 `RetrievalContext` 内部排序依据，不进入普通用户页面。
+- 当前混合检索已覆盖 `metric_definitions.embedding` 和 `schema_metadata.embedding`；SQL Memory 的 `question_embedding` / `sql_embedding` 后续单独接入。

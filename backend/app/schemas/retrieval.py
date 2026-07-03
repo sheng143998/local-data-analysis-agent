@@ -8,6 +8,7 @@ class MetricContext(BaseModel):
     formula: str
     required_tables: list[str] = Field(default_factory=list)
     required_fields: list[str] = Field(default_factory=list)
+    semantic_score: float = 0
     score: float
 
 
@@ -17,6 +18,7 @@ class SchemaColumnContext(BaseModel):
     data_type: str
     description: str
     business_meaning: str
+    semantic_score: float = 0
     score: float = 0
 
 
