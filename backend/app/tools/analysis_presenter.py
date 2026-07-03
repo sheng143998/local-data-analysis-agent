@@ -89,6 +89,8 @@ def _to_analysis_row(row: dict) -> dict:
         rate_value = row.get("success_rate")
     if rate_value is None:
         rate_value = row.get("failure_rate")
+    if rate_value is None:
+        rate_value = row.get("gross_margin")
     return {
         "date": _row_label(row),
         "amount": amount,
@@ -204,6 +206,8 @@ def _period_label(sql: str) -> str:
 
 
 def _main_metric_label(question: str) -> str:
+    if any(keyword in question for keyword in ["毛利率", "毛利", "利润率"]):
+        return "毛利率排行"
     if any(keyword in question for keyword in ["支付失败率", "失败率"]):
         return "支付失败率"
     if any(keyword in question for keyword in ["支付成功率", "成功率", "支付方式"]):
@@ -230,6 +234,12 @@ def _summary_text(
     avg_refund_rate: float,
     leading_label: str,
 ) -> str:
+    if main_metric_label == "毛利率排行":
+        return (
+            f"已基于真实 PostgreSQL 数据查询毛利率最高的 {row_count} 个{period_label}。"
+            f"当前最高的是 {leading_label}，入选范围销售额约为 ¥{total_sales:,.0f}，"
+            f"关联订单数 {total_orders:,}。"
+        )
     if main_metric_label in {"支付成功率", "支付失败率"}:
         return (
             f"已基于真实 PostgreSQL 数据按支付方式查询{main_metric_label}。"

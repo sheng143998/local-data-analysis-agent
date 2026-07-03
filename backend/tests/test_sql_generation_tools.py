@@ -68,6 +68,17 @@ def test_generate_or_rewrite_sales_sql_renders_refund_and_payment_rates() -> Non
     assert "success_rate" in payment.sql
 
 
+def test_generate_or_rewrite_sales_sql_renders_gross_margin() -> None:
+    plan = plan_sql_reuse([])
+
+    result = generate_or_rewrite_sales_sql("最近 30 天毛利率最高的商品品类是什么？", plan)
+
+    assert result.parameters is not None
+    assert result.parameters.metric == "category_gross_margin"
+    assert "gross_margin" in result.sql
+    assert "product_costs" in result.sql
+
+
 def _memory() -> SqlMemoryRecord:
     return SqlMemoryRecord(
         id=uuid4(),

@@ -81,3 +81,12 @@ def test_render_sales_trend_sql_supports_payment_success_rate() -> None:
     assert "payment_method_label" in sql
     assert "success_rate" in sql
     assert "payments pay" in sql
+
+
+def test_render_sales_trend_sql_supports_category_gross_margin() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("最近 30 天毛利率最高的商品品类是什么？"))
+
+    assert "category_label" in sql
+    assert "gross_margin" in sql
+    assert "product_costs pc" in sql
+    assert "ORDER BY gross_margin DESC" in sql

@@ -83,3 +83,14 @@ def test_analyze_supports_payment_success_rate_slice() -> None:
     assert "success_rate" in body["sql"]
     assert len(body["rows"]) <= 20
     assert "支付成功率" in body["summary"]
+
+
+def test_analyze_supports_category_gross_margin_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "最近 30 天毛利率最高的商品品类是什么？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "gross_margin" in body["sql"]
+    assert "product_costs" in body["sql"]
+    assert len(body["rows"]) <= 10
+    assert "毛利率" in body["summary"]

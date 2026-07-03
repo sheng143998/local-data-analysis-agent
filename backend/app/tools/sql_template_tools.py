@@ -14,6 +14,7 @@ MetricIntent = Literal[
     "category_refund_rate",
     "payment_success_rate",
     "payment_failure_rate",
+    "category_gross_margin",
 ]
 
 
@@ -56,6 +57,8 @@ def render_sales_trend_sql(parameters: SalesTrendParameters) -> str:
         return _render_payment_success_rate_sql(success=True)
     if parameters.metric == "payment_failure_rate":
         return _render_payment_success_rate_sql(success=False)
+    if parameters.metric == "category_gross_margin":
+        return _render_category_gross_margin_sql(parameters)
 
     days = max(1, min(parameters.days, MAX_SALES_TREND_DAYS))
     time_bucket = _time_bucket_expression(parameters.granularity)
@@ -99,6 +102,8 @@ def _parse_granularity(question: str) -> Granularity:
 
 
 def _parse_metric(question: str) -> MetricIntent:
+    if any(keyword in question for keyword in ["毛利率", "毛利", "利润率"]):
+        return "category_gross_margin"
     if any(keyword in question for keyword in ["支付失败率", "失败率"]):
         return "payment_failure_rate"
     if any(keyword in question for keyword in ["支付成功率", "成功率", "支付方式"]):
@@ -217,4 +222,26 @@ GROUP BY COALESCE(pay.payment_type, '未知支付方式')
 HAVING COUNT(DISTINCT pay.order_id) > 0
 ORDER BY {rate_alias} DESC, order_count DESC
 LIMIT 20
+"""
+
+
+def _render_category_gross_margin_sql(parameters: SalesTrendParameters) -> str:
+    limit = max(1, min(parameters.limit, 50))
+    return f"""
+SELECT
+  COALESCE(p.category, '未分类') AS category_label,
+  SUM(oi.price) AS daily_sales,
+  COUNT(DISTINCT o.id) AS order_count,
+  ROUND(SUM(oi.price) / NULLIF(COUNT(DISTINCT o.id), 0), 2) AS avg_order_value,
+  ROUND((SUM(oi.price) - SUM(COALESCE(pc.unit_cost, 0))) / NULLIF(SUM(oi.price), 0) * 100, 2) AS gross_margin
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+LEFT JOIN products p ON p.id = oi.product_id
+LEFT JOIN product_costs pc ON pc.product_id = oi.product_id
+LEFT JOIN payments pay ON pay.order_id = o.id
+WHERE pay.status = 'paid'
+GROUP BY COALESCE(p.category, '未分类')
+HAVING SUM(oi.price) > 0
+ORDER BY gross_margin DESC, daily_sales DESC
+LIMIT {limit}
 """
