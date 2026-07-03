@@ -20,6 +20,7 @@
 - `/api/analyze` 已接入复购率 / 城市客单价查询切片，可识别“最近 90 天复购率是多少？”和“每个城市的客单价是多少？”。
 - 已新增 Schema Metadata 自动同步能力，换库、导入新表或字段变化后可运行 `py -3 backend/scripts/sync_schema_metadata.py` 刷新 `schema_metadata`，避免继续堆固定 SQL 模板。
 - 已新增统一 ModelAdapter 基础层，后续 SQL Generator / Rewriter 调用外部或本地 OpenAI-compatible 模型必须走 `backend/app/core/model_adapter.py`。
+- 已新增 Model-backed SQL Generator 基础工具，可基于已召回 schema/metric 构造 prompt、调用 ModelAdapter、解析模型 JSON SQL；尚未接入 `/api/analyze` 主链路执行。
 
 ## 最近完成模块
 
@@ -281,7 +282,7 @@
 
 ### 18. 统一 ModelAdapter 基础层
 
-- commit: 本模块待提交并推送，建议提交信息为 `实现统一ModelAdapter基础层并通过测试`。
+- commit: `25ac0dc 实现统一ModelAdapter基础层并通过测试`
 - 内容：
   - 扩展 `backend/app/core/config.py`，支持模型 provider、base URL、model、API key、timeout、retry 配置
   - 新增 `backend/app/core/model_adapter.py`，提供 OpenAI-compatible chat completions 统一入口
@@ -290,6 +291,19 @@
   - 更新 `backend/.env.example`，只保留模型配置占位值
 - 验证：
   - `npm run backend:test`，59 个测试通过
+
+### 19. Model-backed SQL Generator 基础工具
+
+- commit: 本模块待提交并推送，建议提交信息为 `实现模型SQL生成基础工具并通过测试`。
+- 内容：
+  - 新增 `backend/app/tools/model_sql_generator.py`
+  - 基于 `RetrievalContext` 和 `SqlReusePlan` 构造受控 prompt，只使用召回到的表字段和指标口径
+  - 通过 `ModelAdapter.chat()` 调用 OpenAI-compatible 模型，要求 JSON response format
+  - 解析模型响应为 `GeneratedSql`，新增 `model_generate`、`model_rewrite`、`model_error` 路径
+  - 模型生成 SQL 当前不直接执行，后续接主链路时仍必须经过 Validator / Guard / Executor
+  - 新增 `test_model_sql_generator.py`，覆盖 prompt、JSON 解析、warning、成功生成和模型错误路径
+- 验证：
+  - `npm run backend:test`，64 个测试通过
 
 ## 当前架构边界
 
@@ -303,13 +317,13 @@
 
 ## 当前正在做
 
-统一 ModelAdapter 基础层已完成实现、测试和文档更新，正在提交并推送。
+Model-backed SQL Generator 基础工具已完成实现、测试和文档更新，正在提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 将 SQL Generator 接入 ModelAdapter，让问题到 SQL 不再依赖新增固定模板。
+1. 将 `generate_sql_with_model()` 接入 analysis graph 的 `cold_path`，并确保输出 SQL 必经 Validator / Guard / Executor。
 2. 将 Schema Retriever 从关键词召回升级为 schema metadata + embedding / pgvector 混合召回。
 3. 建立标准问题评估集，按执行成功率、Guard 通过率、记忆命中率和失败样例持续验证。
 
@@ -318,6 +332,7 @@
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
 - `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator，但仍未接入真实 LLM SQL Generator / Rewriter。
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
+- Model-backed SQL Generator 基础工具已完成，但还未接入 analysis graph 的 `cold_path`。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
