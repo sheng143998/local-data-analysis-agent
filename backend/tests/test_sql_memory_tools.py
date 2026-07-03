@@ -38,7 +38,7 @@ def test_plan_sql_reuse_uses_fast_path_for_high_confidence_candidate() -> None:
     plan = plan_sql_reuse(candidates)
 
     assert plan.path_type == "fast_path"
-    assert plan.reuse_type == "direct_reuse"
+    assert plan.reuse_type == "parameter_rewrite"
     assert plan.memory_hit is True
     assert plan.selected_sql == memory.final_sql
 

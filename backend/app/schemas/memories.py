@@ -66,6 +66,7 @@ class SqlMemoryUpsert(BaseModel):
     canonical_question: str
     sql_template: str
     final_sql: str
+    parameters: dict = Field(default_factory=dict)
     tables: list[str] = Field(default_factory=list)
     metrics: list[str] = Field(default_factory=list)
     dimensions: list[str] = Field(default_factory=list)

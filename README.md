@@ -13,6 +13,7 @@
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
 - SQL Memory：成功查询会写入 `sql_memories`，高置信历史问题可走 `fast_path` 复用已验证 SQL。
+- 参数化模板：可解析“最近 7 天 / 30 天 / 90 天”等时间范围，并渲染销售趋势 SQL。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 
@@ -64,6 +65,15 @@ npm run frontend:dev
 - `GET /api/runs/{run_id}`：开发者查看单次运行及工具调用。
 - `GET /api/memories`：开发者查看 SQL Memory 列表。
 - `GET /api/memories/{memory_id}`：开发者查看单条 SQL Memory。
+
+## SQL Memory 当前说明
+
+当前 SQL Memory 已支持最小参数化复用：
+
+- 高置信历史问题会走 `fast_path`。
+- 时间范围会从用户问题中解析为 `days` 参数。
+- 成功查询会把 `parameters`、最终 SQL、结果列和行数写入 `sql_memories`。
+- 普通用户不默认看到 SQL Memory 候选分数；开发者通过 `/api/memories` 和 `/api/runs` 查看。
 
 ## 当前验证
 

@@ -90,7 +90,7 @@ class SqlMemoryRepository:
                   last_row_count, last_used_at
                 )
                 VALUES (
-                  %s, %s, %s, '', 'sales_trend', %s, %s, '{}'::jsonb, '{}'::jsonb,
+                  %s, %s, %s, '', 'sales_trend', %s, %s, '{}'::jsonb, %s::jsonb,
                   %s, %s, %s, '{}'::jsonb, 'postgresql', 'v1',
                   1, 0, %s, %s, %s, now()
                 )
@@ -106,6 +106,7 @@ class SqlMemoryRepository:
                     normalized_question,
                     payload.sql_template,
                     payload.final_sql,
+                    json.dumps(payload.parameters, ensure_ascii=False),
                     payload.tables,
                     payload.metrics,
                     payload.dimensions,
@@ -134,6 +135,7 @@ class SqlMemoryRepository:
                 SET canonical_question = %s,
                     sql_template = %s,
                     final_sql = %s,
+                    parameters = %s::jsonb,
                     tables = %s,
                     metrics = %s,
                     dimensions = %s,
@@ -153,6 +155,7 @@ class SqlMemoryRepository:
                     payload.canonical_question,
                     payload.sql_template,
                     payload.final_sql,
+                    json.dumps(payload.parameters, ensure_ascii=False),
                     payload.tables,
                     payload.metrics,
                     payload.dimensions,

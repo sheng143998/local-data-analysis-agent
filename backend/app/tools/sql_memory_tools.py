@@ -65,7 +65,7 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
     if selected.score >= FAST_PATH_THRESHOLD:
         return SqlReusePlan(
             path_type="fast_path",
-            reuse_type="direct_reuse",
+            reuse_type="parameter_rewrite",
             memory_hit=True,
             selected_memory_id=selected.memory.id,
             selected_sql=selected.memory.final_sql,
@@ -101,6 +101,7 @@ def upsert_successful_sql_memory(
     result_columns: list[str],
     row_count: int,
     latency_ms: int,
+    parameters: dict | None = None,
     repository: SqlMemoryRepository | None = None,
 ) -> SqlMemoryRecord:
     repo = repository or SqlMemoryRepository()
@@ -109,6 +110,7 @@ def upsert_successful_sql_memory(
             canonical_question=question,
             sql_template=sql_template,
             final_sql=final_sql,
+            parameters=parameters or {},
             tables=tables,
             metrics=metrics,
             dimensions=["order_date"],

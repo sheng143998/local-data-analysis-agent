@@ -10,32 +10,24 @@ from backend.app.tools.sql_memory_tools import (
     retrieve_sql_memory,
     upsert_successful_sql_memory,
 )
+from backend.app.tools.sql_template_tools import (
+    parse_sales_trend_parameters,
+    render_sales_trend_sql,
+)
 from backend.app.tools.sql_execution_tools import execute_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 
 
-SALES_TREND_SQL = """
-SELECT
-  DATE(o.created_at) AS order_date,
-  SUM(o.total_amount) AS daily_sales,
-  COUNT(DISTINCT o.id) AS order_count,
-  ROUND(SUM(o.total_amount) / NULLIF(COUNT(DISTINCT o.id), 0), 2) AS avg_order_value,
-  ROUND(COUNT(DISTINCT r.id)::numeric / NULLIF(COUNT(DISTINCT o.id), 0) * 100, 2) AS refund_rate
-FROM orders o
-LEFT JOIN payments p ON p.order_id = o.id
-LEFT JOIN refunds r ON r.order_id = o.id
-WHERE o.created_at IS NOT NULL
-  AND p.status = 'paid'
-GROUP BY DATE(o.created_at)
-ORDER BY order_date DESC
-LIMIT 30
-"""
+SALES_TREND_PARAMETERS = parse_sales_trend_parameters("")
+SALES_TREND_SQL = render_sales_trend_sql(SALES_TREND_PARAMETERS)
 
 
 def run_analysis_graph(question: str) -> AnalyzeResponse:
     """V1 real slice：先检索 SQL Memory，再执行真实 SQL Guard + Executor。"""
     started = perf_counter()
     retrieval_context = build_retrieval_context(question)
+    sales_parameters = parse_sales_trend_parameters(question)
+    rendered_template_sql = render_sales_trend_sql(sales_parameters)
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     memory_candidates = retrieve_sql_memory(
         question,
@@ -43,7 +35,9 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
         tables=retrieval_context.tables,
     )
     reuse_plan = plan_sql_reuse(memory_candidates)
-    selected_sql = reuse_plan.selected_sql or SALES_TREND_SQL
+    if reuse_plan.memory_hit:
+        reuse_plan = reuse_plan.model_copy(update={"selected_sql": rendered_template_sql})
+    selected_sql = reuse_plan.selected_sql or rendered_template_sql
 
     guard = guard_sql(selected_sql, max_rows=30)
     execution = execute_guarded_sql(guard)
@@ -54,6 +48,7 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
             question=question,
             sql_template=SALES_TREND_SQL,
             final_sql=guard.final_sql or selected_sql,
+            parameters=sales_parameters.model_dump(),
             tables=retrieval_context.tables,
             metrics=metric_names,
             result_columns=execution.columns,
