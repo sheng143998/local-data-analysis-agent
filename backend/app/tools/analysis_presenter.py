@@ -1,4 +1,5 @@
 from backend.app.schemas.analysis import AnalyzeResponse
+from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
 
@@ -10,10 +11,11 @@ def present_sales_trend_result(
     guard_warnings: list[str],
     latency_ms: int,
     retrieval_context: RetrievalContext | None = None,
+    reuse_plan: SqlReusePlan | None = None,
 ) -> AnalyzeResponse:
     if execution.status != "success":
         return AnalyzeResponse(
-            **_error_payload(question, sql, execution, latency_ms, retrieval_context)
+            **_error_payload(question, sql, execution, latency_ms, retrieval_context, reuse_plan)
         )
 
     rows = list(reversed(execution.rows))
@@ -26,7 +28,7 @@ def present_sales_trend_result(
 
     return AnalyzeResponse(
         question=question,
-        path="cold_path",
+        path=_path_type(reuse_plan),
         summary=(
             f"已基于真实 PostgreSQL 数据查询最近 {len(analysis_rows)} 个有交易日期的销售趋势。"
             f"区间内总销售额约为 ¥{total_sales:,.0f}，订单数 {total_orders:,}，"
@@ -51,16 +53,18 @@ def present_sales_trend_result(
             "security": "只读 SELECT，已通过 SQL Guard",
         },
         trace={
-            "toolCalls": 4,
+            "toolCalls": 7,
             "modelCalls": 0,
-            "memoryCandidates": 0,
+            "memoryCandidates": reuse_plan.candidate_count if reuse_plan else 0,
             "totalTime": f"{latency_ms}ms",
         },
         steps=[
             {"name": "理解问题", "status": "已完成", "time": "1ms"},
+            {"name": "检索 SQL Memory", "status": "已完成", "time": "1ms"},
+            {"name": "规划复用路径", "status": "已完成", "time": "1ms"},
             {"name": "召回指标口径", "status": "已完成", "time": "1ms"},
             {"name": "读取数据结构", "status": "已完成", "time": "1ms"},
-            {"name": "选择 SQL 模板", "status": "已完成", "time": "1ms"},
+            {"name": _template_step_name(reuse_plan), "status": "已完成", "time": "1ms"},
             {"name": "安全校验", "status": "已完成", "time": "1ms"},
             {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
             {"name": "整理结论", "status": "已完成", "time": "1ms"},
@@ -98,10 +102,11 @@ def _error_payload(
     execution: SqlExecutionResult,
     latency_ms: int,
     retrieval_context: RetrievalContext | None,
+    reuse_plan: SqlReusePlan | None,
 ) -> dict:
     return {
         "question": question,
-        "path": "cold_path",
+        "path": _path_type(reuse_plan),
         "summary": f"查询未成功执行：{execution.error_message or execution.status}",
         "sql": sql,
         "metrics": [],
@@ -117,12 +122,14 @@ def _error_payload(
             "security": "SQL Guard / Executor",
         },
         "trace": {
-            "toolCalls": 4,
+            "toolCalls": 7,
             "modelCalls": 0,
-            "memoryCandidates": 0,
+            "memoryCandidates": reuse_plan.candidate_count if reuse_plan else 0,
             "totalTime": f"{latency_ms}ms",
         },
         "steps": [
+            {"name": "检索 SQL Memory", "status": "已完成", "time": "1ms"},
+            {"name": "规划复用路径", "status": "已完成", "time": "1ms"},
             {"name": "召回指标口径", "status": "已完成", "time": "1ms"},
             {"name": "读取数据结构", "status": "已完成", "time": "1ms"},
             {"name": "安全校验", "status": "已完成", "time": "1ms"},
@@ -148,3 +155,13 @@ def _metric_definition(retrieval_context: RetrievalContext | None) -> str:
     if retrieval_context and retrieval_context.metric_summary:
         return retrieval_context.metric_summary
     return "销售额 = 已支付订单 total_amount 汇总"
+
+
+def _path_type(reuse_plan: SqlReusePlan | None) -> str:
+    return reuse_plan.path_type if reuse_plan else "cold_path"
+
+
+def _template_step_name(reuse_plan: SqlReusePlan | None) -> str:
+    if reuse_plan and reuse_plan.memory_hit:
+        return "复用历史 SQL"
+    return "选择 SQL 模板"

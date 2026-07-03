@@ -11,6 +11,7 @@
 - 当前普通用户产品方向：聊天式数据问答 + 指标口径 CRUD，不默认展示模型、数据库连接状态、SQL 记忆细节和评估报告。
 - `/api/analyze` 已接入 PostgreSQL 指标口径和表结构上下文召回，当前仍使用固定销售趋势 SQL 模板。
 - `/api/analyze` 已写入 `query_runs` 和 `tool_calls`，开发者可通过 `/api/runs` 查看运行记录。
+- `/api/analyze` 已接入 SQL Memory 检索和成功写入，高置信历史成功问题可走 `fast_path` 复用 SQL。
 
 ## 最近完成模块
 
@@ -74,7 +75,7 @@
 
 ### 4. 指标口径 PostgreSQL Repository
 
-- commit: 本模块准备提交，提交信息为 `切换指标口径为PostgreSQL仓储并补全文档`
+- commit: 本模块已提交并推送，提交信息为 `切换指标口径为PostgreSQL仓储并补全文档`。
 - 内容：
   - 补充 DataGrip 连接说明：`docs/database-datagrip.md`
   - 补充 PostgreSQL 数据基础模块完成文档
@@ -87,7 +88,7 @@
 
 ### 5. SQL Guard / Validator
 
-- commit: 本模块准备提交，提交信息为 `实现SQL Guard和Validator并通过测试`
+- commit: 本模块已提交并推送，提交信息为 `实现SQL Guard和Validator并通过测试`。
 - 内容：
   - 新增 `SqlValidationRequest`, `SqlValidationResult`, `SqlGuardResult`
   - 新增 `validate_sql` 和 `guard_sql`
@@ -100,7 +101,7 @@
 
 ### 6. 只读 SQL Executor
 
-- commit: 本模块准备提交，提交信息为 `实现只读SQL Executor并通过测试`
+- commit: 本模块已提交并推送，提交信息为 `实现只读SQL Executor并通过测试`。
 - 内容：
   - 新增 `SqlExecutionResult`
   - 新增 `execute_guarded_sql`
@@ -155,6 +156,21 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 10. SQL Memory Retriever / Reuse Planner 最小切片
+
+- commit: 本模块已提交并推送，提交信息为 `实现SQL Memory检索复用并通过测试`。
+- 内容：
+  - 新增 `SqlMemoryRecord`、`SqlMemoryCandidate`、`SqlReusePlan`、`SqlMemoryUpsert`
+  - 新增 `SqlMemoryRepository`、`MemoryService` 和 `/api/memories` 调试接口
+  - 新增 `retrieve_sql_memory`、`plan_sql_reuse`、`upsert_successful_sql_memory`
+  - `/api/analyze` 会先检索 SQL Memory，再决定 `fast_path` 或 `cold_path`
+  - 查询成功后写入或更新 `sql_memories`
+  - `query_runs.memory_hit` 会记录是否命中历史 SQL
+- 验证：
+  - `npm run backend:test`，24 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -167,21 +183,22 @@
 
 ## 当前正在做
 
-Query Run Logging 运行记录模块已完成，已提交并推送。
+SQL Memory Retriever / Reuse Planner 最小切片已完成，已提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 开始 SQL Memory Retriever / Reuse Planner。
-2. 增加 SQL Memory 写入条件和复用路径。
-3. 后续再接 embedding / pgvector，让 schema/metric retriever 从关键词召回升级为混合检索。
+1. 增加 SQL Memory 参数化模板和时间范围改写。
+2. 接入 SQL Rewriter / Generator，让中置信候选走 `rewrite_path`。
+3. 后续再接 embedding / pgvector，让 schema/metric 和 SQL Memory 从关键词召回升级为混合检索。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
-- `/api/analyze` 已接入真实 Guard + Executor 和 schema/metric retriever，但仍是固定 SQL 模板，尚未接入 LLM SQL Generator 和 SQL Memory。
+- `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever 和 SQL Memory，但仍未接入 LLM SQL Generator / Rewriter。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
+- SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
 - `/api/runs` 是开发者调试接口，暂不放入普通用户主导航。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。

@@ -20,12 +20,16 @@ class QueryRunLogger:
         execution_status: str,
         row_count: int,
         latency_ms: int,
+        memory_hit: bool = False,
+        memory_id: UUID | None = None,
         error_message: str | None = None,
     ) -> QueryRunRecord:
         return self.repository.create_run(
             QueryRunCreate(
                 id=uuid4(),
                 user_question=user_question,
+                memory_hit=memory_hit,
+                memory_id=memory_id,
                 generated_sql=generated_sql,
                 final_sql=final_sql,
                 guard_status=guard_status,

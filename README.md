@@ -12,7 +12,9 @@
 - SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
+- SQL Memory：成功查询会写入 `sql_memories`，高置信历史问题可走 `fast_path` 复用已验证 SQL。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
+- SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 
 ## 项目结构
 
@@ -60,6 +62,8 @@ npm run frontend:dev
 - `DELETE /api/metrics/{metric_id}`：删除指标口径。
 - `GET /api/runs`：开发者查看最近运行记录。
 - `GET /api/runs/{run_id}`：开发者查看单次运行及工具调用。
+- `GET /api/memories`：开发者查看 SQL Memory 列表。
+- `GET /api/memories/{memory_id}`：开发者查看单条 SQL Memory。
 
 ## 当前验证
 

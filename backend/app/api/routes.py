@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from backend.app.api.memories import router as memories_router
 from backend.app.api.metrics import router as metrics_router
 from backend.app.api.runs import router as runs_router
 from backend.app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
@@ -8,6 +9,7 @@ from backend.app.services.agent_service import AgentService
 
 router = APIRouter()
 agent_service = AgentService()
+router.include_router(memories_router)
 router.include_router(metrics_router)
 router.include_router(runs_router)
 
