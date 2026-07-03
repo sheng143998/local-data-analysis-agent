@@ -1,0 +1,20 @@
+{"id":"basic_001","category":"基础查询","question":"最近 7 天销售额是多少？","expected_tables":["orders","payments"],"expected_keywords":["SELECT","orders"]}
+{"id":"basic_002","category":"基础查询","question":"最近 30 天每天的销售额是多少？","expected_tables":["orders","payments"],"expected_keywords":["SELECT","orders"]}
+{"id":"basic_003","category":"基础查询","question":"最近 90 天每月订单数是多少？","expected_tables":["orders","payments"],"expected_keywords":["DATE_TRUNC","COUNT"]}
+{"id":"basic_004","category":"基础查询","question":"销售额最高的前 10 个商品是什么？","expected_tables":["orders","order_items","products"],"expected_keywords":["ORDER BY","daily_sales"]}
+{"id":"basic_005","category":"基础查询","question":"哪个商品品类销售额最高？","expected_tables":["order_items","products"],"expected_keywords":["category","daily_sales"]}
+{"id":"complex_006","category":"复杂指标","question":"最近 30 天支付失败率是多少？","expected_tables":["payments"],"expected_keywords":["failure_rate"]}
+{"id":"complex_007","category":"复杂指标","question":"哪个商品品类退款率最高？","expected_tables":["refunds","order_items","products"],"expected_keywords":["refund_rate"]}
+{"id":"complex_008","category":"复杂指标","question":"最近 180 天每月退款率是多少？","expected_tables":["refunds","orders"],"expected_keywords":["refund"]}
+{"id":"complex_009","category":"复杂指标","question":"最近 30 天毛利率最高的商品品类是什么？","expected_tables":["order_items","products","product_costs"],"expected_keywords":["gross_margin"]}
+{"id":"complex_010","category":"复杂指标","question":"每个支付方式的成功率是多少？","expected_tables":["payments"],"expected_keywords":["success_rate"]}
+{"id":"user_011","category":"用户分析","question":"过去 6 个月每月新增用户数是多少？","expected_tables":["users"],"expected_keywords":["SELECT"]}
+{"id":"user_012","category":"用户分析","question":"最近 30 天下单用户数是多少？","expected_tables":["orders","users"],"expected_keywords":["SELECT"]}
+{"id":"user_013","category":"用户分析","question":"购买次数最多的前 10 个用户是谁？","expected_tables":["orders","users"],"expected_keywords":["SELECT"]}
+{"id":"user_014","category":"用户分析","question":"最近 90 天复购率是多少？","expected_tables":["orders","users","payments"],"expected_keywords":["repeat_rate"]}
+{"id":"user_015","category":"用户分析","question":"每个城市的客单价是多少？","expected_tables":["orders","users"],"expected_keywords":["city_label","avg_order_value"]}
+{"id":"funnel_016","category":"漏斗与营销","question":"最近 30 天访问到下单转化率是多少？","expected_tables":["traffic_events","orders"],"expected_keywords":["SELECT"]}
+{"id":"funnel_017","category":"漏斗与营销","question":"最近 30 天加购到支付转化率是多少？","expected_tables":["traffic_events","payments"],"expected_keywords":["SELECT"]}
+{"id":"marketing_018","category":"漏斗与营销","question":"哪些优惠券核销率最高？","expected_tables":["coupons","coupon_usages"],"expected_keywords":["SELECT"]}
+{"id":"marketing_019","category":"漏斗与营销","question":"使用优惠券的订单客单价是否更高？","expected_tables":["orders","coupon_usages"],"expected_keywords":["SELECT"]}
+{"id":"marketing_020","category":"漏斗与营销","question":"流量来源带来的订单转化率是多少？","expected_tables":["traffic_events","orders"],"expected_keywords":["SELECT"]}

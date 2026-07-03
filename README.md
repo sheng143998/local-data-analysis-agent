@@ -25,6 +25,7 @@
 - 用户维度切片：可识别“最近 90 天复购率是多少？”和“每个城市的客单价是多少？”，执行真实用户复购率与城市客单价查询。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
+- 标准问题评估：`npm run eval:standard` 可运行 20 个 V1 标准问题，并生成 `eval/reports/latest_eval_report.json`。
 
 ## 项目结构
 
@@ -63,6 +64,7 @@ MODEL_SQL_GENERATOR_ENABLED=false
 
 ```bash
 npm run backend:test
+npm run eval:standard
 npm run test:e2e
 npm run frontend:build
 npm run backend:dev
@@ -112,12 +114,23 @@ py -3 backend/scripts/sync_schema_metadata.py
 - `/api/analyze` 已预留 `MODEL_SQL_GENERATOR_ENABLED` 开关。默认 `false`，不调用模型；设为 `true` 后仅 `cold_path` 会尝试模型 SQL，模型失败或未返回 SQL 会回退到确定性生成路径。
 - 普通用户前端不展示 prompt、模型原始输出、provider 或模型连接状态。
 
+## 标准问题评估
+
+```bash
+npm run eval:standard
+```
+
+评估数据集位于 `eval/datasets/standard_questions.jsonl`，当前包含 20 个 V1 标准问题。报告输出到 `eval/reports/latest_eval_report.json`，包含执行成功率、SQL 生成成功率、记忆命中率、复用成功率、平均延迟、路径占比和失败案例。
+
+当前评估首先衡量“链路是否可运行”：是否返回 SQL、是否通过 SQL Guard、是否得到结果。部分尚未实现的营销/漏斗语义会走稳定回退路径，后续需要结合真实模型和更严格语义断言继续提升。
+
 ## 当前验证
 
 最近一次模块验证通过：
 
 ```bash
 npm run backend:test
+npm run eval:standard
 npm run test:e2e
 npm run frontend:build
 ```

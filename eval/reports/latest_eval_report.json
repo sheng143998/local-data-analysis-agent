@@ -1,0 +1,431 @@
+{
+  "generated_at": "2026-07-03T15:09:53.957891+00:00",
+  "total": 20,
+  "success_count": 20,
+  "execution_success_rate": 1.0,
+  "sql_generation_success_rate": 1.0,
+  "memory_hit_rate": 1.0,
+  "reuse_success_rate": 1.0,
+  "average_latency_ms": 873,
+  "path_counts": {
+    "fast_path": 20
+  },
+  "failures": [],
+  "cases": [
+    {
+      "id": "basic_001",
+      "category": "基础查询",
+      "question": "最近 7 天销售额是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 736,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "SELECT",
+        "orders"
+      ],
+      "returned_rows": 7,
+      "error": ""
+    },
+    {
+      "id": "basic_002",
+      "category": "基础查询",
+      "question": "最近 30 天每天的销售额是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 702,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "SELECT",
+        "orders"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "basic_003",
+      "category": "基础查询",
+      "question": "最近 90 天每月订单数是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 605,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "DATE_TRUNC",
+        "COUNT"
+      ],
+      "returned_rows": 3,
+      "error": ""
+    },
+    {
+      "id": "basic_004",
+      "category": "基础查询",
+      "question": "销售额最高的前 10 个商品是什么？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 1050,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "order_items",
+        "products"
+      ],
+      "expected_keyword_hits": [
+        "ORDER BY",
+        "daily_sales"
+      ],
+      "returned_rows": 10,
+      "error": ""
+    },
+    {
+      "id": "basic_005",
+      "category": "基础查询",
+      "question": "哪个商品品类销售额最高？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 1073,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "order_items",
+        "products"
+      ],
+      "expected_keyword_hits": [
+        "category",
+        "daily_sales"
+      ],
+      "returned_rows": 10,
+      "error": ""
+    },
+    {
+      "id": "complex_006",
+      "category": "复杂指标",
+      "question": "最近 30 天支付失败率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 997,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "failure_rate"
+      ],
+      "returned_rows": 5,
+      "error": ""
+    },
+    {
+      "id": "complex_007",
+      "category": "复杂指标",
+      "question": "哪个商品品类退款率最高？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 848,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "refunds",
+        "order_items",
+        "products"
+      ],
+      "expected_keyword_hits": [
+        "refund_rate"
+      ],
+      "returned_rows": 10,
+      "error": ""
+    },
+    {
+      "id": "complex_008",
+      "category": "复杂指标",
+      "question": "最近 180 天每月退款率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 880,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "refunds",
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "refund"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "complex_009",
+      "category": "复杂指标",
+      "question": "最近 30 天毛利率最高的商品品类是什么？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 913,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "order_items",
+        "products",
+        "product_costs"
+      ],
+      "expected_keyword_hits": [
+        "gross_margin"
+      ],
+      "returned_rows": 10,
+      "error": ""
+    },
+    {
+      "id": "complex_010",
+      "category": "复杂指标",
+      "question": "每个支付方式的成功率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 1026,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "success_rate"
+      ],
+      "returned_rows": 5,
+      "error": ""
+    },
+    {
+      "id": "user_011",
+      "category": "用户分析",
+      "question": "过去 6 个月每月新增用户数是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 777,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 1,
+      "error": ""
+    },
+    {
+      "id": "user_012",
+      "category": "用户分析",
+      "question": "最近 30 天下单用户数是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 733,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "user_013",
+      "category": "用户分析",
+      "question": "购买次数最多的前 10 个用户是谁？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 719,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "user_014",
+      "category": "用户分析",
+      "question": "最近 90 天复购率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 1219,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "repeat_rate"
+      ],
+      "returned_rows": 1,
+      "error": ""
+    },
+    {
+      "id": "user_015",
+      "category": "用户分析",
+      "question": "每个城市的客单价是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 910,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "users"
+      ],
+      "expected_keyword_hits": [
+        "city_label",
+        "avg_order_value"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "funnel_016",
+      "category": "漏斗与营销",
+      "question": "最近 30 天访问到下单转化率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 893,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "funnel_017",
+      "category": "漏斗与营销",
+      "question": "最近 30 天加购到支付转化率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 819,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "marketing_018",
+      "category": "漏斗与营销",
+      "question": "哪些优惠券核销率最高？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 767,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "marketing_019",
+      "category": "漏斗与营销",
+      "question": "使用优惠券的订单客单价是否更高？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 1087,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "marketing_020",
+      "category": "漏斗与营销",
+      "question": "流量来源带来的订单转化率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 704,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "returned_rows": 30,
+      "error": ""
+    }
+  ]
+}
