@@ -4,8 +4,12 @@ from backend.app.schemas.retrieval import (
     SchemaColumnContext,
     TableRelationshipContext,
 )
+from backend.app.db.connection import get_connection
 from backend.app.tools.metric_retriever import retrieve_metrics
 from backend.app.tools.schema_retriever import retrieve_schema
+
+
+DEFAULT_RELATIONSHIP_LIMIT = 24
 
 
 def build_retrieval_context(question: str) -> RetrievalContext:
@@ -15,7 +19,10 @@ def build_retrieval_context(question: str) -> RetrievalContext:
     return RetrievalContext(
         metrics=metrics,
         schema_columns=schema_columns,
-        table_relationships=infer_table_relationships(schema_columns),
+        table_relationships=infer_table_relationships(
+            schema_columns,
+            include_database_foreign_keys=True,
+        ),
         tables=_unique_tables(metrics, schema_columns),
         fields=_unique_fields(metrics, schema_columns),
         metric_summary=_metric_summary(metrics),
@@ -24,7 +31,8 @@ def build_retrieval_context(question: str) -> RetrievalContext:
 
 def infer_table_relationships(
     schema_columns: list[SchemaColumnContext],
-    limit: int = 24,
+    limit: int = DEFAULT_RELATIONSHIP_LIMIT,
+    include_database_foreign_keys: bool = False,
 ) -> list[TableRelationshipContext]:
     """根据已召回字段推断高置信表连接关系，供 SQL Generator 使用。"""
     fields_by_table: dict[str, set[str]] = {}
@@ -33,6 +41,24 @@ def infer_table_relationships(
 
     relationships: list[TableRelationshipContext] = []
     seen: set[tuple[str, str, str, str]] = set()
+
+    if include_database_foreign_keys:
+        try:
+            database_relationships = _load_postgres_foreign_key_relationships(fields_by_table)
+        except Exception:
+            database_relationships = []
+        for relationship in database_relationships:
+            _append_relationship(
+                relationships,
+                seen,
+                relationship.left_table,
+                relationship.left_column,
+                relationship.right_table,
+                relationship.right_column,
+                relationship.relationship_type,
+                relationship.confidence,
+                relationship.reason,
+            )
 
     for left_table in sorted(fields_by_table):
         for right_table in sorted(fields_by_table):
@@ -85,6 +111,77 @@ def infer_table_relationships(
             item.right_column,
         ),
     )[:limit]
+
+
+def _load_postgres_foreign_key_relationships(
+    fields_by_table: dict[str, set[str]],
+) -> list[TableRelationshipContext]:
+    if not fields_by_table:
+        return []
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                  ccu.table_name AS parent_table,
+                  ccu.column_name AS parent_column,
+                  kcu.table_name AS child_table,
+                  kcu.column_name AS child_column,
+                  tc.constraint_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                 AND tc.table_schema = kcu.table_schema
+                 AND tc.constraint_catalog = kcu.constraint_catalog
+                JOIN information_schema.constraint_column_usage ccu
+                  ON ccu.constraint_name = tc.constraint_name
+                 AND ccu.table_schema = tc.table_schema
+                 AND ccu.constraint_catalog = tc.constraint_catalog
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND tc.table_schema = 'public'
+                ORDER BY ccu.table_name, kcu.table_name, kcu.column_name
+                """
+            )
+            rows = cursor.fetchall()
+    except Exception:
+        return []
+
+    relationships: list[TableRelationshipContext] = []
+    for parent_table, parent_column, child_table, child_column, constraint_name in rows:
+        if not _relationship_columns_are_recalled(
+            fields_by_table,
+            str(parent_table),
+            str(parent_column),
+            str(child_table),
+            str(child_column),
+        ):
+            continue
+        relationships.append(
+            TableRelationshipContext(
+                left_table=str(parent_table),
+                left_column=str(parent_column),
+                right_table=str(child_table),
+                right_column=str(child_column),
+                relationship_type="foreign_key",
+                confidence=0.98,
+                reason=f"PostgreSQL 外键约束 {constraint_name}",
+            )
+        )
+    return relationships
+
+
+def _relationship_columns_are_recalled(
+    fields_by_table: dict[str, set[str]],
+    parent_table: str,
+    parent_column: str,
+    child_table: str,
+    child_column: str,
+) -> bool:
+    return (
+        parent_column in fields_by_table.get(parent_table, set())
+        and child_column in fields_by_table.get(child_table, set())
+    )
 
 
 def _unique_tables(

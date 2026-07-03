@@ -89,6 +89,118 @@ def test_infer_table_relationships_from_generic_id_conventions() -> None:
     )
 
 
+def test_infer_table_relationships_prefers_postgres_foreign_keys(monkeypatch) -> None:
+    def fake_loader(fields_by_table):
+        assert fields_by_table["orders"] == {"id"}
+        return [
+            _relationship(
+                "orders",
+                "id",
+                "payments",
+                "order_id",
+                "foreign_key",
+                0.98,
+                "PostgreSQL 外键约束 payments_order_id_fkey",
+            )
+        ]
+
+    monkeypatch.setattr(
+        "backend.app.tools.context_builder._load_postgres_foreign_key_relationships",
+        fake_loader,
+    )
+
+    relationships = infer_table_relationships(
+        [
+            _column("orders", "id"),
+            _column("payments", "order_id"),
+        ],
+        include_database_foreign_keys=True,
+    )
+
+    assert len(relationships) == 1
+    assert relationships[0].relationship_type == "foreign_key"
+    assert relationships[0].confidence == 0.98
+    assert "PostgreSQL 外键约束" in relationships[0].reason
+
+
+def test_infer_table_relationships_falls_back_when_postgres_foreign_keys_fail(
+    monkeypatch,
+) -> None:
+    def fake_loader(fields_by_table):
+        raise RuntimeError("database metadata unavailable")
+
+    monkeypatch.setattr(
+        "backend.app.tools.context_builder._load_postgres_foreign_key_relationships",
+        fake_loader,
+    )
+
+    relationships = infer_table_relationships(
+        [
+            _column("orders", "id"),
+            _column("payments", "order_id"),
+        ],
+        include_database_foreign_keys=True,
+    )
+
+    assert any(
+        relationship.left_table == "orders"
+        and relationship.right_table == "payments"
+        and relationship.relationship_type == "id_to_foreign_key"
+        for relationship in relationships
+    )
+
+
+def test_load_postgres_foreign_key_relationships_keeps_only_recalled_fields(
+    monkeypatch,
+) -> None:
+    class FakeCursor:
+        def execute(self, sql):
+            assert "information_schema.table_constraints" in sql
+
+        def fetchall(self):
+            return [
+                ("orders", "id", "payments", "order_id", "payments_order_id_fkey"),
+                ("products", "id", "order_items", "product_id", "items_product_id_fkey"),
+            ]
+
+    class FakeConnection:
+        def cursor(self):
+            return FakeCursor()
+
+    class FakeConnectionContext:
+        def __enter__(self):
+            return FakeConnection()
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    monkeypatch.setattr(
+        "backend.app.tools.context_builder.get_connection",
+        lambda: FakeConnectionContext(),
+    )
+
+    from backend.app.tools.context_builder import _load_postgres_foreign_key_relationships
+
+    relationships = _load_postgres_foreign_key_relationships(
+        {
+            "orders": {"id"},
+            "payments": {"order_id"},
+            "products": {"id"},
+        }
+    )
+
+    assert [
+        (
+            relationship.left_table,
+            relationship.left_column,
+            relationship.right_table,
+            relationship.right_column,
+            relationship.relationship_type,
+        )
+        for relationship in relationships
+    ] == [("orders", "id", "payments", "order_id", "foreign_key")]
+
+
 def _column(table_name: str, column_name: str) -> SchemaColumnContext:
     return SchemaColumnContext(
         table_name=table_name,
@@ -96,4 +208,26 @@ def _column(table_name: str, column_name: str) -> SchemaColumnContext:
         data_type="text",
         description=f"{table_name}.{column_name}",
         business_meaning=f"{table_name}.{column_name}",
+    )
+
+
+def _relationship(
+    left_table: str,
+    left_column: str,
+    right_table: str,
+    right_column: str,
+    relationship_type: str,
+    confidence: float,
+    reason: str,
+):
+    from backend.app.schemas.retrieval import TableRelationshipContext
+
+    return TableRelationshipContext(
+        left_table=left_table,
+        left_column=left_column,
+        right_table=right_table,
+        right_column=right_column,
+        relationship_type=relationship_type,
+        confidence=confidence,
+        reason=reason,
     )

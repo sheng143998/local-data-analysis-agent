@@ -13,7 +13,7 @@
 - 数据上下文刷新命令：`npm run context:refresh` 会先同步 `schema_metadata`，再同步 schema、metric、SQL Memory embedding，用于换库、换表后的检索资产刷新。
 - 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。
 - Model-backed SQL Generator 基础工具：已能基于召回到的 schema/metric 构造受控 prompt、调用 ModelAdapter、解析模型 JSON SQL；当前尚未替换 `/api/analyze` 主链路。
-- Schema 表关系上下文：`RetrievalContext` 会从已召回字段推断高置信 join hints，并提供给模型 SQL 生成 prompt，减少跨表问题对固定模板的依赖。
+- Schema 表关系上下文：`RetrievalContext` 会优先读取 PostgreSQL 真实外键，并用字段命名规则兜底生成 join hints，提供给模型 SQL 生成 prompt，减少跨表问题对固定模板的依赖。
 - Model SQL Generator cold_path 接入：`/api/analyze` 已具备配置开关式模型 SQL 生成入口，默认关闭；开启后仅 `cold_path` 尝试模型生成，失败会回退到稳定生成路径，最终 SQL 仍必经 Guard 和只读 Executor。
 - SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表、不存在字段和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
@@ -162,7 +162,7 @@ npm run context:refresh
 - embedding 调用统一通过 `backend/app/core/embedding_adapter.py`。
 - schema/metric/SQL Memory 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行，支持 `--limit` 控制本次同步规模，支持 `--batch-size` 降低真实 provider 请求次数，支持 `--sleep-ms` 做固定间隔限速。
 - schema/metric/SQL Memory 混合检索通过 `backend/app/tools/vector_retrieval.py` 查询 pgvector 候选；失败时自动退回原文本检索。
-- SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段、指标口径和从字段命名推断出的表关系，不使用全量数据库结构。
+- SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段、指标口径和表关系上下文；表关系优先来自 PostgreSQL 外键，没有外键时再使用字段命名推断，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。
 - 模型生成的 SQL 当前不直接执行；后续接入 `/api/analyze` 时仍必须经过 SQL Validator、SQL Guard 和只读 Executor。
 - `/api/analyze` 已预留 `MODEL_SQL_GENERATOR_ENABLED` 开关。默认 `false`，不调用模型；设为 `true` 后仅 `cold_path` 会尝试模型 SQL，模型失败或未返回 SQL 会回退到确定性生成路径。

@@ -46,6 +46,7 @@
 - 已为 Schema Metadata 同步增加字段名启发式中文业务含义，提升换库后 schema 检索和 embedding 文档质量。
 - 已为 Schema Metadata 同步增加历史泛化说明刷新开关，显式升级旧自动说明并保留人工说明。
 - 已增强 `/api/runs` 工具调用摘要，记录上下文召回、SQL 生成和 Guard 诊断信息。
+- 已为 `RetrievalContext.table_relationships` 接入 PostgreSQL 真实外键读取，换库后优先使用数据库约束生成 join hints，没有外键时退回命名推断，不新增固定 SQL 模板。
 
 ## 最近完成模块
 
@@ -823,6 +824,22 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 52. PostgreSQL 外键表关系上下文
+
+- commit: `接入PostgreSQL外键关系上下文并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `build_retrieval_context()` 调用 `infer_table_relationships(..., include_database_foreign_keys=True)`。
+  - `context_builder._load_postgres_foreign_key_relationships()` 从 PostgreSQL `information_schema` 读取真实外键。
+  - 真实外键以 `relationship_type = foreign_key` 写入 `RetrievalContext.table_relationships`，置信度高于命名推断。
+  - 数据库元数据不可用、没有外键或外键字段未被召回时，自动退回现有命名推断。
+  - 更新 README、Agent 工作流、数据模型、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_retrieval_tools.py`，8 passed
+  - `npm run backend:test`，145 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -835,15 +852,15 @@
 
 ## 当前正在做
 
-“运行日志上下文诊断增强” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强开发者调试接口中的工具调用摘要，帮助后续定位 schema 召回、SQL 生成和 Guard 问题。
+“PostgreSQL 外键表关系上下文” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增强后端 SQL 生成上下文，让换库后能优先使用真实数据库外键。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
-2. 继续评估是否需要为 `sync_embeddings.py` 增加分页游标、provider 限速和后台队列。
-3. 后续可接入 ModelAdapter 做可控自然语言洞察，但必须保留当前通用 Presenter fallback。
+1. 结合标准评估失败项，为 eval report 增加 run trace 关联，便于从失败案例直接定位 `/api/runs/{run_id}`。
+2. 增强模型 SQL Generator 的 prompt/validation smoke，验证外键关系、schema 字段和指标口径能被模型路径正确使用。
+3. 继续评估是否需要为 `sync_embeddings.py` 增加分页游标、provider 限速和后台队列。
 
 ## 已知风险
 
@@ -856,6 +873,7 @@
 - schema/metric retriever 已接入 pgvector 语义候选，但真实质量依赖先运行 `sync_embeddings.py` 并配置真实 embedding provider。
 - SQL Memory 新写入记录会带 question/sql embedding；旧记录可通过 `sync_embeddings.py --target memory` 补齐，未补齐时仍会回退文本相似。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
+- `table_relationships` 已优先读取 PostgreSQL 外键，但用户库没有声明外键时仍只能依赖命名推断兜底。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。
 - 支付成功率当前基于 `payments.status = 'paid'`，真实失败状态样本仍需后续数据增强。
 - 毛利率当前基于合成 `product_costs.unit_cost`，后续可替换为真实成本口径。

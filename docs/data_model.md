@@ -41,7 +41,7 @@ Olist 真实数据和合成增强表包括：
 
 - `RetrievalContext.metrics`：本次问题召回的指标口径。
 - `RetrievalContext.schema_columns`：本次问题召回的字段上下文。
-- `RetrievalContext.table_relationships`：从已召回字段推断出的表关系提示，例如 `orders.id = payments.order_id`。该字段只用于后端 SQL Generator prompt，不写入数据库，也不展示给普通用户。
+- `RetrievalContext.table_relationships`：表关系提示，例如 `orders.id = payments.order_id`。后端优先读取 PostgreSQL 真实外键，缺失或失败时退回已召回字段的命名推断。该字段只用于后端 SQL Generator prompt，不写入数据库，也不展示给普通用户。
 - `RetrievalContext.tables` / `fields`：本次 SQL 生成允许使用的表和字段。
 
 ## 迁移脚本
