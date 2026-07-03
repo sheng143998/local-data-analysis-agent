@@ -8,7 +8,7 @@ from backend.app.core.embedding_adapter import EmbeddingAdapter, EmbeddingReques
 from backend.app.db.connection import get_connection
 
 
-EmbeddingTarget = Literal["schema", "metric"]
+EmbeddingTarget = Literal["schema", "metric", "memory"]
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,13 @@ class MetricEmbeddingRecord:
     required_tables: list[str]
     required_fields: list[str]
     default_filters: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SqlMemoryEmbeddingRecord:
+    id: str
+    canonical_question: str
+    final_sql: str
 
 
 @dataclass
@@ -82,7 +89,34 @@ class EmbeddingSyncService:
         return result
 
     def sync_all(self) -> list[EmbeddingSyncResult]:
-        return [self.sync_schema_embeddings(), self.sync_metric_embeddings()]
+        return [
+            self.sync_schema_embeddings(),
+            self.sync_metric_embeddings(),
+            self.sync_sql_memory_embeddings(),
+        ]
+
+    def sync_sql_memory_embeddings(self) -> EmbeddingSyncResult:
+        result = EmbeddingSyncResult(target="memory")
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            records = self._load_sql_memory_records(cursor)
+            result.scanned = len(records)
+            for record in records:
+                response = self.adapter.embed(
+                    EmbeddingRequest(texts=[record.canonical_question, record.final_sql])
+                )
+                if not response.ok or len(response.vectors) < 2:
+                    result.failed += 1
+                    result.errors.append(_error_summary("memory", record.id, None, response.error_message))
+                    continue
+                self._update_sql_memory_embeddings(
+                    cursor,
+                    record,
+                    question_vector=response.vectors[0],
+                    sql_vector=response.vectors[1],
+                )
+                result.updated += 1
+        return result
 
     def _load_schema_records(self, cursor) -> list[SchemaEmbeddingRecord]:
         cursor.execute(
@@ -157,6 +191,42 @@ class EmbeddingSyncService:
             WHERE id = %s
             """,
             (_vector_literal(vector), record.id),
+        )
+
+    def _load_sql_memory_records(self, cursor) -> list[SqlMemoryEmbeddingRecord]:
+        cursor.execute(
+            """
+            SELECT id, canonical_question, final_sql
+            FROM sql_memories
+            WHERE question_embedding IS NULL OR sql_embedding IS NULL
+            ORDER BY last_used_at DESC NULLS LAST, created_at DESC
+            """
+        )
+        return [
+            SqlMemoryEmbeddingRecord(
+                id=str(row[0]),
+                canonical_question=row[1] or "",
+                final_sql=row[2] or "",
+            )
+            for row in cursor.fetchall()
+        ]
+
+    def _update_sql_memory_embeddings(
+        self,
+        cursor,
+        record: SqlMemoryEmbeddingRecord,
+        *,
+        question_vector: list[float],
+        sql_vector: list[float],
+    ) -> None:
+        cursor.execute(
+            """
+            UPDATE sql_memories
+            SET question_embedding = %s::vector,
+                sql_embedding = %s::vector
+            WHERE id = %s
+            """,
+            (_vector_literal(question_vector), _vector_literal(sql_vector), record.id),
         )
 
 

@@ -58,10 +58,11 @@ py -3 backend/scripts/init_db.py
 py -3 backend/scripts/sync_schema_metadata.py
 ```
 
-同步 schema/metric embedding：
+同步 schema/metric/SQL Memory embedding：
 
 ```bash
 py -3 backend/scripts/sync_embeddings.py
+py -3 backend/scripts/sync_embeddings.py --target memory
 ```
 
 ## 指标口径

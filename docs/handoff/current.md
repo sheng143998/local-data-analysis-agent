@@ -33,6 +33,7 @@
 - 已新增 Schema / Metric Embedding 同步能力，可把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 写入 pgvector 字段；本模块不改普通用户 UI、不展示向量状态、不新增固定 SQL 模板。
 - 已新增 pgvector 混合检索基础层，metric/schema retriever 会结合语义候选、文本相似、关键词和结构化分数排序；向量不可用时自动退回文本检索。
 - 已新增 SQL Memory Embedding 混合检索，成功 memory 写入会同步 `question_embedding` / `sql_embedding`，检索时优先用 `question_embedding` pgvector 分数填充 `semantic_similarity`，不可用时回退文本相似。
+- 已新增 SQL Memory 历史向量补齐能力，`py -3 backend/scripts/sync_embeddings.py --target memory` 可为旧 memory 回填 question/sql embedding。
 
 ## 最近完成模块
 
@@ -587,6 +588,22 @@
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 39. SQL Memory 历史向量补齐
+
+- commit: 本模块随本次提交推送完成，提交信息为 `补齐SQLMemory历史向量同步并通过验证`。
+- 内容：
+  - `EmbeddingSyncService` 新增 `sync_sql_memory_embeddings()`，扫描 `question_embedding IS NULL OR sql_embedding IS NULL` 的历史 memory。
+  - 为 `canonical_question` 和 `final_sql` 生成两个向量，并写回 `sql_memories.question_embedding` / `sql_memories.sql_embedding`。
+  - `backend/scripts/sync_embeddings.py` 的 `--target` 支持 `memory`，默认 `all` 包含 schema、metric、memory。
+  - `backend/tests/test_embedding_sync_service.py` 覆盖 memory 扫描、双文本 embedding、双向量写入和失败不中断。
+  - 更新 README、SQL Memory 文档、数据模型、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_embedding_sync_service.py`，10 passed
+  - `npm run backend:test`，109 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -599,15 +616,15 @@
 
 ## 当前正在做
 
-“SQL Memory Embedding 混合检索” 模块已完成并通过验证，随本次提交推送完成。该模块只改后端记忆写入和检索评分，不改普通用户前端，不新增固定 SQL 模板。
+“SQL Memory 历史向量补齐” 模块已完成并通过验证，随本次提交推送完成。该模块只扩展后端同步脚本，不改普通用户前端，不新增固定 SQL 模板。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 为旧 SQL Memory 增加批量 embedding 补齐脚本，避免历史记录长期只能走文本回退。
-2. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
-3. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
+1. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
+2. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
+3. 评估是否需要为 `sync_embeddings.py` 增加分页、批量大小和限速参数。
 
 ## 已知风险
 
@@ -618,7 +635,7 @@
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
 - EmbeddingAdapter 基础层、schema/metric embedding 同步、schema/metric pgvector 混合检索、SQL Memory embedding 写入和 question_embedding 检索已完成。
 - schema/metric retriever 已接入 pgvector 语义候选，但真实质量依赖先运行 `sync_embeddings.py` 并配置真实 embedding provider。
-- SQL Memory 新写入记录会带 question/sql embedding；旧记录如果没有向量仍会回退文本相似，后续可批量补齐。
+- SQL Memory 新写入记录会带 question/sql embedding；旧记录可通过 `sync_embeddings.py --target memory` 补齐，未补齐时仍会回退文本相似。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。
 - 支付成功率当前基于 `payments.status = 'paid'`，真实失败状态样本仍需后续数据增强。

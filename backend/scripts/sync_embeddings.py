@@ -13,10 +13,10 @@ from backend.app.services.embedding_sync_service import EmbeddingSyncResult, Emb
 
 def main() -> None:
     load_dotenv(ROOT / "backend" / ".env")
-    parser = argparse.ArgumentParser(description="同步 schema_metadata 和 metric_definitions 的 embedding")
+    parser = argparse.ArgumentParser(description="同步 schema、metric 和 SQL Memory 的 embedding")
     parser.add_argument(
         "--target",
-        choices=["all", "schema", "metric"],
+        choices=["all", "schema", "metric", "memory"],
         default="all",
         help="同步目标，默认 all",
     )
@@ -27,6 +27,8 @@ def main() -> None:
         results = [service.sync_schema_embeddings()]
     elif args.target == "metric":
         results = [service.sync_metric_embeddings()]
+    elif args.target == "memory":
+        results = [service.sync_sql_memory_embeddings()]
     else:
         results = service.sync_all()
 

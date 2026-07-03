@@ -77,6 +77,16 @@ score = 0.45 * semantic_similarity
 - 结果列和行数。
 - 执行耗时。
 
+## 历史向量补齐
+
+新写入的 SQL Memory 会自动带上 question/sql embedding。旧记录如果缺少向量，可运行：
+
+```bash
+py -3 backend/scripts/sync_embeddings.py --target memory
+```
+
+脚本只扫描 `question_embedding IS NULL OR sql_embedding IS NULL` 的历史 memory，生成并回写两个向量。默认 `--target all` 也会包含 memory 补齐。
+
 ## 开发者接口
 
 - `GET /api/memories`
@@ -87,5 +97,6 @@ score = 0.45 * semantic_similarity
 ## 已知边界
 
 - 已接入 question/sql embedding 写入和 question_embedding pgvector 召回；旧记录若没有向量会回退文本相似。
+- 历史 memory 可以用 `sync_embeddings.py --target memory` 补齐向量。
 - fast_path 约束目前是关键词启发式。
 - 严格评估显示仍有部分问题需要模型 SQL 生成或更强意图生成修复。

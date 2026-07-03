@@ -9,6 +9,7 @@ from backend.app.services.embedding_sync_service import (
     EmbeddingSyncService,
     MetricEmbeddingRecord,
     SchemaEmbeddingRecord,
+    SqlMemoryEmbeddingRecord,
     _json_object,
     _vector_literal,
     build_metric_embedding_document,
@@ -40,6 +41,32 @@ class FakeAdapter:
             provider="deterministic",
             model="test",
             dimension=3,
+            latency_ms=1,
+        )
+
+
+class MultiTextFakeAdapter:
+    def __init__(self, fail: bool = False) -> None:
+        self.fail = fail
+        self.calls: list[list[str]] = []
+
+    def embed(self, request):
+        self.calls.append(request.texts)
+        if self.fail:
+            return EmbeddingResponse(
+                ok=False,
+                provider="deterministic",
+                model="test",
+                dimension=2,
+                latency_ms=1,
+                error_message="boom",
+            )
+        return EmbeddingResponse(
+            ok=True,
+            vectors=[[0.1, 0.2], [0.3, 0.4]],
+            provider="deterministic",
+            model="test",
+            dimension=2,
             latency_ms=1,
         )
 
@@ -180,3 +207,54 @@ def test_sync_records_embedding_failures_without_stopping(monkeypatch) -> None:
     assert result.updated == 1
     assert result.failed == 1
     assert result.errors == ["schema:orders.bad_column: boom"]
+
+
+def test_sync_sql_memory_embeddings_updates_question_and_sql_vectors(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("mem-1", "最近 30 天销售额是多少？", "SELECT SUM(total_amount) FROM orders"),
+        ]
+    )
+    adapter = MultiTextFakeAdapter()
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_sql_memory_embeddings()
+
+    assert result.target == "memory"
+    assert result.scanned == 1
+    assert result.updated == 1
+    assert result.failed == 0
+    assert adapter.calls == [["最近 30 天销售额是多少？", "SELECT SUM(total_amount) FROM orders"]]
+    select_sql, select_params = cursor.executed[0]
+    assert "FROM sql_memories" in select_sql
+    assert "question_embedding IS NULL OR sql_embedding IS NULL" in select_sql
+    assert select_params is None
+    update_calls = [call for call in cursor.executed if "UPDATE sql_memories" in call[0]]
+    assert update_calls[0][1] == ("[0.10000000,0.20000000]", "[0.30000000,0.40000000]", "mem-1")
+
+
+def test_sync_sql_memory_embeddings_records_failures(monkeypatch) -> None:
+    cursor = FakeCursor(rows=[("mem-1", "问题", "SELECT 1")])
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=MultiTextFakeAdapter(fail=True)).sync_sql_memory_embeddings()
+
+    assert result.scanned == 1
+    assert result.updated == 0
+    assert result.failed == 1
+    assert result.errors == ["memory:mem-1: boom"]
+    assert not [call for call in cursor.executed if "UPDATE sql_memories" in call[0]]
+
+
+def test_load_sql_memory_records_maps_rows() -> None:
+    cursor = FakeCursor(rows=[("mem-1", "问题", "SELECT 1")])
+
+    records = EmbeddingSyncService(adapter=MultiTextFakeAdapter())._load_sql_memory_records(cursor)
+
+    assert records == [
+        SqlMemoryEmbeddingRecord(
+            id="mem-1",
+            canonical_question="问题",
+            final_sql="SELECT 1",
+        )
+    ]
