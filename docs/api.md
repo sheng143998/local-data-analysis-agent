@@ -1,6 +1,6 @@
 # V1 接口文档
 
-本文档说明当前 FastAPI 已实现的 V1 接口。所有接口默认挂载在 `/api` 前缀下。前端 API client 与后端接口字段关系见 [前后端接口映射文档](api_frontend_mapping.md)，错误码和权限边界见 [接口错误码与权限边界文档](api_error_auth.md)，字段或路径变更流程见 [接口变更流程与版本维护文档](api_change_process.md)，手工联调命令见 [接口联调与 Smoke 示例文档](api_smoke_examples.md)。
+本文档说明当前 FastAPI 已实现的 V1 接口。所有接口默认挂载在 `/api` 前缀下。阅读顺序见 [接口文档索引与阅读顺序](api_index.md)，前端 API client 与后端接口字段关系见 [前后端接口映射文档](api_frontend_mapping.md)，错误码和权限边界见 [接口错误码与权限边界文档](api_error_auth.md)，字段或路径变更流程见 [接口变更流程与版本维护文档](api_change_process.md)，手工联调命令见 [接口联调与 Smoke 示例文档](api_smoke_examples.md)。
 
 ## 接口分层
 

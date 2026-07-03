@@ -1,6 +1,6 @@
 # 接口错误码与权限边界文档
 
-本文档说明当前 V1 API 的错误响应、前端错误处理现状、接口权限边界和上线前鉴权建议。它是 [V1 接口文档](api.md) 与 [前后端接口映射文档](api_frontend_mapping.md) 的补充。错误码或权限策略发生变化时，按 [接口变更流程与版本维护文档](api_change_process.md) 同步；手工联调错误排查见 [接口联调与 Smoke 示例文档](api_smoke_examples.md)。
+本文档说明当前 V1 API 的错误响应、前端错误处理现状、接口权限边界和上线前鉴权建议。它是 [V1 接口文档](api.md) 与 [前后端接口映射文档](api_frontend_mapping.md) 的补充。阅读顺序见 [接口文档索引与阅读顺序](api_index.md)；错误码或权限策略发生变化时，按 [接口变更流程与版本维护文档](api_change_process.md) 同步；手工联调错误排查见 [接口联调与 Smoke 示例文档](api_smoke_examples.md)。
 
 ## 当前结论
 

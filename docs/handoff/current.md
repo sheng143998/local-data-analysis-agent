@@ -435,12 +435,25 @@
 
 ### 29. 接口联调与 Smoke 示例文档
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口联调Smoke文档并通过验证`。
+- commit: `a1805e3 补齐接口联调Smoke文档并通过验证`
 - 内容：
   - 新增 `docs/api_smoke_examples.md`，说明本地启动、PowerShell/curl 调用示例、自动 smoke 检查点、验证命令分层和常见问题。
   - README、`docs/api.md`、`docs/api_frontend_mapping.md`、`docs/api_error_auth.md`、`docs/api_change_process.md` 增加该文档入口。
   - 明确 `npm run test:e2e` 当前检查 `/api/health` 和一次 `/api/analyze` 最小链路，不等于完整标准问题评估。
   - 本模块只更新中文文档，不修改接口实现、测试脚本、前端 API client 或数据库结构。
+- 验证：
+  - `npm run backend:test`，73 个测试通过
+  - `npm run frontend:build`
+  - `npm run test:e2e`
+
+### 30. 接口文档索引与阅读顺序
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐接口文档索引并通过验证`。
+- 内容：
+  - 新增 `docs/api_index.md`，说明接口文档阅读顺序、角色路径、文档职责表和维护规则。
+  - README 和所有接口主题文档增加索引入口。
+  - 明确接口文档覆盖范围和当前不代表的能力，例如未实现登录鉴权、未引入 `/api/v1`。
+  - 本模块只更新中文文档，不修改接口实现、前端 API client、测试脚本或数据库结构。
 - 验证：
   - `npm run backend:test`，73 个测试通过
   - `npm run frontend:build`
@@ -458,7 +471,7 @@
 
 ## 当前正在做
 
-接口联调与 Smoke 示例文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
+接口文档索引与阅读顺序已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
 
 ## 下一步建议
 
@@ -466,7 +479,7 @@
 
 1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
 2. 后续如增加登录、角色或 API token，优先同步 `docs/api_error_auth.md` 和 `docs/api_change_process.md`。
-3. 如果 smoke 脚本或本地端口变化，优先同步 `docs/api_smoke_examples.md`。
+3. 如果新增接口主题文档，优先同步 `docs/api_index.md`。
 
 ## 已知风险
 
