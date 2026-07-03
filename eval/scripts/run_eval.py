@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -52,6 +52,7 @@ class EvalCaseResult:
     returned_rows: int
     run_id: str | None = None
     run_detail_path: str = ""
+    run_trace_summary: dict[str, Any] = field(default_factory=dict)
     error: str = ""
 
 
@@ -85,7 +86,7 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             latency_ms = int((perf_counter() - started) * 1000)
             sql = str(body.get("sql") or "")
             source = body.get("source") or {}
-            run_id, run_detail_path = _extract_eval_run_trace(body)
+            run_id, run_detail_path, run_trace_summary = _extract_eval_run_trace(body)
             table_hits = [table for table in case.expected_tables if table in sql]
             keyword_hits = [
                 keyword for keyword in case.expected_keywords if keyword.lower() in sql.lower()
@@ -122,6 +123,7 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     returned_rows=int(source.get("returnedRows") or 0),
                     run_id=run_id,
                     run_detail_path=run_detail_path,
+                    run_trace_summary=run_trace_summary,
                     error=str(body.get("summary") or "") if not ok else "",
                 )
             )
@@ -148,6 +150,7 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     returned_rows=0,
                     run_id=None,
                     run_detail_path="",
+                    run_trace_summary={},
                     error=str(exc),
                 )
             )
@@ -208,6 +211,7 @@ def analyze_with_test_client(question: str) -> tuple[int, dict[str, Any]]:
         if run_id:
             body["_eval_run_id"] = run_id
             body["_eval_run_detail_path"] = f"/api/runs/{run_id}"
+            body["_eval_run_trace_summary"] = _fetch_run_trace_summary(client, run_id)
     return response.status_code, body
 
 
@@ -231,13 +235,15 @@ def _rate(numerator: int, denominator: int) -> float:
     return round(numerator / denominator, 4)
 
 
-def _extract_eval_run_trace(body: dict[str, Any]) -> tuple[str | None, str]:
+def _extract_eval_run_trace(body: dict[str, Any]) -> tuple[str | None, str, dict[str, Any]]:
+    trace_summary = body.get("_eval_run_trace_summary")
+    safe_trace_summary = trace_summary if isinstance(trace_summary, dict) else {}
     run_id = body.get("_eval_run_id")
     if not run_id:
-        return None, ""
+        return None, "", safe_trace_summary
     run_id_text = str(run_id)
     run_detail_path = str(body.get("_eval_run_detail_path") or f"/api/runs/{run_id_text}")
-    return run_id_text, run_detail_path
+    return run_id_text, run_detail_path, safe_trace_summary
 
 
 def _find_latest_run_id(client: TestClient, question: str) -> str | None:
@@ -258,20 +264,79 @@ def _find_latest_run_id(client: TestClient, question: str) -> str | None:
     return None
 
 
+def _fetch_run_trace_summary(client: TestClient, run_id: str) -> dict[str, Any]:
+    try:
+        response = client.get(f"/api/runs/{run_id}")
+        if response.status_code != 200:
+            return {}
+        detail = response.json()
+    except Exception:
+        return {}
+    return _build_run_trace_summary(detail)
+
+
+def _build_run_trace_summary(run_detail: dict[str, Any]) -> dict[str, Any]:
+    tool_calls = run_detail.get("tool_calls")
+    if not isinstance(tool_calls, list):
+        return {}
+    tools = {
+        tool.get("tool_name"): tool
+        for tool in tool_calls
+        if isinstance(tool, dict) and tool.get("tool_name")
+    }
+    context = _output_payload(tools, "context_builder.build_retrieval_context")
+    generation = _output_payload(tools, "analysis_graph.select_generated_sql")
+    guard = _output_payload(tools, "sql_validation_tools.guard_sql")
+    memory_plan = _output_payload(tools, "sql_memory_tools.plan_sql_reuse")
+    return {
+        "context_tables": _string_list(context.get("tables")),
+        "context_fields_sample": _string_list(context.get("fields_sample")),
+        "metric_count": _safe_int(context.get("metric_count")),
+        "schema_column_count": _safe_int(context.get("schema_column_count")),
+        "relationship_count": _safe_int(context.get("relationship_count")),
+        "generation_path": str(generation.get("generation_path") or ""),
+        "generation_warning_count": _safe_int(generation.get("warning_count")),
+        "generation_warnings": _string_list(generation.get("warnings")),
+        "guard_status": str(guard.get("guard_status") or ""),
+        "guard_warning_count": _safe_int(guard.get("warning_count")),
+        "guard_warnings": _string_list(guard.get("warnings")),
+        "guard_error_count": _safe_int(guard.get("error_count")),
+        "guard_errors": _string_list(guard.get("errors")),
+        "memory_path_type": str(memory_plan.get("path_type") or ""),
+        "memory_reuse_type": str(memory_plan.get("reuse_type") or ""),
+        "memory_hit": bool(memory_plan.get("memory_hit") or False),
+        "memory_score": memory_plan.get("score"),
+    }
+
+
+def _output_payload(tools: dict[str, Any], tool_name: str) -> dict[str, Any]:
+    tool = tools.get(tool_name)
+    if not isinstance(tool, dict):
+        return {}
+    payload = tool.get("output_payload")
+    return payload if isinstance(payload, dict) else {}
+
+
 def _assertion_failure_summary(results: list[EvalCaseResult]) -> dict[str, Any]:
     missing_table_counts: dict[str, int] = {}
     category_counts: dict[str, int] = {}
     path_counts: dict[str, int] = {}
+    context_status_counts: dict[tuple[str, str], int] = {}
 
     for result in results:
         category_counts[result.category] = category_counts.get(result.category, 0) + 1
         path_counts[result.path] = path_counts.get(result.path, 0) + 1
+        context_tables = set(_string_list(result.run_trace_summary.get("context_tables")))
         for table in result.missing_tables:
             missing_table_counts[table] = missing_table_counts.get(table, 0) + 1
+            status = "present_in_context" if table in context_tables else "missing_from_context"
+            key = (table, status)
+            context_status_counts[key] = context_status_counts.get(key, 0) + 1
 
     return {
         "total": len(results),
         "by_missing_table": _sorted_count_items(missing_table_counts),
+        "by_missing_table_context_status": _sorted_context_status_items(context_status_counts),
         "by_category": _sorted_count_items(category_counts),
         "by_path": _sorted_count_items(path_counts),
         "case_ids": [result.id for result in results],
@@ -283,6 +348,41 @@ def _sorted_count_items(counts: dict[str, int]) -> list[dict[str, Any]]:
         {"name": name, "count": count}
         for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     ]
+
+
+def _sorted_context_status_items(counts: dict[tuple[str, str], int]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, int | str]] = {}
+    for (table, status), count in counts.items():
+        item = grouped.setdefault(
+            table,
+            {
+                "name": table,
+                "missing_from_context": 0,
+                "present_in_context": 0,
+            },
+        )
+        item[status] = int(item[status]) + count
+    return sorted(
+        grouped.values(),
+        key=lambda item: (
+            -int(item["missing_from_context"]),
+            -int(item["present_in_context"]),
+            str(item["name"]),
+        ),
+    )
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if item is not None]
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 if __name__ == "__main__":
