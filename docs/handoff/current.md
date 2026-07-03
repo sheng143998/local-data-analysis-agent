@@ -381,7 +381,7 @@
 
 ### 25. V1 接口文档补齐
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐V1中文接口文档并通过验证`。
+- commit: `2f62bc0 补齐V1中文接口文档并通过验证`
 - 内容：
   - 新增 `docs/api.md`，按普通业务接口和开发者调试接口分层说明当前 API。
   - 覆盖 `GET /api/health`、`POST /api/analyze`、指标口径 CRUD、运行记录和 SQL Memory 调试接口。
@@ -392,6 +392,20 @@
   - `npm run backend:test`，73 个测试通过
   - `npm run test:e2e`
   - `npm run frontend:build`
+
+### 26. 前后端接口映射文档
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐前后端接口映射文档并通过验证`。
+- 内容：
+  - 新增 `docs/api_frontend_mapping.md`，说明前端 API client、TypeScript 类型和后端接口的映射关系。
+  - 记录 `analysisClient.ts`、`metricClient.ts` 当前调用的后端路径和页面入口。
+  - 明确后端 `AnalyzeResponse.trace`、`AnalyzeResponse.steps` 当前未进入前端类型和普通用户页面。
+  - README 和 `docs/api.md` 增加映射文档入口。
+  - 本模块只更新中文文档，不修改前端、后端、数据库或 Agent 行为。
+- 验证：
+  - `npm run frontend:build`
+  - `npm run backend:test`，73 个测试通过
+  - `npm run test:e2e`
 
 ## 当前架构边界
 
@@ -405,15 +419,15 @@
 
 ## 当前正在做
 
-V1 中文接口文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等文档，不修改功能代码。
+前后端接口映射文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等中文文档，不修改功能代码。
 
 ## 下一步建议
 
 按用户最新目标继续推进 V1 文档类任务，优先补齐接口相关中文说明：
 
 1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
-2. 后续可补充前端 API client 与后端接口的字段映射表。
-3. 后续可补充错误码、权限边界和上线前鉴权说明。
+2. 后续可补充错误码、权限边界和上线前鉴权说明。
+3. 后续如果建设开发者调试页，再补 `/api/runs`、`/api/memories` 的前端映射说明。
 
 ## 已知风险
 

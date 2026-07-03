@@ -1,6 +1,6 @@
 # V1 接口文档
 
-本文档说明当前 FastAPI 已实现的 V1 接口。所有接口默认挂载在 `/api` 前缀下。
+本文档说明当前 FastAPI 已实现的 V1 接口。所有接口默认挂载在 `/api` 前缀下。前端 API client 与后端接口字段关系见 [前后端接口映射文档](api_frontend_mapping.md)。
 
 ## 接口分层
 
