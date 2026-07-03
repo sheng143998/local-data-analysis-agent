@@ -90,6 +90,12 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
         error_message=execution.error_message or "; ".join(guard.errors) or None,
         metric_count=len(retrieval_context.metrics),
         schema_column_count=len(retrieval_context.schema_columns),
+        relationship_count=len(retrieval_context.table_relationships),
+        context_tables=retrieval_context.tables,
+        context_fields=retrieval_context.fields,
+        generation_warnings=generated_sql.warnings,
+        guard_warnings=guard.warnings,
+        guard_errors=guard.errors,
     )
     return response
 
@@ -112,6 +118,12 @@ def _log_analysis_run(
     error_message: str | None,
     metric_count: int,
     schema_column_count: int,
+    relationship_count: int,
+    context_tables: list[str],
+    context_fields: list[str],
+    generation_warnings: list[str],
+    guard_warnings: list[str],
+    guard_errors: list[str],
 ) -> None:
     logger = QueryRunLogger()
     run = logger.log_run(
@@ -152,6 +164,9 @@ def _log_analysis_run(
         output_payload={
             "metric_count": metric_count,
             "schema_column_count": schema_column_count,
+            "relationship_count": relationship_count,
+            "tables": context_tables,
+            "fields_sample": context_fields[:20],
         },
         status="success",
     )
@@ -159,14 +174,25 @@ def _log_analysis_run(
         query_run_id=run.id,
         tool_name="analysis_graph.select_generated_sql",
         input_payload={"path_type": reuse_plan.path_type},
-        output_payload={"generation_path": generation_path},
+        output_payload={
+            "generation_path": generation_path,
+            "has_sql": bool(generated_sql_text),
+            "warning_count": len(generation_warnings),
+            "warnings": generation_warnings[:5],
+        },
         status="success",
     )
     logger.log_tool_call(
         query_run_id=run.id,
         tool_name="sql_validation_tools.guard_sql",
         input_payload={"max_rows": 30},
-        output_payload={"guard_status": guard_status},
+        output_payload={
+            "guard_status": guard_status,
+            "warning_count": len(guard_warnings),
+            "warnings": guard_warnings[:5],
+            "error_count": len(guard_errors),
+            "errors": guard_errors[:5],
+        },
         status="success" if guard_status == "allowed" else "blocked",
     )
     logger.log_tool_call(

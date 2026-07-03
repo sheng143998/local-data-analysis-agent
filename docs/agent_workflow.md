@@ -74,6 +74,9 @@ MODEL_SQL_GENERATOR_ENABLED=false
 
 - `query_runs`：问题、SQL、Guard 状态、执行状态、耗时、错误。
 - `tool_calls`：SQL Memory、上下文召回、SQL 生成、Guard、Executor、Presenter、Memory 更新等摘要。
+  - 上下文召回摘要包含指标数、字段数、表关系数、召回表和字段样例。
+  - SQL 生成摘要包含生成路径、是否有 SQL、warning 数量和 warning 样例。
+  - Guard 摘要包含放行状态、warning/error 数量和样例。
 
 开发者接口：
 

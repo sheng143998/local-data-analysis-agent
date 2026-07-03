@@ -45,6 +45,7 @@
 - 已为 SQL Validator 接入 `schema_metadata` 字段存在性校验，提前拦截模型编造字段。
 - 已为 Schema Metadata 同步增加字段名启发式中文业务含义，提升换库后 schema 检索和 embedding 文档质量。
 - 已为 Schema Metadata 同步增加历史泛化说明刷新开关，显式升级旧自动说明并保留人工说明。
+- 已增强 `/api/runs` 工具调用摘要，记录上下文召回、SQL 生成和 Guard 诊断信息。
 
 ## 最近完成模块
 
@@ -807,6 +808,21 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 51. 运行日志上下文诊断增强
+
+- commit: `增强运行日志上下文诊断并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `context_builder.build_retrieval_context` 工具调用输出增加 `relationship_count`、`tables` 和 `fields_sample`。
+  - `analysis_graph.select_generated_sql` 工具调用输出增加 `has_sql`、`warning_count` 和 `warnings`。
+  - `sql_validation_tools.guard_sql` 工具调用输出增加 warning/error 数量和样例。
+  - 更新 runs 测试、Agent 工作流文档、API 文档、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_runs.py`，3 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run backend:test`，142 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -819,7 +835,7 @@
 
 ## 当前正在做
 
-“Schema 历史泛化说明刷新” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只为开发者提供显式刷新旧自动说明的开关，让已有数据库也能受益于新的字段含义推断。
+“运行日志上下文诊断增强” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强开发者调试接口中的工具调用摘要，帮助后续定位 schema 召回、SQL 生成和 Guard 问题。
 
 ## 下一步建议
 

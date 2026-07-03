@@ -327,6 +327,14 @@
 | `error_message` | string/null | 错误信息。 |
 | `created_at` | datetime | 创建时间。 |
 
+当前关键工具的 `output_payload` 摘要包括：
+
+| 工具 | 典型字段 | 说明 |
+| --- | --- | --- |
+| `context_builder.build_retrieval_context` | `metric_count`, `schema_column_count`, `relationship_count`, `tables`, `fields_sample` | 本次上下文召回规模和字段样例。 |
+| `analysis_graph.select_generated_sql` | `generation_path`, `has_sql`, `warning_count`, `warnings` | SQL 生成路径和 warning 摘要。 |
+| `sql_validation_tools.guard_sql` | `guard_status`, `warning_count`, `warnings`, `error_count`, `errors` | SQL Guard 放行状态和诊断摘要。 |
+
 ### `GET /api/runs`
 
 用途：查看最近运行记录。
