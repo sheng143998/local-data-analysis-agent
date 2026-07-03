@@ -17,6 +17,7 @@
 - `/api/analyze` 已接入 Top N 商品/品类销售额查询切片，可识别“销售额最高的前 10 个商品是什么？”和“哪个商品品类销售额最高？”。
 - `/api/analyze` 已接入退款率 / 支付成功率查询切片，可识别“哪个商品品类退款率最高？”和“每个支付方式的成功率是多少？”。
 - `/api/analyze` 已接入毛利率查询切片，可识别“最近 30 天毛利率最高的商品品类是什么？”。
+- `/api/analyze` 已接入复购率 / 城市客单价查询切片，可识别“最近 90 天复购率是多少？”和“每个城市的客单价是多少？”。
 
 ## 最近完成模块
 
@@ -246,6 +247,20 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 16. 复购率 / 城市客单价查询切片
+
+- commit: 本模块待提交并推送，建议提交信息为 `实现复购率城市客单价查询并通过测试`。
+- 内容：
+  - 扩展 `SalesTrendParameters.metric`，支持 `repeat_purchase_rate`、`city_avg_order_value`
+  - 支持“最近 90 天复购率是多少？”生成整体复购率 SQL
+  - 支持“每个城市的客单价是多少？”生成城市客单价 SQL
+  - 用户维度问题自动召回 `users`、`orders`、`payments`、`refunds` 相关 schema
+  - Presenter 兼容 `segment_label`、`city_label`、`repeat_rate` 结果列
+- 验证：
+  - `npm run backend:test`，51 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -258,14 +273,14 @@
 
 ## 当前正在做
 
-毛利率查询切片已完成验证，正在提交并推送。
+复购率 / 城市客单价查询切片已完成验证，正在提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 扩展 SQL Rewriter / Generator，覆盖用户复购率、城市客单价、新增用户趋势等标准问题。
-2. 扩展 SQL Memory 参数化模板，支持城市、流量来源、优惠券等过滤和维度。
+1. 扩展 SQL Rewriter / Generator，覆盖新增用户趋势、购买次数最多用户、访问转化率等标准问题。
+2. 扩展 SQL Memory 参数化模板，支持流量来源、优惠券等过滤和维度。
 3. 后续再接 embedding / pgvector，让 schema/metric 和 SQL Memory 从关键词召回升级为混合检索。
 
 ## 已知风险
@@ -277,6 +292,7 @@
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。
 - 支付成功率当前基于 `payments.status = 'paid'`，真实失败状态样本仍需后续数据增强。
 - 毛利率当前基于合成 `product_costs.unit_cost`，后续可替换为真实成本口径。
+- 复购率当前暂按全量已支付用户订单计算，未严格套用“最近 90 天”自然日窗口。
 - `/api/runs` 是开发者调试接口，暂不放入普通用户主导航。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。

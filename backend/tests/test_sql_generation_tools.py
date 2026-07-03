@@ -79,6 +79,20 @@ def test_generate_or_rewrite_sales_sql_renders_gross_margin() -> None:
     assert "product_costs" in result.sql
 
 
+def test_generate_or_rewrite_sales_sql_renders_user_dimension_metrics() -> None:
+    plan = plan_sql_reuse([])
+
+    repeat = generate_or_rewrite_sales_sql("最近 90 天复购率是多少？", plan)
+    city = generate_or_rewrite_sales_sql("每个城市的客单价是多少？", plan)
+
+    assert repeat.parameters is not None
+    assert repeat.parameters.metric == "repeat_purchase_rate"
+    assert "repeat_rate" in repeat.sql
+    assert city.parameters is not None
+    assert city.parameters.metric == "city_avg_order_value"
+    assert "city_label" in city.sql
+
+
 def _memory() -> SqlMemoryRecord:
     return SqlMemoryRecord(
         id=uuid4(),

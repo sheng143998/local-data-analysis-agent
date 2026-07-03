@@ -94,3 +94,24 @@ def test_analyze_supports_category_gross_margin_slice() -> None:
     assert "product_costs" in body["sql"]
     assert len(body["rows"]) <= 10
     assert "毛利率" in body["summary"]
+
+
+def test_analyze_supports_repeat_purchase_rate_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "最近 90 天复购率是多少？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "repeat_rate" in body["sql"]
+    assert len(body["rows"]) == 1
+    assert "复购率" in body["summary"]
+
+
+def test_analyze_supports_city_avg_order_value_slice() -> None:
+    response = client.post("/api/analyze", json={"question": "每个城市的客单价是多少？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "city_label" in body["sql"]
+    assert "avg_order_value" in body["sql"]
+    assert len(body["rows"]) <= 30
+    assert "城市" in body["summary"]

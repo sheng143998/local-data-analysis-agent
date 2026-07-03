@@ -90,3 +90,19 @@ def test_render_sales_trend_sql_supports_category_gross_margin() -> None:
     assert "gross_margin" in sql
     assert "product_costs pc" in sql
     assert "ORDER BY gross_margin DESC" in sql
+
+
+def test_render_sales_trend_sql_supports_repeat_purchase_rate() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("最近 90 天复购率是多少？"))
+
+    assert "user_summary" in sql
+    assert "repeat_rate" in sql
+    assert "整体复购率" in sql
+
+
+def test_render_sales_trend_sql_supports_city_avg_order_value() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("每个城市的客单价是多少？"))
+
+    assert "city_label" in sql
+    assert "avg_order_value" in sql
+    assert "users u" in sql

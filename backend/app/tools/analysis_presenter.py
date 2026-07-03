@@ -91,6 +91,8 @@ def _to_analysis_row(row: dict) -> dict:
         rate_value = row.get("failure_rate")
     if rate_value is None:
         rate_value = row.get("gross_margin")
+    if rate_value is None:
+        rate_value = row.get("repeat_rate")
     return {
         "date": _row_label(row),
         "amount": amount,
@@ -101,7 +103,15 @@ def _to_analysis_row(row: dict) -> dict:
 
 
 def _row_label(row: dict) -> str:
-    for key in ["payment_method_label", "product_label", "category_label", "product_category", "order_date"]:
+    for key in [
+        "segment_label",
+        "city_label",
+        "payment_method_label",
+        "product_label",
+        "category_label",
+        "product_category",
+        "order_date",
+    ]:
         value = row.get(key)
         if value:
             return str(value)
@@ -194,6 +204,10 @@ def _template_step_name(reuse_plan: SqlReusePlan | None) -> str:
 
 
 def _period_label(sql: str) -> str:
+    if "CITY_LABEL" in sql.upper():
+        return "城市"
+    if "SEGMENT_LABEL" in sql.upper():
+        return "用户"
     if "PAYMENT_METHOD_LABEL" in sql.upper():
         return "支付方式"
     if "PRODUCT_LABEL" in sql.upper():
@@ -206,6 +220,12 @@ def _period_label(sql: str) -> str:
 
 
 def _main_metric_label(question: str) -> str:
+    if any(keyword in question for keyword in ["复购率", "复购", "回购"]):
+        return "复购率"
+    if any(keyword in question for keyword in ["城市", "地区", "地域"]) and any(
+        keyword in question for keyword in ["客单价", "平均订单", "平均金额"]
+    ):
+        return "城市客单价"
     if any(keyword in question for keyword in ["毛利率", "毛利", "利润率"]):
         return "毛利率排行"
     if any(keyword in question for keyword in ["支付失败率", "失败率"]):
@@ -234,6 +254,18 @@ def _summary_text(
     avg_refund_rate: float,
     leading_label: str,
 ) -> str:
+    if main_metric_label == "复购率":
+        return (
+            f"已基于真实 PostgreSQL 数据计算整体复购率。"
+            f"覆盖用户数 {total_orders:,}，相关销售额约为 ¥{total_sales:,.0f}，"
+            f"复购率为 {avg_refund_rate:.2f}%。"
+        )
+    if main_metric_label == "城市客单价":
+        return (
+            f"已基于真实 PostgreSQL 数据按城市查询客单价。"
+            f"当前最高的是 {leading_label}，入选范围销售额约为 ¥{total_sales:,.0f}，"
+            f"关联订单数 {total_orders:,}，平均客单价约 ¥{avg_order_value:,}。"
+        )
     if main_metric_label == "毛利率排行":
         return (
             f"已基于真实 PostgreSQL 数据查询毛利率最高的 {row_count} 个{period_label}。"

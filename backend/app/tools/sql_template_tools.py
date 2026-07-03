@@ -15,6 +15,8 @@ MetricIntent = Literal[
     "payment_success_rate",
     "payment_failure_rate",
     "category_gross_margin",
+    "repeat_purchase_rate",
+    "city_avg_order_value",
 ]
 
 
@@ -59,6 +61,10 @@ def render_sales_trend_sql(parameters: SalesTrendParameters) -> str:
         return _render_payment_success_rate_sql(success=False)
     if parameters.metric == "category_gross_margin":
         return _render_category_gross_margin_sql(parameters)
+    if parameters.metric == "repeat_purchase_rate":
+        return _render_repeat_purchase_rate_sql()
+    if parameters.metric == "city_avg_order_value":
+        return _render_city_avg_order_value_sql(parameters)
 
     days = max(1, min(parameters.days, MAX_SALES_TREND_DAYS))
     time_bucket = _time_bucket_expression(parameters.granularity)
@@ -102,6 +108,12 @@ def _parse_granularity(question: str) -> Granularity:
 
 
 def _parse_metric(question: str) -> MetricIntent:
+    if any(keyword in question for keyword in ["复购率", "复购", "回购"]):
+        return "repeat_purchase_rate"
+    if any(keyword in question for keyword in ["城市", "地区", "地域"]) and any(
+        keyword in question for keyword in ["客单价", "平均订单", "平均金额"]
+    ):
+        return "city_avg_order_value"
     if any(keyword in question for keyword in ["毛利率", "毛利", "利润率"]):
         return "category_gross_margin"
     if any(keyword in question for keyword in ["支付失败率", "失败率"]):
@@ -243,5 +255,49 @@ WHERE pay.status = 'paid'
 GROUP BY COALESCE(p.category, '未分类')
 HAVING SUM(oi.price) > 0
 ORDER BY gross_margin DESC, daily_sales DESC
+LIMIT {limit}
+"""
+
+
+def _render_repeat_purchase_rate_sql() -> str:
+    return """
+SELECT
+  '整体复购率' AS segment_label,
+  SUM(user_summary.sales_amount) AS daily_sales,
+  COUNT(user_summary.user_id) AS order_count,
+  ROUND(SUM(user_summary.sales_amount) / NULLIF(COUNT(user_summary.user_id), 0), 2) AS avg_order_value,
+  ROUND(COUNT(CASE WHEN user_summary.paid_order_count >= 2 THEN user_summary.user_id END)::numeric / NULLIF(COUNT(user_summary.user_id), 0) * 100, 2) AS repeat_rate
+FROM (
+  SELECT
+    o.user_id AS user_id,
+    COUNT(DISTINCT o.id) AS paid_order_count,
+    SUM(o.total_amount) AS sales_amount
+  FROM orders o
+  LEFT JOIN payments pay ON pay.order_id = o.id
+  WHERE o.user_id IS NOT NULL
+    AND pay.status = 'paid'
+  GROUP BY o.user_id
+) AS user_summary
+LIMIT 1
+"""
+
+
+def _render_city_avg_order_value_sql(parameters: SalesTrendParameters) -> str:
+    limit = max(1, min(parameters.limit, 50))
+    return f"""
+SELECT
+  COALESCE(u.city, '未知城市') AS city_label,
+  SUM(o.total_amount) AS daily_sales,
+  COUNT(DISTINCT o.id) AS order_count,
+  ROUND(SUM(o.total_amount) / NULLIF(COUNT(DISTINCT o.id), 0), 2) AS avg_order_value,
+  ROUND(COUNT(DISTINCT r.id)::numeric / NULLIF(COUNT(DISTINCT o.id), 0) * 100, 2) AS refund_rate
+FROM orders o
+LEFT JOIN users u ON u.id = o.user_id
+LEFT JOIN payments pay ON pay.order_id = o.id
+LEFT JOIN refunds r ON r.order_id = o.id
+WHERE pay.status = 'paid'
+GROUP BY COALESCE(u.city, '未知城市')
+HAVING COUNT(DISTINCT o.id) > 0
+ORDER BY avg_order_value DESC, daily_sales DESC
 LIMIT {limit}
 """
