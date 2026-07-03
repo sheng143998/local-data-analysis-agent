@@ -90,6 +90,7 @@ eval/reports/latest_eval_report.json
 - 如果 `assertion_failure_summary.by_missing_table` 集中在某些表，优先检查这些表是否被召回、是否进入模型 SQL prompt、是否被 SQL Memory fast_path 错误绕过。
 - 如果某个 case 需要进一步排查，优先打开该 case 的 `run_detail_path`，查看上下文召回、SQL 生成、Guard 和 Executor 的工具调用摘要。
 - 如果 `by_missing_table_context_status` 显示 `missing_from_context` 高，优先修 schema/metric 检索；如果显示 `present_in_context` 高，优先修 SQL 生成、SQL Memory 复用或模型路径。
+- 流量、优惠券、用户等主题的 schema 召回已加强；如果这些表仍缺失，优先检查字段说明、embedding 同步和业务主题词覆盖。
 
 ## 后续方向
 

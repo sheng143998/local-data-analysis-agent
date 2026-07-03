@@ -32,6 +32,7 @@ POST /api/analyze
 2. `build_retrieval_context()` 召回指标口径和 schema：
    - metric/schema retriever 先用 `EmbeddingAdapter` 生成问题向量。
    - pgvector 候选分与关键词、文本相似度、必需表字段等规则分融合排序。
+   - 对用户、流量、优惠券、退款、毛利、商品等业务主题，会补充召回相关表字段，避免后续生成阶段缺少真实 schema。
    - embedding 或 pgvector 不可用时自动退回原文本检索，不中断分析。
    - 后端会优先从 PostgreSQL 真实外键读取 `table_relationships`，并在没有外键时基于已召回字段命名推断关系，例如 `orders.id = payments.order_id`，供模型 SQL 生成参考。
 3. `retrieve_sql_memory()` 检索历史成功 SQL：

@@ -50,6 +50,7 @@
 - 已为标准评估报告接入 run trace 关联，每个 case 会写入 `run_id` 和 `run_detail_path`，便于从断言失败直接查看 `/api/runs/{run_id}`。
 - 已增强模型 SQL Generator 上下文 smoke，prompt payload 可结构化测试，模型编造字段会在 Guard/Validator smoke 中被拦截。
 - 已为标准评估报告增加 `run_trace_summary`，并聚合缺失表是否进入召回上下文，帮助区分 schema 召回不足和 SQL 生成不足。
+- 已增强 Schema 主题表召回，用户、流量、优惠券相关问题会把 `users`、`traffic_events`、`coupons`、`coupon_usages` 纳入上下文。
 
 ## 最近完成模块
 
@@ -892,6 +893,23 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 56. Schema 主题表召回增强
+
+- commit: `增强Schema主题表召回并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `schema_retriever.py` 新增 `SCHEMA_TOPIC_TABLES`，集中维护业务主题词到相关表的映射。
+  - `_related_tables()` 改为遍历主题表规则，保留指标依赖表优先和 `orders` 默认兜底。
+  - 增强用户、流量、优惠券主题召回，覆盖 `users`、`traffic_events`、`coupons`、`coupon_usages`。
+  - `test_retrieval_tools.py` 新增流量、优惠券、新增用户和 Top 用户召回测试。
+  - 更新 README、Agent 工作流、评估文档、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_retrieval_tools.py`，12 passed
+  - `npm run backend:test`，155 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - 抽查 `eval/reports/latest_eval_report.json`：当前断言失败中的 `users`、`traffic_events`、`coupons`、`coupon_usages` 均为 `present_in_context`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -904,15 +922,15 @@
 
 ## 当前正在做
 
-“评估 Run Trace 摘要诊断” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增强开发者评估诊断报告。
+“Schema 主题表召回增强” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增强 schema 上下文召回。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 优先增强 `users`、`traffic_events`、`coupons`、`coupon_usages` 的 schema/metric 召回；最新报告显示这些缺失表多数没有进入上下文。
-2. 对 `users` 已进入上下文但 SQL 未使用的失败项，检查 SQL Memory 复用和确定性 rewrite 是否覆盖了错误路径。
-3. 为模型 SQL Generator 增加可选的离线 provider smoke，使用 fake adapter 覆盖更多跨表场景，不调用真实模型。
+1. 处理已召回但 SQL 未使用的问题：当前 `users`、`traffic_events`、`coupons`、`coupon_usages` 已进入上下文，但确定性 rewrite/SQL Memory 仍生成订单类 SQL。
+2. 为模型 SQL Generator 增加可选的离线 provider smoke，使用 fake adapter 覆盖用户、流量、优惠券跨表场景，不调用真实模型。
+3. 继续评估是否要对 `rewrite_path` 引入更保守的表覆盖检查，避免相似历史 SQL 覆盖新问题关键表。
 
 ## 已知风险
 
@@ -921,7 +939,7 @@
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 模型 SQL Generator prompt payload 已有结构化 smoke，但真实模型输出质量仍未验证。
-- 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
+- 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。当前主要失败表已进入上下文，剩余问题更偏 SQL 生成/复用策略。
 - 评估报告已带 `run_id` / `run_detail_path`，但当前通过串行评估后查询最近 runs 匹配问题；如果未来并发评估，需要请求级 correlation id。
 - 评估报告已带 `run_trace_summary`，但摘要依赖工具调用名称稳定；后续重命名工具需要同步 eval runner。
 - EmbeddingAdapter 基础层、schema/metric embedding 同步、schema/metric pgvector 混合检索、SQL Memory embedding 写入和 question_embedding 检索已完成。

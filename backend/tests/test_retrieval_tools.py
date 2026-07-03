@@ -40,6 +40,44 @@ def test_schema_retriever_prioritizes_refund_context() -> None:
     assert any(column.score > 0 for column in columns)
 
 
+def test_schema_retriever_recalls_traffic_context() -> None:
+    metrics = retrieve_metrics("按流量来源统计访问到下单的转化率")
+    columns = retrieve_schema("按流量来源统计访问到下单的转化率", metrics)
+
+    fields = {f"{column.table_name}.{column.column_name}" for column in columns}
+    assert any(field.startswith("traffic_events.") for field in fields)
+    assert "traffic_events.user_id" in fields
+    assert "orders.user_id" in fields
+
+
+def test_schema_retriever_recalls_coupon_context() -> None:
+    metrics = retrieve_metrics("哪些优惠券核销率最高？")
+    columns = retrieve_schema("哪些优惠券核销率最高？", metrics)
+
+    fields = {f"{column.table_name}.{column.column_name}" for column in columns}
+    assert "coupons.id" in fields
+    assert "coupon_usages.coupon_id" in fields
+    assert "coupon_usages.order_id" in fields
+
+
+def test_schema_retriever_recalls_new_user_context() -> None:
+    metrics = retrieve_metrics("过去 6 个月每月新增用户数是多少？")
+    columns = retrieve_schema("过去 6 个月每月新增用户数是多少？", metrics)
+
+    fields = {f"{column.table_name}.{column.column_name}" for column in columns}
+    assert "users.id" in fields
+    assert "users.created_at" in fields
+
+
+def test_schema_retriever_recalls_top_user_context() -> None:
+    metrics = retrieve_metrics("购买次数最多的前 10 个用户是谁？")
+    columns = retrieve_schema("购买次数最多的前 10 个用户是谁？", metrics)
+
+    fields = {f"{column.table_name}.{column.column_name}" for column in columns}
+    assert "users.id" in fields
+    assert "orders.user_id" in fields
+
+
 def test_context_builder_combines_metrics_and_schema() -> None:
     context = build_retrieval_context("最近 30 天销售额按天变化如何？")
 

@@ -8,7 +8,7 @@
 
 - 聊天式数据问答：`POST /api/analyze` 已接入真实 PostgreSQL 查询链路。
 - 指标口径 CRUD：`GET/POST/PUT/DELETE /api/metrics` 已持久化到 `metric_definitions`。
-- Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文，已接入文本分数 + pgvector 语义候选的混合检索；向量不可用时自动退回文本检索。
+- Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文，已接入文本分数 + pgvector 语义候选的混合检索；向量不可用时自动退回文本检索；用户、流量、优惠券等业务主题会补充召回相关表字段。
 - Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新；新增字段会按字段名生成基础中文说明，已有人工说明不会被覆盖。
 - 数据上下文刷新命令：`npm run context:refresh` 会先同步 `schema_metadata`，再同步 schema、metric、SQL Memory embedding，用于换库、换表后的检索资产刷新。
 - 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。

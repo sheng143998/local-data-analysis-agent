@@ -10,6 +10,50 @@ from backend.app.tools.vector_retrieval import retrieve_schema_vector_candidates
 
 
 DEFAULT_ANALYSIS_TABLES = ["orders", "payments", "refunds"]
+SCHEMA_TOPIC_TABLES: list[tuple[set[str], list[str]]] = [
+    (
+        {"退款", "退款率", "售后"},
+        ["refunds", "order_items", "products", "payments"],
+    ),
+    (
+        {"毛利率", "毛利", "利润率"},
+        ["order_items", "products", "product_costs", "payments"],
+    ),
+    (
+        {
+            "用户",
+            "客户",
+            "买家",
+            "复购率",
+            "复购",
+            "回购",
+            "城市",
+            "地区",
+            "地域",
+            "客单价",
+            "新增用户",
+            "用户数",
+            "下单用户",
+        },
+        ["users", "orders", "payments", "refunds"],
+    ),
+    (
+        {"访问", "访客", "流量", "转化率", "转化", "浏览", "加购", "漏斗", "来源", "渠道"},
+        ["traffic_events", "users", "orders", "payments"],
+    ),
+    (
+        {"优惠券", "优惠", "券", "核销", "核销率", "领券", "用券", "折扣", "coupon"},
+        ["coupons", "coupon_usages", "users", "orders", "payments"],
+    ),
+    (
+        {"支付", "已支付", "销售额"},
+        ["payments"],
+    ),
+    (
+        {"商品", "产品", "SKU", "sku", "品类", "类目", "分类"},
+        ["order_items", "products", "payments"],
+    ),
+]
 
 
 def retrieve_schema(
@@ -73,23 +117,10 @@ def _related_tables(question: str, metrics: list[MetricContext]) -> list[str]:
             if table not in tables:
                 tables.append(table)
 
-    if any(token in question for token in ["退款", "退款率", "售后"]) and "refunds" not in tables:
-        tables.append("refunds")
-        for table in ["order_items", "products", "payments"]:
-            if table not in tables:
-                tables.append(table)
-    if any(token in question for token in ["毛利率", "毛利", "利润率"]):
-        for table in ["order_items", "products", "product_costs", "payments"]:
-            if table not in tables:
-                tables.append(table)
-    if any(token in question for token in ["复购率", "复购", "回购", "城市", "地区", "地域", "客单价"]):
-        for table in ["users", "orders", "payments", "refunds"]:
-            if table not in tables:
-                tables.append(table)
-    if any(token in question for token in ["支付", "已支付", "销售额"]) and "payments" not in tables:
-        tables.append("payments")
-    if any(token in question for token in ["商品", "产品", "SKU", "sku", "品类", "类目", "分类"]):
-        for table in ["order_items", "products", "payments"]:
+    for keywords, topic_tables in SCHEMA_TOPIC_TABLES:
+        if not any(token in question for token in keywords):
+            continue
+        for table in topic_tables:
             if table not in tables:
                 tables.append(table)
     if "orders" not in tables:
