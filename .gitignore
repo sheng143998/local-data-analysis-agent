@@ -20,6 +20,10 @@ venv/
 backend/.env
 frontend/.env
 
+# local data
+backend/app/data/raw/
+backend/app/data/processed/
+
 # logs
 *.log
 npm-debug.log*
