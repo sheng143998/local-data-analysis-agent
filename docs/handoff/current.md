@@ -364,7 +364,7 @@
 
 ### 24. V1 核心文档补齐
 
-- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐V1核心文档并通过验证`。
+- commit: `39ac317 补齐V1核心文档并通过验证`
 - 内容：
   - 新增 `docs/architecture.md`，说明 V1 架构、产品边界和主链路。
   - 新增 `docs/data_model.md`，说明业务表、Agent 元数据表、迁移和指标口径。
@@ -376,6 +376,20 @@
 - 验证：
   - `npm run backend:test`，73 个测试通过
   - `npm run eval:standard`，20/20 链路执行成功，严格成功率 55%
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
+### 25. V1 接口文档补齐
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐V1中文接口文档并通过验证`。
+- 内容：
+  - 新增 `docs/api.md`，按普通业务接口和开发者调试接口分层说明当前 API。
+  - 覆盖 `GET /api/health`、`POST /api/analyze`、指标口径 CRUD、运行记录和 SQL Memory 调试接口。
+  - 中文说明请求参数、响应字段、错误边界、接口用途和当前风险。
+  - README 增加 `docs/api.md` 入口，并在 API 入口段落链接完整接口文档。
+  - 本模块只更新文档，不修改后端接口、前端页面、数据库结构或 Agent 行为。
+- 验证：
+  - `npm run backend:test`，73 个测试通过
   - `npm run test:e2e`
   - `npm run frontend:build`
 
@@ -391,16 +405,15 @@
 
 ## 当前正在做
 
-V1 核心文档已补齐且验证通过，准备随本次提交推送完成。本轮不继续新增固定 SQL 模板，后续优先推进 schema-aware、memory-aware、model-ready 的通用能力。
+V1 中文接口文档已补齐且验证通过，准备随本次提交推送完成。本轮只做接口文档和 README 等文档，不修改功能代码。
 
 ## 下一步建议
 
-按 `executable-plan-draft.md` 继续推进 V1，但避开继续堆固定问法模板：
+按用户最新目标继续推进 V1 文档类任务，优先补齐接口相关中文说明：
 
-1. 接入 schema/metric/sql memory 的 embedding 生成与 pgvector 混合召回，降低换库后对固定模板的依赖。
-2. 将用户、流量、优惠券等 rewrite/cold 问题交给模型 SQL Generator 或更强意图生成，提升严格成功率。
-3. 在真实本地模型服务可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑 `npm run eval:standard`，记录模型 SQL 生成成功率和失败样例。
-4. 继续增强评估断言，加入字段命中、指标口径、结果形态和语义正确性。
+1. 如接口字段继续变化，优先同步 `docs/api.md`、README 和对应模块说明。
+2. 后续可补充前端 API client 与后端接口的字段映射表。
+3. 后续可补充错误码、权限边界和上线前鉴权说明。
 
 ## 已知风险
 
