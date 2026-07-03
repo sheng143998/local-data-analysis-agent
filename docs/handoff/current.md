@@ -351,7 +351,7 @@
 
 ### 23. SQL Memory fast_path 表/意图约束
 
-- commit: 本模块待提交并推送，建议提交信息为 `增强SQLMemory复用约束并通过测试`。
+- commit: `6a12c25 增强SQLMemory复用约束并通过测试`
 - 内容：
   - `SqlMemoryCandidate` 新增 `required_table_match` 和 `required_tables`
   - `retrieve_sql_memory()` 根据问题推断用户、流量、优惠券等关键表，并检查候选 SQL 是否包含这些表
@@ -361,6 +361,23 @@
 - 验证：
   - `npm run backend:test`，73 个测试通过
   - `npm run eval:standard`，20/20 链路执行成功，严格成功率 55%，memory hit 从 100% 降到 60%
+
+### 24. V1 核心文档补齐
+
+- commit: 本模块已验证，随本次提交推送完成，提交信息为 `补齐V1核心文档并通过验证`。
+- 内容：
+  - 新增 `docs/architecture.md`，说明 V1 架构、产品边界和主链路。
+  - 新增 `docs/data_model.md`，说明业务表、Agent 元数据表、迁移和指标口径。
+  - 新增 `docs/agent_workflow.md`，说明 `/api/analyze` 的检索、记忆、SQL 选择、Guard、Executor、日志和记忆写入链路。
+  - 新增 `docs/sql_guard.md`，说明 Validator、Guard、白名单表和只读 Executor。
+  - 新增 `docs/sql_memory.md`，说明 SQL Memory 打分、fast_path 关键表约束和写入条件。
+  - 新增 `docs/evaluation.md`，说明标准问题评估集、报告字段和当前基线。
+  - README 增加 V1 核心文档入口。
+- 验证：
+  - `npm run backend:test`，73 个测试通过
+  - `npm run eval:standard`，20/20 链路执行成功，严格成功率 55%
+  - `npm run test:e2e`
+  - `npm run frontend:build`
 
 ## 当前架构边界
 
@@ -374,15 +391,16 @@
 
 ## 当前正在做
 
-SQL Memory fast_path 表/意图约束已完成实现、测试、真实评估运行和文档更新，正在提交并推送。
+V1 核心文档已补齐且验证通过，准备随本次提交推送完成。本轮不继续新增固定 SQL 模板，后续优先推进 schema-aware、memory-aware、model-ready 的通用能力。
 
 ## 下一步建议
 
-按 `executable-plan-draft.md` 继续 M5/M7：
+按 `executable-plan-draft.md` 继续推进 V1，但避开继续堆固定问法模板：
 
-1. 将用户、流量、优惠券等 rewrite/cold 问题交给模型 SQL Generator 或更强意图生成，提升严格成功率。
-2. 在真实本地模型服务可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑 `npm run eval:standard`，记录模型 SQL 生成成功率和失败样例。
-3. 继续增强评估断言，加入字段命中、指标口径、结果形态和语义正确性。
+1. 接入 schema/metric/sql memory 的 embedding 生成与 pgvector 混合召回，降低换库后对固定模板的依赖。
+2. 将用户、流量、优惠券等 rewrite/cold 问题交给模型 SQL Generator 或更强意图生成，提升严格成功率。
+3. 在真实本地模型服务可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑 `npm run eval:standard`，记录模型 SQL 生成成功率和失败样例。
+4. 继续增强评估断言，加入字段命中、指标口径、结果形态和语义正确性。
 
 ## 已知风险
 

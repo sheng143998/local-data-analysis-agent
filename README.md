@@ -33,7 +33,17 @@
 frontend/   React + Vite + TypeScript 前端
 backend/    FastAPI 后端、Agent 编排、工具函数、PostgreSQL 访问
 docs/       计划文档、模块完成说明、handoff、数据库说明
+eval/       标准问题评估集、评估脚本和最新报告
 ```
+
+## V1 核心文档
+
+- [架构说明](docs/architecture.md)
+- [数据模型说明](docs/data_model.md)
+- [Agent 工作流说明](docs/agent_workflow.md)
+- [SQL Guard 与只读执行说明](docs/sql_guard.md)
+- [SQL Memory 机制说明](docs/sql_memory.md)
+- [标准问题评估说明](docs/evaluation.md)
 
 ## 本地环境
 

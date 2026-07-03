@@ -1,0 +1,77 @@
+# V1 数据模型说明
+
+## 数据库
+
+当前使用本地 PostgreSQL：
+
+```text
+database: local_data_agent
+schema: public
+```
+
+真实连接串只保存在 `backend/.env`，示例配置保存在 `backend/.env.example`。
+
+## 业务表
+
+Olist 真实数据和合成增强表包括：
+
+- `users`：用户基础信息，含城市等维度。
+- `products`：商品基础信息和品类。
+- `orders`：订单主表，含用户、时间、订单金额。
+- `order_items`：订单商品明细。
+- `payments`：支付记录，含支付方式、金额和状态。
+- `refunds`：退款记录。
+- `reviews`：评价记录。
+- `traffic_events`：访问、加购等合成流量事件。
+- `coupons`：优惠券。
+- `coupon_usages`：优惠券使用记录。
+- `inventory_snapshots`：库存快照。
+- `product_costs`：商品成本，用于毛利率。
+
+## Agent 元数据表
+
+- `schema_metadata`：表字段说明，用于 Schema Retriever。
+- `metric_definitions`：指标口径，支持 API CRUD。
+- `sql_memories`：历史成功问题、SQL、参数、表、指标和复用统计。
+- `query_runs`：每次分析运行记录。
+- `tool_calls`：每次工具调用摘要。
+- `embedding_documents`：后续 RAG 文档和 embedding 存储。
+
+## 迁移脚本
+
+迁移位于 `backend/app/db/migrations/`：
+
+- `001_extensions.sql`：pgvector、pg_trgm 等扩展。
+- `002_business_tables.sql`：业务表。
+- `003_agent_metadata.sql`：Agent 元数据表和索引。
+- `004_schema_metadata_unique.sql`：`schema_metadata(table_name, column_name)` 唯一索引。
+
+初始化：
+
+```bash
+py -3 backend/scripts/init_db.py
+```
+
+同步 schema metadata：
+
+```bash
+py -3 backend/scripts/sync_schema_metadata.py
+```
+
+## 指标口径
+
+指标 CRUD API：
+
+- `GET /api/metrics`
+- `POST /api/metrics`
+- `PUT /api/metrics/{metric_id}`
+- `DELETE /api/metrics/{metric_id}`
+
+`metric_definitions` 字段包括指标名、展示名、说明、公式、依赖表、依赖字段、默认过滤、示例问题、负责人和状态。
+
+## 当前风险
+
+- 测试直接使用本地库，尚未隔离测试数据库。
+- `product_costs.unit_cost` 是合成成本。
+- `traffic_events`、`coupons`、`coupon_usages` 的语义评估仍在增强中。
+- embedding 字段存在，但 schema/metric/sql memory 召回尚未接入真实 embedding。
