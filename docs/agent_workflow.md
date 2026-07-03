@@ -44,7 +44,10 @@ POST /api/analyze
    - 模型失败或无 SQL 时回退确定性路径。
 6. `guard_sql()` 做 SQL 安全拦截。
 7. `execute_guarded_sql()` 用只读连接执行。
-8. `present_sales_trend_result()` 组织业务结果。
+8. `present_sales_trend_result()` 组织业务结果：
+   - 基于 SQL Executor 返回的真实列生成 `rows`。
+   - 自动识别维度列、数值列和比例列，生成通用中文摘要和指标卡。
+   - 保持普通用户只看到业务结果、SQL、来源和安全说明。
 9. `QueryRunLogger` 写入 `query_runs` 和 `tool_calls`。
 10. 成功查询写入或更新 SQL Memory。
 

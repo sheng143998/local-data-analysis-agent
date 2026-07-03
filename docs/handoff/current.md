@@ -34,6 +34,7 @@
 - 已新增 pgvector 混合检索基础层，metric/schema retriever 会结合语义候选、文本相似、关键词和结构化分数排序；向量不可用时自动退回文本检索。
 - 已新增 SQL Memory Embedding 混合检索，成功 memory 写入会同步 `question_embedding` / `sql_embedding`，检索时优先用 `question_embedding` pgvector 分数填充 `semantic_similarity`，不可用时回退文本相似。
 - 已新增 SQL Memory 历史向量补齐能力，`py -3 backend/scripts/sync_embeddings.py --target memory` 可为旧 memory 回填 question/sql embedding。
+- 已新增通用分析结果 Presenter，能根据 SQL 返回列动态识别维度列、数值列和比例列，生成中文摘要和指标卡，减少对固定销售趋势字段的依赖。
 
 ## 最近完成模块
 
@@ -604,6 +605,24 @@
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 40. 通用分析结果 Presenter
+
+- commit: 本模块已提交并推送，提交信息为 `实现通用分析结果Presenter并通过验证`。
+- 内容：
+  - `analysis_presenter.py` 新增 `ResultProfile` 和通用结果画像 helper。
+  - 根据 SQL Executor 返回的真实列识别维度列、数值列和比例列。
+  - `AnalyzeResponse.summary` 和 `metrics` 改为基于真实返回列动态生成，不新增 API 字段。
+  - 保留既有销售、订单、商品、品类、退款率、支付成功率、毛利率、复购率、城市客单价摘要关键词。
+  - 清理旧 `_summary_text()` / `_row_label()` 死代码，避免后续维护出现两套总结逻辑。
+  - 新增 `backend/tests/test_analysis_presenter.py`，覆盖任意列结果和既有业务列结果。
+  - 更新 README、Agent 工作流、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_analysis_presenter.py backend/tests/test_api.py`，12 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run backend:test`，111 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -616,20 +635,20 @@
 
 ## 当前正在做
 
-“SQL Memory 历史向量补齐” 模块已完成并通过验证，随本次提交推送完成。该模块只扩展后端同步脚本，不改普通用户前端，不新增固定 SQL 模板。
+“通用分析结果 Presenter” 模块已完成、提交并推送。当前可继续推进非模板方向的 V1 能力，例如更通用的模型 SQL 生成、检索质量或同步脚本工程化。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
-2. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
-3. 评估是否需要为 `sync_embeddings.py` 增加分页、批量大小和限速参数。
+1. 结合标准评估失败项，优先增强用户、流量、优惠券等非销售模板问题的通用生成能力。
+2. 评估是否需要为 `sync_embeddings.py` 增加分页、批量大小和限速参数。
+3. 后续可接入 ModelAdapter 做可控自然语言洞察，但必须保留当前通用 Presenter fallback。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
-- `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator；通用 `rows` 已完成，但自然语言总结仍主要面向当前 V1 指标。
+- `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator；通用 `rows` 和通用 Presenter 已完成，但 SQL 生成仍主要面向当前 V1 指标。
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。

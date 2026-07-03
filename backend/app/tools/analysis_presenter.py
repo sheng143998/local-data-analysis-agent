@@ -1,7 +1,21 @@
+from dataclasses import dataclass
+from typing import Any
+
 from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
+
+
+@dataclass(frozen=True)
+class ResultProfile:
+    row_count: int
+    dimension_label: str
+    dimension_value: str
+    primary_metric_label: str
+    primary_metric_value: str
+    metrics: list[dict[str, str]]
+    range_label: str
 
 
 def present_sales_trend_result(
@@ -19,44 +33,33 @@ def present_sales_trend_result(
         )
 
     rows = list(reversed(execution.rows))
-    summary_rows = [_to_summary_row(row) for row in rows]
-    total_sales = sum(row["amount"] for row in summary_rows)
-    total_orders = sum(row["orders"] for row in summary_rows)
-    avg_order_value = round(total_sales / total_orders) if total_orders else 0
-    avg_refund_rate = _average_refund_rate(summary_rows)
-    date_range = _date_range(summary_rows)
 
     period_label = _period_label(sql)
     main_metric_label = _main_metric_label(question)
-    leading_label = summary_rows[0]["date"] if summary_rows else "无"
+    profile = _build_result_profile(
+        rows=rows,
+        columns=execution.columns,
+        period_label=period_label,
+        main_metric_label=main_metric_label,
+    )
 
     return AnalyzeResponse(
         question=question,
         path=_path_type(reuse_plan),
-        summary=_summary_text(
-            row_count=len(summary_rows),
+        summary=_generic_summary_text(
+            profile=profile,
             period_label=period_label,
             main_metric_label=main_metric_label,
-            total_sales=total_sales,
-            total_orders=total_orders,
-            avg_order_value=avg_order_value,
-            avg_refund_rate=avg_refund_rate,
-            leading_label=leading_label,
         ),
         sql=sql,
-        metrics=[
-            {"label": "总销售额", "value": f"¥ {total_sales:,.0f}", "delta": "--", "hint": "真实查询"},
-            {"label": "订单数", "value": f"{total_orders:,}", "delta": "--", "hint": "真实查询"},
-            {"label": "退款率", "value": f"{avg_refund_rate:.2f}%", "delta": "--", "hint": "真实查询"},
-            {"label": "平均客单价", "value": f"¥ {avg_order_value:,}", "delta": "--", "hint": "真实查询"},
-        ],
+        metrics=profile.metrics,
         rows=[_to_response_row(row) for row in rows],
         source={
             "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
             "tables": _source_tables(retrieval_context),
             "fields": _source_fields(retrieval_context),
             "metricDefinition": _metric_definition(retrieval_context),
-            "range": date_range,
+            "range": profile.range_label,
             "returnedRows": execution.row_count,
             "queryTime": f"{execution.latency_ms}ms",
             "security": "只读 SELECT，已通过 SQL Guard",
@@ -81,57 +84,237 @@ def present_sales_trend_result(
     )
 
 
-def _to_summary_row(row: dict) -> dict:
-    amount = round(float(row.get("daily_sales") or 0))
-    orders = int(row.get("order_count") or 0)
-    rate_value = row.get("refund_rate")
-    if rate_value is None:
-        rate_value = row.get("success_rate")
-    if rate_value is None:
-        rate_value = row.get("failure_rate")
-    if rate_value is None:
-        rate_value = row.get("gross_margin")
-    if rate_value is None:
-        rate_value = row.get("repeat_rate")
-    return {
-        "date": _row_label(row),
-        "amount": amount,
-        "orders": orders,
-        "avg": round(float(row.get("avg_order_value") or 0)),
-        "refundRate": f"{float(rate_value or 0):.2f}%",
-    }
-
-
 def _to_response_row(row: dict) -> dict:
     return {str(key): value for key, value in row.items()}
 
 
-def _row_label(row: dict) -> str:
-    for key in [
-        "segment_label",
-        "city_label",
-        "payment_method_label",
-        "product_label",
-        "category_label",
-        "product_category",
-        "order_date",
-    ]:
-        value = row.get(key)
-        if value:
-            return str(value)
-    return "未知"
-
-
-def _average_refund_rate(rows: list[dict]) -> float:
+def _build_result_profile(
+    *,
+    rows: list[dict],
+    columns: list[str],
+    period_label: str,
+    main_metric_label: str,
+) -> ResultProfile:
     if not rows:
-        return 0
-    return sum(float(row["refundRate"].rstrip("%")) for row in rows) / len(rows)
+        return ResultProfile(
+            row_count=0,
+            dimension_label=period_label,
+            dimension_value="无数据",
+            primary_metric_label=main_metric_label,
+            primary_metric_value="无数据",
+            metrics=[_metric_card("返回行数", "0", "真实查询")],
+            range_label="无数据",
+        )
+
+    ordered_columns = columns or list(rows[0].keys())
+    dimension_column = _dimension_column(ordered_columns, rows)
+    numeric_columns = _numeric_columns(ordered_columns, rows)
+    primary_metric_column = _primary_metric_column(numeric_columns, main_metric_label)
+    dimension_value = _display_value(rows[0].get(dimension_column)) if dimension_column else "首行"
+    primary_metric_value = (
+        _format_value(primary_metric_column, rows[0].get(primary_metric_column))
+        if primary_metric_column
+        else "无数值列"
+    )
+    metrics = _profile_metrics(rows, numeric_columns)
+    range_label = _profile_range(rows, dimension_column, period_label)
+
+    return ResultProfile(
+        row_count=len(rows),
+        dimension_label=_column_label(dimension_column) if dimension_column else period_label,
+        dimension_value=dimension_value,
+        primary_metric_label=_column_label(primary_metric_column) if primary_metric_column else main_metric_label,
+        primary_metric_value=primary_metric_value,
+        metrics=metrics,
+        range_label=range_label,
+    )
 
 
-def _date_range(rows: list[dict]) -> str:
+def _dimension_column(columns: list[str], rows: list[dict]) -> str | None:
+    preferred_tokens = [
+        "date",
+        "month",
+        "label",
+        "name",
+        "category",
+        "city",
+        "method",
+        "segment",
+        "product",
+    ]
+    for column in columns:
+        lowered = column.lower()
+        if any(token in lowered for token in preferred_tokens) and not _is_numeric_value(rows[0].get(column)):
+            return column
+    for column in columns:
+        if not _is_numeric_value(rows[0].get(column)):
+            return column
+    return columns[0] if columns else None
+
+
+def _numeric_columns(columns: list[str], rows: list[dict]) -> list[str]:
+    numeric: list[str] = []
+    for column in columns:
+        values = [row.get(column) for row in rows if row.get(column) is not None]
+        if values and all(_is_numeric_value(value) for value in values[:10]):
+            numeric.append(column)
+    return numeric
+
+
+def _primary_metric_column(numeric_columns: list[str], main_metric_label: str) -> str | None:
+    if not numeric_columns:
+        return None
+    preferred_by_metric = {
+        "复购率": ["repeat_rate"],
+        "城市客单价": ["avg_order_value"],
+        "毛利率排行": ["gross_margin"],
+        "支付失败率": ["failure_rate"],
+        "支付成功率": ["success_rate"],
+        "退款率排行": ["refund_rate"],
+        "订单数趋势": ["order_count", "orders", "count"],
+        "销售额排行": ["daily_sales", "sales_amount", "total_amount"],
+        "销售趋势": ["daily_sales", "sales_amount", "total_amount"],
+    }
+    preferred_tokens = preferred_by_metric.get(main_metric_label, [])
+    for token in preferred_tokens:
+        for column in numeric_columns:
+            if token in column.lower():
+                return column
+    return numeric_columns[0]
+
+
+def _profile_metrics(rows: list[dict], numeric_columns: list[str]) -> list[dict[str, str]]:
+    metrics: list[dict[str, str]] = [_metric_card("返回行数", f"{len(rows):,}", "真实查询")]
+    for column in numeric_columns[:3]:
+        values = [_to_float(row.get(column)) for row in rows if row.get(column) is not None]
+        if not values:
+            continue
+        if _is_rate_column(column):
+            value = sum(values) / len(values)
+            hint = "平均值"
+        elif _is_average_column(column):
+            value = sum(values) / len(values)
+            hint = "平均值"
+        else:
+            value = sum(values)
+            hint = "合计"
+        metrics.append(_metric_card(_column_label(column), _format_number(column, value), hint))
+    return metrics[:4]
+
+
+def _profile_range(rows: list[dict], dimension_column: str | None, period_label: str) -> str:
     if not rows:
         return "无数据"
-    return f"{rows[0]['date']} 至 {rows[-1]['date']}"
+    if dimension_column and _is_date_like_column(dimension_column):
+        first = _display_value(rows[0].get(dimension_column))
+        last = _display_value(rows[-1].get(dimension_column))
+        return f"{first} 至 {last}"
+    return f"{period_label}维度，返回 {len(rows)} 行"
+
+
+def _generic_summary_text(
+    *,
+    profile: ResultProfile,
+    period_label: str,
+    main_metric_label: str,
+) -> str:
+    if profile.row_count <= 0:
+        return f"已基于真实 PostgreSQL 数据执行{main_metric_label}查询，但当前没有返回数据。"
+    return (
+        f"已基于真实 PostgreSQL 数据查询{main_metric_label}，"
+        f"按{period_label}返回 {profile.row_count} 行结果。"
+        f"首行{profile.dimension_label}为 {profile.dimension_value}，"
+        f"{profile.primary_metric_label}为 {profile.primary_metric_value}。"
+    )
+
+
+def _metric_card(label: str, value: str, hint: str) -> dict[str, str]:
+    return {"label": label, "value": value, "delta": "--", "hint": hint}
+
+
+def _column_label(column: str | None) -> str:
+    if not column:
+        return "指标"
+    labels = {
+        "order_date": "日期",
+        "order_month": "月份",
+        "daily_sales": "销售额",
+        "sales_amount": "销售额",
+        "total_amount": "销售额",
+        "order_count": "订单数",
+        "avg_order_value": "客单价",
+        "refund_rate": "退款率",
+        "success_rate": "支付成功率",
+        "failure_rate": "支付失败率",
+        "gross_margin": "毛利率",
+        "repeat_rate": "复购率",
+        "category_label": "品类",
+        "product_label": "商品",
+        "city_label": "城市",
+        "payment_method_label": "支付方式",
+        "segment_label": "用户分组",
+    }
+    return labels.get(column, column.replace("_", " "))
+
+
+def _format_value(column: str | None, value: Any) -> str:
+    if value is None:
+        return "无"
+    if column and _is_numeric_value(value):
+        return _format_number(column, _to_float(value))
+    return _display_value(value)
+
+
+def _format_number(column: str | None, value: float) -> str:
+    if column and _is_rate_column(column):
+        return f"{value:.2f}%"
+    if column and _is_money_column(column):
+        return f"¥ {value:,.0f}"
+    if abs(value) >= 1000:
+        return f"{value:,.0f}"
+    if float(value).is_integer():
+        return f"{value:.0f}"
+    return f"{value:.2f}"
+
+
+def _display_value(value: Any) -> str:
+    if value is None:
+        return "无"
+    return str(value)
+
+
+def _is_numeric_value(value: Any) -> bool:
+    if isinstance(value, bool) or value is None:
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _to_float(value: Any) -> float:
+    return float(value or 0)
+
+
+def _is_rate_column(column: str) -> bool:
+    lowered = column.lower()
+    return any(token in lowered for token in ["rate", "ratio", "margin", "percent"])
+
+
+def _is_money_column(column: str) -> bool:
+    lowered = column.lower()
+    return any(token in lowered for token in ["sales", "amount", "value", "price", "revenue", "gmv"])
+
+
+def _is_average_column(column: str) -> bool:
+    lowered = column.lower()
+    return lowered.startswith("avg_") or "average" in lowered
+
+
+def _is_date_like_column(column: str) -> bool:
+    lowered = column.lower()
+    return "date" in lowered or "month" in lowered
 
 
 def _error_payload(
@@ -247,55 +430,3 @@ def _main_metric_label(question: str) -> str:
     return "销售趋势"
 
 
-def _summary_text(
-    *,
-    row_count: int,
-    period_label: str,
-    main_metric_label: str,
-    total_sales: int,
-    total_orders: int,
-    avg_order_value: int,
-    avg_refund_rate: float,
-    leading_label: str,
-) -> str:
-    if main_metric_label == "复购率":
-        return (
-            f"已基于真实 PostgreSQL 数据计算整体复购率。"
-            f"覆盖用户数 {total_orders:,}，相关销售额约为 ¥{total_sales:,.0f}，"
-            f"复购率为 {avg_refund_rate:.2f}%。"
-        )
-    if main_metric_label == "城市客单价":
-        return (
-            f"已基于真实 PostgreSQL 数据按城市查询客单价。"
-            f"当前最高的是 {leading_label}，入选范围销售额约为 ¥{total_sales:,.0f}，"
-            f"关联订单数 {total_orders:,}，平均客单价约 ¥{avg_order_value:,}。"
-        )
-    if main_metric_label == "毛利率排行":
-        return (
-            f"已基于真实 PostgreSQL 数据查询毛利率最高的 {row_count} 个{period_label}。"
-            f"当前最高的是 {leading_label}，入选范围销售额约为 ¥{total_sales:,.0f}，"
-            f"关联订单数 {total_orders:,}。"
-        )
-    if main_metric_label in {"支付成功率", "支付失败率"}:
-        return (
-            f"已基于真实 PostgreSQL 数据按支付方式查询{main_metric_label}。"
-            f"当前最高的是 {leading_label}，覆盖订单数 {total_orders:,}，"
-            f"相关支付金额约为 ¥{total_sales:,.0f}。"
-        )
-    if main_metric_label == "退款率排行":
-        return (
-            f"已基于真实 PostgreSQL 数据查询退款率最高的 {row_count} 个{period_label}。"
-            f"当前最高的是 {leading_label}，入选范围关联订单数 {total_orders:,}，"
-            f"合计销售额约为 ¥{total_sales:,.0f}。"
-        )
-    if period_label in {"商品", "品类"}:
-        return (
-            f"已基于真实 PostgreSQL 数据查询销售额最高的 {row_count} 个{period_label}。"
-            f"当前第一名是 {leading_label}，入选范围合计销售额约为 ¥{total_sales:,.0f}，"
-            f"关联订单数 {total_orders:,}，平均客单价约 ¥{avg_order_value:,}。"
-        )
-    return (
-        f"已基于真实 PostgreSQL 数据查询最近 {row_count} 个{period_label}的{main_metric_label}。"
-        f"区间内总销售额约为 ¥{total_sales:,.0f}，订单数 {total_orders:,}，"
-        f"平均客单价约 ¥{avg_order_value:,}，平均退款率 {avg_refund_rate:.2f}%。"
-    )
