@@ -1,5 +1,11 @@
 from backend.app.db.connection import get_connection
 from backend.app.schemas.retrieval import MetricContext, SchemaColumnContext
+from backend.app.tools.retrieval_scoring import (
+    build_search_document,
+    keyword_hit_score,
+    text_similarity,
+    weighted_score,
+)
 
 
 DEFAULT_ANALYSIS_TABLES = ["orders", "payments", "refunds"]
@@ -19,9 +25,14 @@ def retrieve_schema(
         if "." in field
     }
     columns = _load_schema_columns(tables)
+    scored_columns = [
+        _score_column(column, question, related_tables=tables, required_fields=required_fields)
+        for column in columns
+    ]
     ranked = sorted(
-        columns,
+        scored_columns,
         key=lambda column: (
+            -column.score,
             column.table_name not in tables,
             f"{column.table_name}.{column.column_name}" not in required_fields,
             _column_priority(column.column_name),
@@ -106,3 +117,46 @@ def _column_priority(column_name: str) -> int:
         "id": 4,
     }
     return priorities.get(column_name, 10)
+
+
+def _score_column(
+    column: SchemaColumnContext,
+    question: str,
+    *,
+    related_tables: list[str],
+    required_fields: set[str],
+) -> SchemaColumnContext:
+    field_name = f"{column.table_name}.{column.column_name}"
+    document = build_search_document(
+        [
+            column.table_name,
+            column.column_name,
+            column.data_type,
+            column.description,
+            column.business_meaning,
+        ]
+    )
+    required_field_match = 1.0 if field_name in required_fields else 0.0
+    related_table_match = 1.0 if column.table_name in related_tables else 0.0
+    keyword_score = keyword_hit_score(
+        question,
+        {
+            column.table_name,
+            column.column_name,
+            field_name,
+            column.description,
+            column.business_meaning,
+        },
+    )
+    similarity = text_similarity(question, document)
+    priority_score = max(0.0, (10 - _column_priority(column.column_name)) / 10)
+    score = weighted_score(
+        {
+            "required_field_match": (required_field_match, 1.0),
+            "related_table_match": (related_table_match, 0.2),
+            "keyword_score": (keyword_score, 0.8),
+            "text_similarity": (similarity, 0.4),
+            "priority_score": (priority_score, 0.2),
+        }
+    )
+    return column.model_copy(update={"score": score})

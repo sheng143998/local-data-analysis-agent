@@ -1,5 +1,3 @@
-from difflib import SequenceMatcher
-
 from backend.app.db.repositories.memory_repository import SqlMemoryRepository
 from backend.app.schemas.memories import (
     SqlMemoryCandidate,
@@ -7,6 +5,7 @@ from backend.app.schemas.memories import (
     SqlMemoryUpsert,
     SqlReusePlan,
 )
+from backend.app.tools.retrieval_scoring import overlap_score, text_similarity
 from backend.app.tools.text_normalization import normalize_question
 
 
@@ -31,13 +30,13 @@ def retrieve_sql_memory(
     candidates: list[SqlMemoryCandidate] = []
 
     for memory in repo.list(limit=100):
-        text_similarity = _text_similarity(normalized_question, memory.normalized_question)
-        semantic_similarity = text_similarity
+        lexical_similarity = text_similarity(normalized_question, memory.normalized_question)
+        semantic_similarity = lexical_similarity
         metric_table_match = _metric_table_match(memory, metric_set, table_set)
         success_score = _success_score(memory)
         score = round(
             0.45 * semantic_similarity
-            + 0.25 * text_similarity
+            + 0.25 * lexical_similarity
             + 0.20 * metric_table_match
             + 0.10 * success_score,
             4,
@@ -50,7 +49,7 @@ def retrieve_sql_memory(
                 memory=memory,
                 score=score,
                 semantic_similarity=round(semantic_similarity, 4),
-                text_similarity=round(text_similarity, 4),
+                text_similarity=round(lexical_similarity, 4),
                 metric_table_match=round(metric_table_match, 4),
                 success_score=round(success_score, 4),
                 required_table_match=required_table_match,
@@ -125,14 +124,6 @@ def upsert_successful_sql_memory(
     )
 
 
-def _text_similarity(question: str, memory_question: str) -> float:
-    if not question or not memory_question:
-        return 0
-    if question == memory_question:
-        return 1
-    return SequenceMatcher(None, question, memory_question).ratio()
-
-
 def _metric_table_match(
     memory: SqlMemoryRecord,
     metric_set: set[str],
@@ -140,15 +131,9 @@ def _metric_table_match(
 ) -> float:
     memory_metrics = set(memory.metrics)
     memory_tables = set(memory.tables)
-    metric_score = _overlap_score(memory_metrics, metric_set)
-    table_score = _overlap_score(memory_tables, table_set)
+    metric_score = overlap_score(memory_metrics, metric_set)
+    table_score = overlap_score(memory_tables, table_set)
     return (metric_score + table_score) / 2
-
-
-def _overlap_score(left: set[str], right: set[str]) -> float:
-    if not left or not right:
-        return 0
-    return len(left & right) / len(left | right)
 
 
 def _success_score(memory: SqlMemoryRecord) -> float:

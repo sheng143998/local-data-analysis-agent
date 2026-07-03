@@ -10,6 +10,7 @@ def test_metric_retriever_finds_sales_context() -> None:
     assert "sales_amount" in metric_names
     assert any("orders" in metric.required_tables for metric in metrics)
     assert any("payments" in metric.required_tables for metric in metrics)
+    assert all(metric.score > 0 for metric in metrics)
 
 
 def test_schema_retriever_returns_required_columns() -> None:
@@ -20,6 +21,22 @@ def test_schema_retriever_returns_required_columns() -> None:
     assert "orders.created_at" in fields
     assert "orders.total_amount" in fields
     assert "orders.status" in fields
+    required = {
+        f"{column.table_name}.{column.column_name}": column.score
+        for column in columns
+        if f"{column.table_name}.{column.column_name}" in fields
+    }
+    assert required["orders.total_amount"] > 0
+
+
+def test_schema_retriever_prioritizes_refund_context() -> None:
+    metrics = retrieve_metrics("哪个商品品类退款率最高？")
+    columns = retrieve_schema("哪个商品品类退款率最高？", metrics)
+
+    fields = {f"{column.table_name}.{column.column_name}" for column in columns}
+    assert "refunds.order_id" in fields
+    assert "products.category" in fields
+    assert any(column.score > 0 for column in columns)
 
 
 def test_context_builder_combines_metrics_and_schema() -> None:

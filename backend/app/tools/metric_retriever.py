@@ -1,5 +1,12 @@
 from backend.app.db.connection import get_connection
 from backend.app.schemas.retrieval import MetricContext
+from backend.app.tools.retrieval_scoring import (
+    build_search_document,
+    keyword_hit_score,
+    normalize_search_text,
+    text_similarity,
+    weighted_score,
+)
 
 
 METRIC_KEYWORDS = {
@@ -47,8 +54,8 @@ def _load_enabled_metrics() -> list[MetricContext]:
 
 
 def _score_metric(metric: MetricContext, question: str) -> MetricContext:
-    lowered = question.lower()
-    text = " ".join(
+    normalized_question = normalize_search_text(question)
+    document = build_search_document(
         [
             metric.metric_name,
             metric.display_name,
@@ -57,21 +64,27 @@ def _score_metric(metric: MetricContext, question: str) -> MetricContext:
             " ".join(metric.required_tables),
             " ".join(metric.required_fields),
         ]
-    ).lower()
+    )
 
-    score = 0.0
-    if metric.display_name and metric.display_name in question:
-        score += 1.0
-    if metric.metric_name.lower() in lowered:
-        score += 1.0
-    for keyword in METRIC_KEYWORDS.get(metric.metric_name, set()):
-        keyword_lower = keyword.lower()
-        if keyword_lower in lowered:
-            score += 0.8
-        elif keyword_lower in text and keyword_lower in lowered:
-            score += 0.4
-    if any(token in question for token in ["趋势", "按天", "每天", "最近"]):
-        if metric.metric_name in {"sales_amount", "order_count", "avg_order_value", "refund_rate"}:
-            score += 0.2
+    display_name = normalize_search_text(metric.display_name)
+    metric_name = normalize_search_text(metric.metric_name)
+    name_match = 1.0 if (
+        (display_name and display_name in normalized_question)
+        or (metric_name and metric_name in normalized_question)
+    ) else 0.0
+    keyword_score = keyword_hit_score(question, METRIC_KEYWORDS.get(metric.metric_name, set()))
+    similarity = text_similarity(question, document)
+    trend_intent = 1.0 if (
+        any(token in question for token in ["趋势", "按天", "每天", "最近"])
+        and metric.metric_name in {"sales_amount", "order_count", "avg_order_value", "refund_rate"}
+    ) else 0.0
 
-    return metric.model_copy(update={"score": round(score, 4)})
+    score = weighted_score(
+        {
+            "name_match": (name_match, 1.0),
+            "keyword_score": (keyword_score, 1.0),
+            "text_similarity": (similarity, 0.4),
+            "trend_intent": (trend_intent, 0.2),
+        }
+    )
+    return metric.model_copy(update={"score": score})

@@ -28,6 +28,7 @@
 - 前端已新增统一 API Client，数据问答和指标 CRUD 都通过 `frontend/src/api/client.ts` 调用后端，并统一解析 FastAPI `detail` 为中文业务错误。
 - `/api/analyze.rows` 已改为通用表格结构，前端聊天页会根据 SQL 真实结果列动态生成表头，减少对固定销售趋势字段的依赖。
 - 前端 `AnalysisResponse` 已补齐后端 `trace` 和 `steps` 类型契约，但普通用户页面不展示内部追踪细节。
+- 已新增统一检索评分基础层，metric、schema、SQL Memory 检索复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
 
 ## 最近完成模块
 
@@ -491,7 +492,7 @@
 
 ### 33. 数据问答 Trace / Steps 前端类型契约
 
-- commit: 本模块随本次提交推送完成，提交信息为 `补齐分析追踪前端类型并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- commit: `ca1e343 补齐分析追踪前端类型并通过验证`
 - 内容：
   - `frontend/src/types/analysis.ts` 新增 `AnalysisTrace` 和 `AgentStep`。
   - `AnalysisResponse` 声明后端已返回的 `trace` 和 `steps` 字段。
@@ -501,6 +502,20 @@
 - 验证：
   - `npm run frontend:build` 已通过
   - `npm run backend:test`，73 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run test:e2e` 已通过
+
+### 34. 统一检索评分基础层
+
+- commit: 本模块随本次提交推送完成，提交信息为 `统一检索评分基础层并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- 内容：
+  - 新增 `backend/app/tools/retrieval_scoring.py`，统一文本归一化、文档拼接、文本相似、关键词命中、集合重合和加权评分。
+  - `metric_retriever.py` 复用共享评分工具，指标分由名称命中、关键词命中、文本相似和趋势意图组成。
+  - `schema_retriever.py` 为字段增加 `score`，按必需字段、相关表、关键词、文本相似和字段优先级排序。
+  - `sql_memory_tools.py` 复用共享文本相似和集合重合分，原 SQL Memory 混合公式保持不变。
+  - 新增 `test_retrieval_scoring.py`，并增强检索相关测试。
+- 验证：
+  - `npm run backend:test`，80 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过
 
 ## 当前架构边界
@@ -515,13 +530,13 @@
 
 ## 当前正在做
 
-“数据问答 Trace / Steps 前端类型契约”模块已完成并通过验证，随本次提交推送完成。
+“统一检索评分基础层”模块已完成并通过验证，随本次提交推送完成。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 推进 schema/metric/memory 的 embedding 或混合检索能力，让换库后依赖自动检索而不是固定模板。
+1. 在统一检索评分基础上接入 embedding / pgvector 查询，形成 schema、metric、memory 的真正混合检索。
 2. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
 3. 后续如建设开发者视图，再使用 `trace` 和 `steps` 类型展示受控执行摘要。
 
@@ -532,8 +547,8 @@
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
-- schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
-- SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
+- schema/metric retriever 已有统一确定性评分基础层，但尚未接入 embedding / pgvector 混合检索。
+- SQL Memory 当前 semantic similarity 仍暂用统一文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。
 - 支付成功率当前基于 `payments.status = 'paid'`，真实失败状态样本仍需后续数据增强。

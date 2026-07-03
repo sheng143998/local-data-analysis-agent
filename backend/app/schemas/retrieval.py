@@ -17,6 +17,7 @@ class SchemaColumnContext(BaseModel):
     data_type: str
     description: str
     business_meaning: str
+    score: float = 0
 
 
 class RetrievalContext(BaseModel):
