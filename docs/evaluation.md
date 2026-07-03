@@ -64,6 +64,7 @@ eval/reports/latest_eval_report.json
 - `path_counts`：路径分布。
 - `failures`：链路失败案例。
 - `assertion_failures`：链路成功但断言失败案例。
+- `assertion_failure_summary`：断言失败聚合诊断，包含缺失表、失败类别、失败路径和 case id 列表。
 
 ## 最近基线
 
@@ -82,6 +83,7 @@ eval/reports/latest_eval_report.json
 - 如果 `strict_success_rate` 下降，优先检查 SQL Memory 复用、SQL Generator、schema/metric 召回。
 - 如果 `memory_hit_rate` 异常升高且严格成功率下降，说明可能存在错误 fast_path 复用。
 - 如果 `assertion_failures` 集中在某类表，优先补强该意图的 schema 召回和 SQL 生成。
+- 如果 `assertion_failure_summary.by_missing_table` 集中在某些表，优先检查这些表是否被召回、是否进入模型 SQL prompt、是否被 SQL Memory fast_path 错误绕过。
 
 ## 后续方向
 

@@ -40,6 +40,7 @@
 - 已为 embedding 同步增加 `--batch-size` / `--embedding-batch-size` 控制，减少真实 provider 下的逐条请求开销。
 - 已为 embedding batch 失败增加单条重试，避免单条坏数据拖垮整批同步。
 - 已为 embedding 同步增加 `--sleep-ms` / `--embedding-sleep-ms` 固定间隔限速，降低真实 provider 限流风险。
+- 已为标准评估报告增加断言失败聚合诊断，帮助定位缺失表、失败类别和路径。
 
 ## 最近完成模块
 
@@ -718,6 +719,22 @@
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 46. 评估断言失败聚合诊断
+
+- commit: `新增评估断言失败聚合诊断并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `eval/scripts/run_eval.py` 新增 `assertion_failure_summary`。
+  - 聚合链路成功但严格断言失败案例的缺失表、失败类别、失败路径和 case id。
+  - 新增 `_assertion_failure_summary()` 和 `_sorted_count_items()` 纯函数。
+  - `backend/tests/test_eval_runner.py` 覆盖缺失表、类别、路径聚合。
+  - 更新评估文档、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_eval_runner.py`，4 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run backend:test`，134 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%，报告已生成 `assertion_failure_summary`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -730,7 +747,7 @@
 
 ## 当前正在做
 
-“Embedding 同步批次限速” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，让 `sync_embeddings.py` 和 `refresh_context.py` 支持固定间隔限速，降低真实 embedding provider 的限流风险。
+“评估断言失败聚合诊断” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强标准评估报告，帮助后续优先补强通用 SQL 生成和 schema 召回。
 
 ## 下一步建议
 

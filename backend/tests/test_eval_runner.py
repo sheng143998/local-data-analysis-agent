@@ -85,3 +85,72 @@ def test_summary_separates_execution_success_from_assertion_match() -> None:
     assert report["table_match_rate"] == 0
     assert report["keyword_match_rate"] == 0
     assert report["assertion_failures"][0]["missing_tables"] == ["coupons"]
+    assert report["assertion_failure_summary"] == {
+        "total": 1,
+        "by_missing_table": [{"name": "coupons", "count": 1}],
+        "by_category": [{"name": "漏斗与营销", "count": 1}],
+        "by_path": [{"name": "cold_path", "count": 1}],
+        "case_ids": ["case_1"],
+    }
+
+
+def test_summary_groups_assertion_failures_by_table_category_and_path() -> None:
+    cases = [
+        EvalCase(
+            id="user_1",
+            category="用户分析",
+            question="下单用户数",
+            expected_tables=["users", "orders"],
+            expected_keywords=["SELECT"],
+        ),
+        EvalCase(
+            id="funnel_1",
+            category="漏斗与营销",
+            question="访问转化率",
+            expected_tables=["traffic_events", "orders"],
+            expected_keywords=["SELECT"],
+        ),
+        EvalCase(
+            id="funnel_2",
+            category="漏斗与营销",
+            question="流量来源转化率",
+            expected_tables=["traffic_events"],
+            expected_keywords=["SELECT"],
+        ),
+    ]
+
+    def fake_analyze(question: str):
+        if question == "下单用户数":
+            sql = "SELECT COUNT(*) FROM orders"
+            path = "rewrite_path"
+        elif question == "访问转化率":
+            sql = "SELECT COUNT(*) FROM orders"
+            path = "rewrite_path"
+        else:
+            sql = "SELECT COUNT(*) FROM orders"
+            path = "fast_path"
+        return 200, {
+            "path": path,
+            "sql": sql,
+            "source": {"security": "只读 SELECT，已通过 SQL Guard", "returnedRows": 1},
+            "trace": {},
+        }
+
+    report = summarize_results(run_cases(cases, fake_analyze))
+
+    assert report["assertion_failure_summary"] == {
+        "total": 3,
+        "by_missing_table": [
+            {"name": "traffic_events", "count": 2},
+            {"name": "users", "count": 1},
+        ],
+        "by_category": [
+            {"name": "漏斗与营销", "count": 2},
+            {"name": "用户分析", "count": 1},
+        ],
+        "by_path": [
+            {"name": "rewrite_path", "count": 2},
+            {"name": "fast_path", "count": 1},
+        ],
+        "case_ids": ["user_1", "funnel_1", "funnel_2"],
+    }

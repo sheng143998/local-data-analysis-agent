@@ -160,6 +160,11 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
     path_counts: dict[str, int] = {}
     for result in results:
         path_counts[result.path] = path_counts.get(result.path, 0) + 1
+    assertion_failures = [
+        result
+        for result in results
+        if result.ok and not result.strict_ok
+    ]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": total,
@@ -177,11 +182,8 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         ),
         "path_counts": path_counts,
         "failures": [asdict(result) for result in results if not result.ok],
-        "assertion_failures": [
-            asdict(result)
-            for result in results
-            if result.ok and not result.strict_ok
-        ],
+        "assertion_failures": [asdict(result) for result in assertion_failures],
+        "assertion_failure_summary": _assertion_failure_summary(assertion_failures),
         "cases": [asdict(result) for result in results],
     }
 
@@ -215,6 +217,33 @@ def _rate(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0
     return round(numerator / denominator, 4)
+
+
+def _assertion_failure_summary(results: list[EvalCaseResult]) -> dict[str, Any]:
+    missing_table_counts: dict[str, int] = {}
+    category_counts: dict[str, int] = {}
+    path_counts: dict[str, int] = {}
+
+    for result in results:
+        category_counts[result.category] = category_counts.get(result.category, 0) + 1
+        path_counts[result.path] = path_counts.get(result.path, 0) + 1
+        for table in result.missing_tables:
+            missing_table_counts[table] = missing_table_counts.get(table, 0) + 1
+
+    return {
+        "total": len(results),
+        "by_missing_table": _sorted_count_items(missing_table_counts),
+        "by_category": _sorted_count_items(category_counts),
+        "by_path": _sorted_count_items(path_counts),
+        "case_ids": [result.id for result in results],
+    }
+
+
+def _sorted_count_items(counts: dict[str, int]) -> list[dict[str, Any]]:
+    return [
+        {"name": name, "count": count}
+        for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
 
 
 if __name__ == "__main__":
