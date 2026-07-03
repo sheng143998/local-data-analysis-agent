@@ -27,24 +27,24 @@ class FakeEmbeddingService:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int | None]] = []
 
-    def sync_all(self, limit=None, batch_size=16) -> list[EmbeddingSyncResult]:
-        self.calls.append(("all", limit, batch_size))
+    def sync_all(self, limit=None, batch_size=16, retry_single_on_batch_failure=True) -> list[EmbeddingSyncResult]:
+        self.calls.append(("all", limit, batch_size, retry_single_on_batch_failure))
         return [
             EmbeddingSyncResult(target="schema", scanned=3, updated=3),
             EmbeddingSyncResult(target="metric", scanned=1, updated=1),
             EmbeddingSyncResult(target="memory", scanned=2, updated=2),
         ]
 
-    def sync_schema_embeddings(self, limit=None, batch_size=16) -> EmbeddingSyncResult:
-        self.calls.append(("schema", limit, batch_size))
+    def sync_schema_embeddings(self, limit=None, batch_size=16, retry_single_on_batch_failure=True) -> EmbeddingSyncResult:
+        self.calls.append(("schema", limit, batch_size, retry_single_on_batch_failure))
         return EmbeddingSyncResult(target="schema", scanned=3, updated=3)
 
-    def sync_metric_embeddings(self, limit=None, batch_size=16) -> EmbeddingSyncResult:
-        self.calls.append(("metric", limit, batch_size))
+    def sync_metric_embeddings(self, limit=None, batch_size=16, retry_single_on_batch_failure=True) -> EmbeddingSyncResult:
+        self.calls.append(("metric", limit, batch_size, retry_single_on_batch_failure))
         return EmbeddingSyncResult(target="metric", scanned=1, updated=1)
 
-    def sync_sql_memory_embeddings(self, limit=None, batch_size=16) -> EmbeddingSyncResult:
-        self.calls.append(("memory", limit, batch_size))
+    def sync_sql_memory_embeddings(self, limit=None, batch_size=16, retry_single_on_batch_failure=True) -> EmbeddingSyncResult:
+        self.calls.append(("memory", limit, batch_size, retry_single_on_batch_failure))
         return EmbeddingSyncResult(target="memory", scanned=2, updated=2)
 
 
@@ -59,7 +59,7 @@ def test_refresh_syncs_schema_then_all_embeddings_by_default() -> None:
     result = service.refresh()
 
     assert schema_service.calls == [{"include_tables": None, "exclude_tables": None}]
-    assert embedding_service.calls == [("all", None, 16)]
+    assert embedding_service.calls == [("all", None, 16, True)]
     assert result.schema_result.synced_columns == 3
     assert [item.target for item in result.embedding_results] == ["schema", "metric", "memory"]
 
@@ -99,9 +99,10 @@ def test_refresh_syncs_selected_embedding_targets_in_order() -> None:
         embedding_targets=["memory", "schema", "memory"],
         embedding_limit=10,
         embedding_batch_size=4,
+        retry_single_on_batch_failure=False,
     )
 
-    assert embedding_service.calls == [("memory", 10, 4), ("schema", 10, 4)]
+    assert embedding_service.calls == [("memory", 10, 4, False), ("schema", 10, 4, False)]
     assert [item.target for item in result.embedding_results] == ["memory", "schema"]
 
 

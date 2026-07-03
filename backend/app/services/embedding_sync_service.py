@@ -58,6 +58,7 @@ class EmbeddingSyncService:
         self,
         limit: int | None = None,
         batch_size: int = 16,
+        retry_single_on_batch_failure: bool = True,
     ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="schema")
         with get_connection() as conn:
@@ -68,11 +69,14 @@ class EmbeddingSyncService:
                 documents = [build_schema_embedding_document(record) for record in batch]
                 response = self.adapter.embed(EmbeddingRequest(texts=documents))
                 if not response.ok or len(response.vectors) < len(batch):
-                    result.failed += len(batch)
-                    for record in batch:
-                        result.errors.append(
-                            _error_summary("schema", record.table_name, record.column_name, response.error_message)
-                        )
+                    if retry_single_on_batch_failure and len(batch) > 1:
+                        self._retry_schema_records(cursor, batch, result)
+                    else:
+                        result.failed += len(batch)
+                        for record in batch:
+                            result.errors.append(
+                                _error_summary("schema", record.table_name, record.column_name, response.error_message)
+                            )
                     continue
                 for record, vector in zip(batch, response.vectors, strict=False):
                     self._update_schema_embedding(cursor, record, vector)
@@ -83,6 +87,7 @@ class EmbeddingSyncService:
         self,
         limit: int | None = None,
         batch_size: int = 16,
+        retry_single_on_batch_failure: bool = True,
     ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="metric")
         with get_connection() as conn:
@@ -93,9 +98,12 @@ class EmbeddingSyncService:
                 documents = [build_metric_embedding_document(record) for record in batch]
                 response = self.adapter.embed(EmbeddingRequest(texts=documents))
                 if not response.ok or len(response.vectors) < len(batch):
-                    result.failed += len(batch)
-                    for record in batch:
-                        result.errors.append(_error_summary("metric", record.metric_name, None, response.error_message))
+                    if retry_single_on_batch_failure and len(batch) > 1:
+                        self._retry_metric_records(cursor, batch, result)
+                    else:
+                        result.failed += len(batch)
+                        for record in batch:
+                            result.errors.append(_error_summary("metric", record.metric_name, None, response.error_message))
                     continue
                 for record, vector in zip(batch, response.vectors, strict=False):
                     self._update_metric_embedding(cursor, record, vector)
@@ -106,17 +114,31 @@ class EmbeddingSyncService:
         self,
         limit: int | None = None,
         batch_size: int = 16,
+        retry_single_on_batch_failure: bool = True,
     ) -> list[EmbeddingSyncResult]:
         return [
-            self.sync_schema_embeddings(limit=limit, batch_size=batch_size),
-            self.sync_metric_embeddings(limit=limit, batch_size=batch_size),
-            self.sync_sql_memory_embeddings(limit=limit, batch_size=batch_size),
+            self.sync_schema_embeddings(
+                limit=limit,
+                batch_size=batch_size,
+                retry_single_on_batch_failure=retry_single_on_batch_failure,
+            ),
+            self.sync_metric_embeddings(
+                limit=limit,
+                batch_size=batch_size,
+                retry_single_on_batch_failure=retry_single_on_batch_failure,
+            ),
+            self.sync_sql_memory_embeddings(
+                limit=limit,
+                batch_size=batch_size,
+                retry_single_on_batch_failure=retry_single_on_batch_failure,
+            ),
         ]
 
     def sync_sql_memory_embeddings(
         self,
         limit: int | None = None,
         batch_size: int = 16,
+        retry_single_on_batch_failure: bool = True,
     ) -> EmbeddingSyncResult:
         result = EmbeddingSyncResult(target="memory")
         with get_connection() as conn:
@@ -130,9 +152,12 @@ class EmbeddingSyncService:
                 response = self.adapter.embed(EmbeddingRequest(texts=texts))
                 expected_vectors = len(batch) * 2
                 if not response.ok or len(response.vectors) < expected_vectors:
-                    result.failed += len(batch)
-                    for record in batch:
-                        result.errors.append(_error_summary("memory", record.id, None, response.error_message))
+                    if retry_single_on_batch_failure and len(batch) > 1:
+                        self._retry_sql_memory_records(cursor, batch, result)
+                    else:
+                        result.failed += len(batch)
+                        for record in batch:
+                            result.errors.append(_error_summary("memory", record.id, None, response.error_message))
                     continue
                 for index, record in enumerate(batch):
                     self._update_sql_memory_embeddings(
@@ -143,6 +168,58 @@ class EmbeddingSyncService:
                     )
                     result.updated += 1
         return result
+
+    def _retry_schema_records(
+        self,
+        cursor,
+        records: list[SchemaEmbeddingRecord],
+        result: EmbeddingSyncResult,
+    ) -> None:
+        for record in records:
+            document = build_schema_embedding_document(record)
+            response = self.adapter.embed(EmbeddingRequest(texts=[document]))
+            if not response.ok or not response.vectors:
+                result.failed += 1
+                result.errors.append(_error_summary("schema", record.table_name, record.column_name, response.error_message))
+                continue
+            self._update_schema_embedding(cursor, record, response.vectors[0])
+            result.updated += 1
+
+    def _retry_metric_records(
+        self,
+        cursor,
+        records: list[MetricEmbeddingRecord],
+        result: EmbeddingSyncResult,
+    ) -> None:
+        for record in records:
+            document = build_metric_embedding_document(record)
+            response = self.adapter.embed(EmbeddingRequest(texts=[document]))
+            if not response.ok or not response.vectors:
+                result.failed += 1
+                result.errors.append(_error_summary("metric", record.metric_name, None, response.error_message))
+                continue
+            self._update_metric_embedding(cursor, record, response.vectors[0])
+            result.updated += 1
+
+    def _retry_sql_memory_records(
+        self,
+        cursor,
+        records: list[SqlMemoryEmbeddingRecord],
+        result: EmbeddingSyncResult,
+    ) -> None:
+        for record in records:
+            response = self.adapter.embed(EmbeddingRequest(texts=[record.canonical_question, record.final_sql]))
+            if not response.ok or len(response.vectors) < 2:
+                result.failed += 1
+                result.errors.append(_error_summary("memory", record.id, None, response.error_message))
+                continue
+            self._update_sql_memory_embeddings(
+                cursor,
+                record,
+                question_vector=response.vectors[0],
+                sql_vector=response.vectors[1],
+            )
+            result.updated += 1
 
     def _load_schema_records(self, cursor, limit: int | None = None) -> list[SchemaEmbeddingRecord]:
         sql = """

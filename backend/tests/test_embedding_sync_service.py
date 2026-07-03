@@ -80,6 +80,76 @@ class MultiTextFakeAdapter:
         )
 
 
+class BatchThenSingleFakeAdapter:
+    def __init__(self, fail_single_text: str | None = None) -> None:
+        self.fail_single_text = fail_single_text
+        self.calls: list[list[str]] = []
+
+    def embed(self, request):
+        self.calls.append(request.texts)
+        if len(request.texts) > 1:
+            return EmbeddingResponse(
+                ok=False,
+                provider="deterministic",
+                model="test",
+                dimension=2,
+                latency_ms=1,
+                error_message="batch failed",
+            )
+        if self.fail_single_text and self.fail_single_text in request.texts[0]:
+            return EmbeddingResponse(
+                ok=False,
+                provider="deterministic",
+                model="test",
+                dimension=2,
+                latency_ms=1,
+                error_message="single failed",
+            )
+        return EmbeddingResponse(
+            ok=True,
+            vectors=[[0.9, 0.8]],
+            provider="deterministic",
+            model="test",
+            dimension=2,
+            latency_ms=1,
+        )
+
+
+class MemoryBatchThenSingleFakeAdapter:
+    def __init__(self, fail_memory_question: str | None = None) -> None:
+        self.fail_memory_question = fail_memory_question
+        self.calls: list[list[str]] = []
+
+    def embed(self, request):
+        self.calls.append(request.texts)
+        if len(request.texts) > 2:
+            return EmbeddingResponse(
+                ok=False,
+                provider="deterministic",
+                model="test",
+                dimension=2,
+                latency_ms=1,
+                error_message="batch failed",
+            )
+        if self.fail_memory_question and request.texts and self.fail_memory_question in request.texts[0]:
+            return EmbeddingResponse(
+                ok=False,
+                provider="deterministic",
+                model="test",
+                dimension=2,
+                latency_ms=1,
+                error_message="single failed",
+            )
+        return EmbeddingResponse(
+            ok=True,
+            vectors=[[0.9, 0.8], [0.7, 0.6]],
+            provider="deterministic",
+            model="test",
+            dimension=2,
+            latency_ms=1,
+        )
+
+
 class FakeCursor:
     def __init__(self, rows: list[tuple[Any, ...]]) -> None:
         self.rows = rows
@@ -231,7 +301,7 @@ def test_sync_schema_embeddings_applies_limit_to_select(monkeypatch) -> None:
     assert select_params == (1,)
 
 
-def test_sync_schema_embeddings_marks_whole_batch_failed_on_short_response(monkeypatch) -> None:
+def test_sync_schema_embeddings_marks_whole_batch_failed_when_retry_disabled(monkeypatch) -> None:
     cursor = FakeCursor(
         rows=[
             ("orders", "total_amount", "numeric", "订单金额", "销售额分析"),
@@ -240,13 +310,37 @@ def test_sync_schema_embeddings_marks_whole_batch_failed_on_short_response(monke
     )
     _patch_connection(monkeypatch, cursor)
 
-    result = EmbeddingSyncService(adapter=MultiTextFakeAdapter(short_response=True)).sync_schema_embeddings(batch_size=2)
+    result = EmbeddingSyncService(adapter=MultiTextFakeAdapter(short_response=True)).sync_schema_embeddings(
+        batch_size=2,
+        retry_single_on_batch_failure=False,
+    )
 
     assert result.scanned == 2
     assert result.updated == 0
     assert result.failed == 2
     assert len(result.errors) == 2
     assert not [call for call in cursor.executed if "UPDATE schema_metadata" in call[0]]
+
+
+def test_sync_schema_embeddings_retries_single_records_after_batch_failure(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("orders", "bad_column", "text", "会失败", ""),
+            ("orders", "ok_column", "text", "可同步", ""),
+        ]
+    )
+    adapter = BatchThenSingleFakeAdapter(fail_single_text="bad_column")
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_schema_embeddings(batch_size=2)
+
+    assert result.scanned == 2
+    assert result.updated == 1
+    assert result.failed == 1
+    assert result.errors == ["schema:orders.bad_column: single failed"]
+    assert len(adapter.calls) == 3
+    update_calls = [call for call in cursor.executed if "UPDATE schema_metadata" in call[0]]
+    assert update_calls[0][1] == ("[0.90000000,0.80000000]", "orders", "ok_column")
 
 
 def test_sync_metric_embeddings_updates_pgvector(monkeypatch) -> None:
@@ -315,6 +409,25 @@ def test_sync_metric_embeddings_batches_documents(monkeypatch) -> None:
     assert [call[1] for call in update_calls] == [("[0.40000000]", "m1"), ("[0.50000000]", "m2")]
 
 
+def test_sync_metric_embeddings_retries_single_records_after_batch_failure(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("m1", "bad_metric", "坏指标", "会失败", "bad()", ["orders"], ["orders.id"], "{}"),
+            ("m2", "order_count", "订单数", "订单", "count(*)", ["orders"], ["orders.id"], "{}"),
+        ]
+    )
+    adapter = BatchThenSingleFakeAdapter(fail_single_text="bad_metric")
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_metric_embeddings(batch_size=2)
+
+    assert result.updated == 1
+    assert result.failed == 1
+    assert result.errors == ["metric:bad_metric: single failed"]
+    update_calls = [call for call in cursor.executed if "UPDATE metric_definitions" in call[0]]
+    assert update_calls[0][1] == ("[0.90000000,0.80000000]", "m2")
+
+
 def test_sync_records_embedding_failures_without_stopping(monkeypatch) -> None:
     cursor = FakeCursor(
         rows=[
@@ -373,6 +486,30 @@ def test_sync_sql_memory_embeddings_batches_question_sql_pairs(monkeypatch) -> N
     update_calls = [call for call in cursor.executed if "UPDATE sql_memories" in call[0]]
     assert update_calls[0][1] == ("[0.10000000,0.20000000]", "[0.30000000,0.40000000]", "mem-1")
     assert update_calls[1][1] == ("[0.50000000,0.60000000]", "[0.70000000,0.80000000]", "mem-2")
+
+
+def test_sync_sql_memory_embeddings_retries_single_records_after_batch_failure(monkeypatch) -> None:
+    cursor = FakeCursor(
+        rows=[
+            ("mem-1", "坏问题", "SELECT bad"),
+            ("mem-2", "好问题", "SELECT 2"),
+        ]
+    )
+    adapter = MemoryBatchThenSingleFakeAdapter(fail_memory_question="坏问题")
+    _patch_connection(monkeypatch, cursor)
+
+    result = EmbeddingSyncService(adapter=adapter).sync_sql_memory_embeddings(batch_size=2)
+
+    assert result.updated == 1
+    assert result.failed == 1
+    assert result.errors == ["memory:mem-1: single failed"]
+    assert adapter.calls == [
+        ["坏问题", "SELECT bad", "好问题", "SELECT 2"],
+        ["坏问题", "SELECT bad"],
+        ["好问题", "SELECT 2"],
+    ]
+    update_calls = [call for call in cursor.executed if "UPDATE sql_memories" in call[0]]
+    assert update_calls[0][1] == ("[0.90000000,0.80000000]", "[0.70000000,0.60000000]", "mem-2")
 
 
 def test_sync_sql_memory_embeddings_applies_limit_to_select(monkeypatch) -> None:

@@ -36,6 +36,7 @@ class ContextRefreshService:
         embedding_targets: Iterable[RefreshEmbeddingTarget] | None = None,
         embedding_limit: int | None = None,
         embedding_batch_size: int = 16,
+        retry_single_on_batch_failure: bool = True,
     ) -> ContextRefreshResult:
         schema_result = self.schema_service.sync_public_schema(
             include_tables=include_tables,
@@ -46,6 +47,7 @@ class ContextRefreshService:
                 embedding_targets,
                 limit=embedding_limit,
                 batch_size=embedding_batch_size,
+                retry_single_on_batch_failure=retry_single_on_batch_failure,
             )
             if sync_embeddings
             else []
@@ -61,19 +63,42 @@ class ContextRefreshService:
         *,
         limit: int | None = None,
         batch_size: int = 16,
+        retry_single_on_batch_failure: bool = True,
     ) -> list[EmbeddingSyncResult]:
         targets = _normalize_targets(embedding_targets)
         if targets == ["schema", "metric", "memory"]:
-            return self.embedding_service.sync_all(limit=limit, batch_size=batch_size)
+            return self.embedding_service.sync_all(
+                limit=limit,
+                batch_size=batch_size,
+                retry_single_on_batch_failure=retry_single_on_batch_failure,
+            )
 
         results: list[EmbeddingSyncResult] = []
         for target in targets:
             if target == "schema":
-                results.append(self.embedding_service.sync_schema_embeddings(limit=limit, batch_size=batch_size))
+                results.append(
+                    self.embedding_service.sync_schema_embeddings(
+                        limit=limit,
+                        batch_size=batch_size,
+                        retry_single_on_batch_failure=retry_single_on_batch_failure,
+                    )
+                )
             elif target == "metric":
-                results.append(self.embedding_service.sync_metric_embeddings(limit=limit, batch_size=batch_size))
+                results.append(
+                    self.embedding_service.sync_metric_embeddings(
+                        limit=limit,
+                        batch_size=batch_size,
+                        retry_single_on_batch_failure=retry_single_on_batch_failure,
+                    )
+                )
             elif target == "memory":
-                results.append(self.embedding_service.sync_sql_memory_embeddings(limit=limit, batch_size=batch_size))
+                results.append(
+                    self.embedding_service.sync_sql_memory_embeddings(
+                        limit=limit,
+                        batch_size=batch_size,
+                        retry_single_on_batch_failure=retry_single_on_batch_failure,
+                    )
+                )
         return results
 
 
