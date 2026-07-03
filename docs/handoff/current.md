@@ -35,6 +35,7 @@
 - 已新增 SQL Memory Embedding 混合检索，成功 memory 写入会同步 `question_embedding` / `sql_embedding`，检索时优先用 `question_embedding` pgvector 分数填充 `semantic_similarity`，不可用时回退文本相似。
 - 已新增 SQL Memory 历史向量补齐能力，`py -3 backend/scripts/sync_embeddings.py --target memory` 可为旧 memory 回填 question/sql embedding。
 - 已新增通用分析结果 Presenter，能根据 SQL 返回列动态识别维度列、数值列和比例列，生成中文摘要和指标卡，减少对固定销售趋势字段的依赖。
+- 已新增数据上下文刷新命令，把 schema metadata 同步和 embedding 同步串成一个入口，服务于换库、换表后的检索资产刷新。
 
 ## 最近完成模块
 
@@ -623,6 +624,23 @@
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
   - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
 
+### 41. 数据上下文刷新命令
+
+- commit: 本模块随本次提交推送完成，提交信息为 `新增数据上下文刷新命令并通过验证`。
+- 内容：
+  - 新增 `ContextRefreshService`，按顺序同步 `schema_metadata` 和 embedding 检索资产。
+  - 新增 `backend/scripts/refresh_context.py`，支持 `--include-table`、`--exclude-table`、`--skip-embeddings` 和 `--embedding-target`。
+  - `package.json` 新增 `npm run context:refresh`。
+  - 新增 `backend/tests/test_context_refresh_service.py`，覆盖默认全量刷新、跳过 embedding、指定 target 和非法 target。
+  - 更新 README、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_context_refresh_service.py`，4 passed
+  - `npm run backend:test`，115 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+  - `py -3 backend/scripts/refresh_context.py --help` 已通过
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -635,7 +653,7 @@
 
 ## 当前正在做
 
-“通用分析结果 Presenter” 模块已完成、提交并推送。当前可继续推进非模板方向的 V1 能力，例如更通用的模型 SQL 生成、检索质量或同步脚本工程化。
+“数据上下文刷新命令” 模块已完成并通过完整验证，随本次提交推送完成。该模块不新增固定 SQL 模板，目标是让换库、换表后可以用一个命令刷新 schema metadata 和 embedding 检索资产。
 
 ## 下一步建议
 

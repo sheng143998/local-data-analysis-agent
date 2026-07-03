@@ -8,6 +8,7 @@
     "backend:dev": "py -3 -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000",
     "backend:test": "py -3 -m pytest backend/tests",
     "eval:standard": "py -3 eval/scripts/run_eval.py",
+    "context:refresh": "py -3 backend/scripts/refresh_context.py",
     "test:e2e": "py -3 backend/tests/smoke_api.py"
   }
 }

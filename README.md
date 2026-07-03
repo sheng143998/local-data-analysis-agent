@@ -10,6 +10,7 @@
 - 指标口径 CRUD：`GET/POST/PUT/DELETE /api/metrics` 已持久化到 `metric_definitions`。
 - Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文，已接入文本分数 + pgvector 语义候选的混合检索；向量不可用时自动退回文本检索。
 - Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新。
+- 数据上下文刷新命令：`npm run context:refresh` 会先同步 `schema_metadata`，再同步 schema、metric、SQL Memory embedding，用于换库、换表后的检索资产刷新。
 - 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。
 - Model-backed SQL Generator 基础工具：已能基于召回到的 schema/metric 构造受控 prompt、调用 ModelAdapter、解析模型 JSON SQL；当前尚未替换 `/api/analyze` 主链路。
 - Model SQL Generator cold_path 接入：`/api/analyze` 已具备配置开关式模型 SQL 生成入口，默认关闭；开启后仅 `cold_path` 尝试模型生成，失败会回退到稳定生成路径，最终 SQL 仍必经 Guard 和只读 Executor。
@@ -95,6 +96,7 @@ EMBEDDING_DIMENSIONS=1536
 ```bash
 npm run backend:test
 npm run eval:standard
+npm run context:refresh
 npm run test:e2e
 npm run frontend:build
 npm run backend:dev
@@ -102,6 +104,7 @@ npm run frontend:dev
 py -3 backend/scripts/init_db.py
 py -3 backend/scripts/sync_schema_metadata.py
 py -3 backend/scripts/sync_embeddings.py
+py -3 backend/scripts/refresh_context.py
 ```
 
 换库、导入新表或调整字段后，先运行：
@@ -112,7 +115,13 @@ py -3 backend/scripts/sync_schema_metadata.py
 py -3 backend/scripts/sync_embeddings.py
 ```
 
-`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。
+也可以直接运行统一刷新命令：
+
+```bash
+npm run context:refresh
+```
+
+`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段、指标口径和缺少向量的历史 SQL Memory 生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。`refresh_context.py` 会先同步 schema metadata，再按需同步 embedding；可用 `--skip-embeddings` 只刷新字段结构，也可重复传入 `--embedding-target schema|metric|memory` 选择同步目标。
 
 ## API 入口
 
