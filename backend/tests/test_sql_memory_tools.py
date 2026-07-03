@@ -51,14 +51,55 @@ def test_plan_sql_reuse_defaults_to_cold_path_without_candidates() -> None:
     assert plan.candidate_count == 0
 
 
-def _memory(question: str) -> SqlMemoryRecord:
+def test_plan_sql_reuse_blocks_fast_path_when_required_tables_missing() -> None:
+    memory = _memory("过去 6 个月每月新增用户数是多少？")
+    candidates = retrieve_sql_memory(
+        "过去 6 个月每月新增用户数是多少？",
+        metrics=["sales_amount"],
+        tables=["users", "orders"],
+        repository=FakeMemoryRepository([memory]),
+    )
+    plan = plan_sql_reuse(candidates)
+
+    assert candidates[0].score >= 0.88
+    assert candidates[0].required_tables == ["users"]
+    assert candidates[0].required_table_match is False
+    assert plan.path_type == "rewrite_path"
+    assert plan.memory_hit is False
+
+
+def test_plan_sql_reuse_allows_fast_path_when_required_tables_match() -> None:
+    memory = _memory(
+        "过去 6 个月每月新增用户数是多少？",
+        final_sql="SELECT u.id FROM users u LIMIT 10",
+        tables=["users"],
+    )
+    candidates = retrieve_sql_memory(
+        "过去 6 个月每月新增用户数是多少？",
+        metrics=["user_count"],
+        tables=["users"],
+        repository=FakeMemoryRepository([memory]),
+    )
+    plan = plan_sql_reuse(candidates)
+
+    assert candidates[0].required_table_match is True
+    assert plan.path_type == "fast_path"
+    assert plan.memory_hit is True
+
+
+def _memory(
+    question: str,
+    *,
+    final_sql: str = "SELECT DATE(created_at), SUM(total_amount) FROM orders GROUP BY 1 LIMIT 30",
+    tables: list[str] | None = None,
+) -> SqlMemoryRecord:
     return SqlMemoryRecord(
         id=uuid4(),
         canonical_question=question,
         normalized_question=question.lower(),
         sql_template="SELECT DATE(created_at), SUM(total_amount) FROM orders GROUP BY 1",
-        final_sql="SELECT DATE(created_at), SUM(total_amount) FROM orders GROUP BY 1 LIMIT 30",
-        tables=["orders", "payments"],
+        final_sql=final_sql,
+        tables=tables or ["orders", "payments"],
         metrics=["sales_amount", "order_count"],
         success_count=5,
         failure_count=0,

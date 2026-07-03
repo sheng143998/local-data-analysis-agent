@@ -127,7 +127,7 @@ npm run eval:standard
 - `execution_success_rate`：API 链路是否成功返回 SQL、通过 SQL Guard、得到结果。
 - `strict_success_rate`：在链路成功基础上，SQL 是否命中预期表和关键词。
 
-最近一次评估为 20/20 链路成功，严格成功率为 55%。断言失败主要集中在用户、流量和优惠券问题，说明 SQL Memory 复用仍需要更强的表/意图约束。
+最近一次评估为 20/20 链路成功，严格成功率为 55%。SQL Memory fast_path 已加入关键表约束，记忆命中率从 100% 降为 60%，避免部分明显不匹配的历史 SQL 直接复用；剩余断言失败主要需要后续模型 SQL 生成或更完整的业务意图生成来修复。
 
 ## 当前验证
 

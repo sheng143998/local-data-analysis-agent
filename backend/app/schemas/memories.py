@@ -50,6 +50,8 @@ class SqlMemoryCandidate(BaseModel):
     text_similarity: float
     metric_table_match: float
     success_score: float
+    required_table_match: bool = True
+    required_tables: list[str] = Field(default_factory=list)
 
 
 class SqlReusePlan(BaseModel):

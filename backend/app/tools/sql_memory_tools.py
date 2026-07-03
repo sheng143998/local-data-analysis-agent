@@ -27,6 +27,7 @@ def retrieve_sql_memory(
     normalized_question = normalize_question(question)
     metric_set = set(metrics)
     table_set = set(tables)
+    required_tables = _required_tables_for_question(question)
     candidates: list[SqlMemoryCandidate] = []
 
     for memory in repo.list(limit=100):
@@ -43,6 +44,7 @@ def retrieve_sql_memory(
         )
         if score <= 0:
             continue
+        required_table_match = _sql_contains_required_tables(memory.final_sql, required_tables)
         candidates.append(
             SqlMemoryCandidate(
                 memory=memory,
@@ -51,6 +53,8 @@ def retrieve_sql_memory(
                 text_similarity=round(text_similarity, 4),
                 metric_table_match=round(metric_table_match, 4),
                 success_score=round(success_score, 4),
+                required_table_match=required_table_match,
+                required_tables=required_tables,
             )
         )
 
@@ -62,7 +66,7 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
         return SqlReusePlan(path_type="cold_path", candidate_count=0)
 
     selected = candidates[0]
-    if selected.score >= FAST_PATH_THRESHOLD:
+    if selected.score >= FAST_PATH_THRESHOLD and selected.required_table_match:
         return SqlReusePlan(
             path_type="fast_path",
             reuse_type="parameter_rewrite",
@@ -152,3 +156,23 @@ def _success_score(memory: SqlMemoryRecord) -> float:
     if total <= 0:
         return 0
     return memory.success_count / total
+
+
+def _required_tables_for_question(question: str) -> list[str]:
+    required: list[str] = []
+    if any(token in question for token in ["新增用户", "新用户", "下单用户", "购买用户", "购买次数最多", "用户是谁"]):
+        required.append("users")
+    if any(token in question for token in ["访问", "加购", "流量来源", "转化率"]):
+        required.append("traffic_events")
+    if any(token in question for token in ["优惠券", "核销"]):
+        required.append("coupon_usages")
+    if any(token in question for token in ["哪些优惠券", "优惠券核销"]):
+        required.append("coupons")
+    return required
+
+
+def _sql_contains_required_tables(sql: str, required_tables: list[str]) -> bool:
+    if not required_tables:
+        return True
+    lowered_sql = sql.lower()
+    return all(table.lower() in lowered_sql for table in required_tables)
