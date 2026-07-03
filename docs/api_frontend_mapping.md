@@ -72,6 +72,8 @@ export type AnalysisResponse = {
     queryTime: string;
     security: string;
   };
+  trace: AnalysisTrace;
+  steps: AgentStep[];
 };
 ```
 
@@ -86,14 +88,39 @@ export type AnalysisResponse = {
 | `metrics` | 是 | 展示指标摘要。 |
 | `rows` | 是 | 展示结果表和图表数据。 |
 | `source` | 是 | 展示数据来源、字段、口径、耗时和安全说明。 |
-| `trace` | 否 | 后端已返回，当前前端普通页面未声明和展示。 |
-| `steps` | 否 | 后端已返回，当前前端普通页面未声明和展示。 |
+| `trace` | 是 | 前端类型已声明，普通用户页面不展示内部追踪细节。 |
+| `steps` | 是 | 前端类型已声明，普通用户页面不展示内部执行步骤。 |
 
 注意：
 
 - `trace` 和 `steps` 属于简化执行追踪信息，不是原始工具 payload。
 - 普通用户界面不展示 SQL Memory 候选分数、prompt、模型原始输出或数据库连接状态。
-- 如果后续需要在前端展示 Agent 执行步骤，应先扩展 `frontend/src/types/analysis.ts`，再调整页面组件。
+- 如果后续需要在前端展示 Agent 执行步骤，应优先建设开发者视图或受控的“分析过程摘要”，不要把原始工具 payload 放入普通用户页面。
+
+### Trace 和 Steps 类型
+
+文件：`frontend/src/types/analysis.ts`
+
+```ts
+export type AnalysisTrace = {
+  toolCalls: number;
+  modelCalls: number;
+  memoryCandidates: number;
+  totalTime: string;
+};
+
+export type AgentStep = {
+  name: string;
+  status: '已完成' | '运行中' | '已跳过';
+  time: string;
+};
+```
+
+说明：
+
+- 类型契约覆盖后端响应，方便后续开发者调试视图复用。
+- 普通用户聊天页当前不渲染 `trace` 和 `steps`。
+- 聊天页头部已使用“只读安全分析”这类业务化文案，不展示数据库连接状态。
 
 ### `rows` 当前结构
 
@@ -197,5 +224,5 @@ export type MetricPayload = Omit<MetricDefinition, 'id' | 'created_at' | 'update
 ## 当前风险
 
 - 前端 API client 已统一封装，但尚未实现请求超时、取消请求和鉴权 header。
-- 前端 `AnalysisResponse` 没有声明后端返回的 `trace` 和 `steps`，如果页面要展示执行步骤，需要补类型。
+- 前端 `AnalysisResponse` 已声明后端返回的 `trace` 和 `steps`，普通用户页面仍不展示内部调试细节。
 - `/api/analyze` 的 `rows` 已改为通用表格结构；后续风险转为自然语言总结仍主要面向 V1 已覆盖指标。

@@ -27,6 +27,7 @@
 - SQL Memory `fast_path` 已增加关键表约束，用户、流量、优惠券等问题缺少关键表时不再直接复用历史 SQL。
 - 前端已新增统一 API Client，数据问答和指标 CRUD 都通过 `frontend/src/api/client.ts` 调用后端，并统一解析 FastAPI `detail` 为中文业务错误。
 - `/api/analyze.rows` 已改为通用表格结构，前端聊天页会根据 SQL 真实结果列动态生成表头，减少对固定销售趋势字段的依赖。
+- 前端 `AnalysisResponse` 已补齐后端 `trace` 和 `steps` 类型契约，但普通用户页面不展示内部追踪细节。
 
 ## 最近完成模块
 
@@ -476,13 +477,27 @@
 
 ### 32. 数据问答通用 Rows 契约
 
-- commit: 本模块随本次提交推送完成，提交信息为 `实现数据问答通用Rows并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- commit: `107b699 实现数据问答通用Rows并通过验证`
 - 内容：
   - `backend/app/schemas/analysis.py` 将 `AnalysisRow` 从固定销售字段改为通用字典行。
   - `analysis_presenter.py` 保留内部总结逻辑，但响应 `rows` 改为 SQL Executor 的真实结果列。
   - `frontend/src/types/analysis.ts` 改为 `Record<string, string | number | boolean | null>`。
   - `ChatPage.tsx` 改为根据返回行动态生成最多 6 列结果表，并对常见列名做中文化和数字格式化。
   - 更新接口文档、前后端映射、README、计划文档和模块完成说明。
+- 验证：
+  - `npm run frontend:build` 已通过
+  - `npm run backend:test`，73 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run test:e2e` 已通过
+
+### 33. 数据问答 Trace / Steps 前端类型契约
+
+- commit: 本模块随本次提交推送完成，提交信息为 `补齐分析追踪前端类型并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- 内容：
+  - `frontend/src/types/analysis.ts` 新增 `AnalysisTrace` 和 `AgentStep`。
+  - `AnalysisResponse` 声明后端已返回的 `trace` 和 `steps` 字段。
+  - 普通聊天页继续不展示内部追踪细节。
+  - `ChatPage.tsx` 将“本地 PostgreSQL / 只读执行”文案调整为“只读安全分析”，避免普通用户界面出现数据库状态感文案。
+  - 更新接口映射、README、计划文档和模块完成说明。
 - 验证：
   - `npm run frontend:build` 已通过
   - `npm run backend:test`，73 passed，1 个 `StarletteDeprecationWarning`
@@ -500,15 +515,15 @@
 
 ## 当前正在做
 
-“数据问答通用 Rows 契约”模块已完成并通过验证，随本次提交推送完成。
+“数据问答 Trace / Steps 前端类型契约”模块已完成并通过验证，随本次提交推送完成。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 继续补齐前端 `AnalysisResponse` 与后端 `trace`、`steps` 的类型契约，但普通用户页面不展示内部调试细节。
-2. 推进 schema/metric/memory 的 embedding 或混合检索能力，让换库后依赖自动检索而不是固定模板。
-3. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
+1. 推进 schema/metric/memory 的 embedding 或混合检索能力，让换库后依赖自动检索而不是固定模板。
+2. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
+3. 后续如建设开发者视图，再使用 `trace` 和 `steps` 类型展示受控执行摘要。
 
 ## 已知风险
 

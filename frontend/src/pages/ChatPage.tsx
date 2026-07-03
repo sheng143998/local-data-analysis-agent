@@ -161,7 +161,7 @@ export function ChatPage() {
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <span className="status-dot" />
-                本地 PostgreSQL / 只读执行
+                只读安全分析
               </div>
             </div>
           </div>

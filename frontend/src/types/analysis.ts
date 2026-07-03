@@ -9,6 +9,19 @@ export type AnalysisMetric = {
   hint: string;
 };
 
+export type AnalysisTrace = {
+  toolCalls: number;
+  modelCalls: number;
+  memoryCandidates: number;
+  totalTime: string;
+};
+
+export type AgentStep = {
+  name: string;
+  status: '已完成' | '运行中' | '已跳过';
+  time: string;
+};
+
 export type AnalysisResponse = {
   question: string;
   path: 'fast_path' | 'rewrite_path' | 'cold_path';
@@ -26,4 +39,6 @@ export type AnalysisResponse = {
     queryTime: string;
     security: string;
   };
+  trace: AnalysisTrace;
+  steps: AgentStep[];
 };
