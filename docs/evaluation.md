@@ -65,6 +65,8 @@ eval/reports/latest_eval_report.json
 - `failures`：链路失败案例。
 - `assertion_failures`：链路成功但断言失败案例。
 - `assertion_failure_summary`：断言失败聚合诊断，包含缺失表、失败类别、失败路径和 case id 列表。
+- `cases[].run_id`：该评估问题对应的 `query_runs.id`，用于开发者追踪。
+- `cases[].run_detail_path`：对应开发者调试接口路径，例如 `/api/runs/{run_id}`。
 
 ## 最近基线
 
@@ -84,9 +86,10 @@ eval/reports/latest_eval_report.json
 - 如果 `memory_hit_rate` 异常升高且严格成功率下降，说明可能存在错误 fast_path 复用。
 - 如果 `assertion_failures` 集中在某类表，优先补强该意图的 schema 召回和 SQL 生成。
 - 如果 `assertion_failure_summary.by_missing_table` 集中在某些表，优先检查这些表是否被召回、是否进入模型 SQL prompt、是否被 SQL Memory fast_path 错误绕过。
+- 如果某个 case 需要进一步排查，优先打开该 case 的 `run_detail_path`，查看上下文召回、SQL 生成、Guard 和 Executor 的工具调用摘要。
 
 ## 后续方向
 
 - 在真实本地模型可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑评估。
 - 增加字段命中、指标口径命中和结果形态断言。
-- 将失败案例关联到 `query_runs` 和 `tool_calls`。
+- 后续可把评估报告中的 `run_detail_path` 做成开发者页面链接，但普通用户界面不展示评估报告。

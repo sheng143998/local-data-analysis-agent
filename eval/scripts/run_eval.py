@@ -50,6 +50,8 @@ class EvalCaseResult:
     keyword_match: bool
     strict_ok: bool
     returned_rows: int
+    run_id: str | None = None
+    run_detail_path: str = ""
     error: str = ""
 
 
@@ -83,7 +85,7 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             latency_ms = int((perf_counter() - started) * 1000)
             sql = str(body.get("sql") or "")
             source = body.get("source") or {}
-            trace = body.get("trace") or {}
+            run_id, run_detail_path = _extract_eval_run_trace(body)
             table_hits = [table for table in case.expected_tables if table in sql]
             keyword_hits = [
                 keyword for keyword in case.expected_keywords if keyword.lower() in sql.lower()
@@ -118,6 +120,8 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     keyword_match=keyword_match,
                     strict_ok=strict_ok,
                     returned_rows=int(source.get("returnedRows") or 0),
+                    run_id=run_id,
+                    run_detail_path=run_detail_path,
                     error=str(body.get("summary") or "") if not ok else "",
                 )
             )
@@ -142,6 +146,8 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     keyword_match=False,
                     strict_ok=False,
                     returned_rows=0,
+                    run_id=None,
+                    run_detail_path="",
                     error=str(exc),
                 )
             )
@@ -196,7 +202,13 @@ def write_report(report: dict[str, Any], path: Path = REPORT_PATH) -> None:
 def analyze_with_test_client(question: str) -> tuple[int, dict[str, Any]]:
     client = TestClient(app)
     response = client.post("/api/analyze", json={"question": question})
-    return response.status_code, response.json()
+    body = response.json()
+    if isinstance(body, dict):
+        run_id = _find_latest_run_id(client, question)
+        if run_id:
+            body["_eval_run_id"] = run_id
+            body["_eval_run_detail_path"] = f"/api/runs/{run_id}"
+    return response.status_code, body
 
 
 def main() -> None:
@@ -217,6 +229,33 @@ def _rate(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0
     return round(numerator / denominator, 4)
+
+
+def _extract_eval_run_trace(body: dict[str, Any]) -> tuple[str | None, str]:
+    run_id = body.get("_eval_run_id")
+    if not run_id:
+        return None, ""
+    run_id_text = str(run_id)
+    run_detail_path = str(body.get("_eval_run_detail_path") or f"/api/runs/{run_id_text}")
+    return run_id_text, run_detail_path
+
+
+def _find_latest_run_id(client: TestClient, question: str) -> str | None:
+    try:
+        response = client.get("/api/runs?limit=5")
+        if response.status_code != 200:
+            return None
+        runs = response.json()
+    except Exception:
+        return None
+    if not isinstance(runs, list):
+        return None
+    for run in runs:
+        if not isinstance(run, dict):
+            continue
+        if run.get("user_question") == question and run.get("id"):
+            return str(run["id"])
+    return None
 
 
 def _assertion_failure_summary(results: list[EvalCaseResult]) -> dict[str, Any]:

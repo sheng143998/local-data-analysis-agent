@@ -1,4 +1,11 @@
-from eval.scripts.run_eval import EvalCase, load_cases, run_cases, summarize_results
+from eval.scripts.run_eval import (
+    EvalCase,
+    _extract_eval_run_trace,
+    _find_latest_run_id,
+    load_cases,
+    run_cases,
+    summarize_results,
+)
 
 
 def test_load_standard_questions_contains_twenty_cases() -> None:
@@ -35,6 +42,8 @@ def test_run_cases_and_summary_collect_eval_metrics() -> None:
             "sql": "SELECT o.id FROM orders o LIMIT 10",
             "source": {"security": "只读 SELECT，已通过 SQL Guard", "returnedRows": 1},
             "trace": {},
+            "_eval_run_id": "11111111-1111-1111-1111-111111111111",
+            "_eval_run_detail_path": "/api/runs/11111111-1111-1111-1111-111111111111",
         }
 
     results = run_cases(cases, fake_analyze)
@@ -53,6 +62,11 @@ def test_run_cases_and_summary_collect_eval_metrics() -> None:
     assert report["path_counts"] == {"fast_path": 1, "": 1}
     assert len(report["failures"]) == 1
     assert report["cases"][0]["strict_ok"] is True
+    assert report["cases"][0]["run_id"] == "11111111-1111-1111-1111-111111111111"
+    assert (
+        report["cases"][0]["run_detail_path"]
+        == "/api/runs/11111111-1111-1111-1111-111111111111"
+    )
     assert report["cases"][1]["strict_ok"] is False
 
 
@@ -92,6 +106,43 @@ def test_summary_separates_execution_success_from_assertion_match() -> None:
         "by_path": [{"name": "cold_path", "count": 1}],
         "case_ids": ["case_1"],
     }
+
+
+def test_eval_run_trace_extracts_detail_path() -> None:
+    assert _extract_eval_run_trace({}) == (None, "")
+    assert _extract_eval_run_trace({"_eval_run_id": "run-1"}) == (
+        "run-1",
+        "/api/runs/run-1",
+    )
+    assert _extract_eval_run_trace(
+        {
+            "_eval_run_id": "run-2",
+            "_eval_run_detail_path": "/api/runs/run-2",
+        }
+    ) == ("run-2", "/api/runs/run-2")
+
+
+def test_find_latest_run_id_matches_question() -> None:
+    class FakeResponse:
+        def __init__(self, status_code, payload):
+            self.status_code = status_code
+            self.payload = payload
+
+        def json(self):
+            return self.payload
+
+    class FakeClient:
+        def get(self, path):
+            assert path == "/api/runs?limit=5"
+            return FakeResponse(
+                200,
+                [
+                    {"id": "run-newer", "user_question": "其他问题"},
+                    {"id": "run-target", "user_question": "目标问题"},
+                ],
+            )
+
+    assert _find_latest_run_id(FakeClient(), "目标问题") == "run-target"
 
 
 def test_summary_groups_assertion_failures_by_table_category_and_path() -> None:
