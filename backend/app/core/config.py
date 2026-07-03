@@ -3,6 +3,13 @@ import os
 from pydantic import BaseModel, Field
 
 
+def _env_bool(name: str, *, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Settings(BaseModel):
     app_version: str = "0.1.0"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
@@ -19,6 +26,9 @@ class Settings(BaseModel):
         default_factory=lambda: float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
     )
     model_max_retries: int = Field(default_factory=lambda: int(os.getenv("MODEL_MAX_RETRIES", "1")))
+    model_sql_generator_enabled: bool = Field(
+        default_factory=lambda: _env_bool("MODEL_SQL_GENERATOR_ENABLED", default=False)
+    )
 
 
 settings = Settings()

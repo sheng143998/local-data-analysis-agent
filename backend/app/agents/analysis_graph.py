@@ -1,9 +1,14 @@
 from time import perf_counter
 
+from backend.app.core.config import settings
+from backend.app.core.model_adapter import ModelAdapter
 from backend.app.schemas.analysis import AnalyzeResponse
+from backend.app.schemas.retrieval import RetrievalContext
+from backend.app.schemas.sql_generation import GeneratedSql
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.tools.analysis_presenter import present_sales_trend_result
 from backend.app.tools.context_builder import build_retrieval_context
+from backend.app.tools.model_sql_generator import generate_sql_with_model
 from backend.app.tools.run_logger import QueryRunLogger
 from backend.app.tools.sql_memory_tools import (
     plan_sql_reuse,
@@ -31,7 +36,11 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
         tables=retrieval_context.tables,
     )
     reuse_plan = plan_sql_reuse(memory_candidates)
-    generated_sql = generate_or_rewrite_sales_sql(question, reuse_plan)
+    generated_sql = _select_generated_sql(
+        question=question,
+        retrieval_context=retrieval_context,
+        reuse_plan=reuse_plan,
+    )
     selected_sql = generated_sql.sql
     sales_parameters = generated_sql.parameters or parse_sales_trend_parameters(question)
     if reuse_plan.memory_hit:
@@ -148,7 +157,7 @@ def _log_analysis_run(
     )
     logger.log_tool_call(
         query_run_id=run.id,
-        tool_name="sql_generation_tools.generate_or_rewrite_sales_sql",
+        tool_name="analysis_graph.select_generated_sql",
         input_payload={"path_type": reuse_plan.path_type},
         output_payload={"generation_path": generation_path},
         status="success",
@@ -181,3 +190,37 @@ def _log_analysis_run(
         output_payload={"updated_memory_id": str(updated_memory_id) if updated_memory_id else None},
         status="success" if updated_memory_id else "skipped",
     )
+
+
+def _select_generated_sql(
+    *,
+    question: str,
+    retrieval_context: RetrievalContext,
+    reuse_plan: SqlReusePlan,
+    adapter: ModelAdapter | None = None,
+    model_enabled: bool | None = None,
+) -> GeneratedSql:
+    """选择 SQL 生成路径；模型生成只在显式开启的 cold_path 中尝试。"""
+    enabled = settings.model_sql_generator_enabled if model_enabled is None else model_enabled
+    if enabled and reuse_plan.path_type == "cold_path":
+        model_result = generate_sql_with_model(
+            question=question,
+            retrieval_context=retrieval_context,
+            reuse_plan=reuse_plan,
+            adapter=adapter,
+        )
+        if model_result.sql:
+            return model_result
+
+        fallback = generate_or_rewrite_sales_sql(question, reuse_plan)
+        return fallback.model_copy(
+            update={
+                "warnings": [
+                    *fallback.warnings,
+                    *model_result.warnings,
+                    "模型 SQL 生成不可用，已回退到确定性生成路径",
+                ]
+            }
+        )
+
+    return generate_or_rewrite_sales_sql(question, reuse_plan)

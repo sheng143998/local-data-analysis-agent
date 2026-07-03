@@ -21,6 +21,7 @@
 - 已新增 Schema Metadata 自动同步能力，换库、导入新表或字段变化后可运行 `py -3 backend/scripts/sync_schema_metadata.py` 刷新 `schema_metadata`，避免继续堆固定 SQL 模板。
 - 已新增统一 ModelAdapter 基础层，后续 SQL Generator / Rewriter 调用外部或本地 OpenAI-compatible 模型必须走 `backend/app/core/model_adapter.py`。
 - 已新增 Model-backed SQL Generator 基础工具，可基于已召回 schema/metric 构造 prompt、调用 ModelAdapter、解析模型 JSON SQL；尚未接入 `/api/analyze` 主链路执行。
+- `/api/analyze` 已通过 `MODEL_SQL_GENERATOR_ENABLED` 配置开关接入 Model SQL Generator 的 `cold_path` 尝试路径；默认关闭，开启后模型 SQL 仍必经 Guard / Executor，失败会回退确定性生成。
 
 ## 最近完成模块
 
@@ -294,7 +295,7 @@
 
 ### 19. Model-backed SQL Generator 基础工具
 
-- commit: 本模块待提交并推送，建议提交信息为 `实现模型SQL生成基础工具并通过测试`。
+- commit: `75a6627 实现模型SQL生成基础工具并通过测试`
 - 内容：
   - 新增 `backend/app/tools/model_sql_generator.py`
   - 基于 `RetrievalContext` 和 `SqlReusePlan` 构造受控 prompt，只使用召回到的表字段和指标口径
@@ -304,6 +305,19 @@
   - 新增 `test_model_sql_generator.py`，覆盖 prompt、JSON 解析、warning、成功生成和模型错误路径
 - 验证：
   - `npm run backend:test`，64 个测试通过
+
+### 20. Model SQL Generator cold_path 配置开关接入
+
+- commit: 本模块待提交并推送，建议提交信息为 `接入模型SQL生成cold_path并通过测试`。
+- 内容：
+  - 新增 `MODEL_SQL_GENERATOR_ENABLED` 配置，默认关闭模型 SQL 生成
+  - `analysis_graph._select_generated_sql()` 负责集中选择 SQL 生成路径
+  - 开启配置且 `reuse_plan.path_type == "cold_path"` 时调用 `generate_sql_with_model()`
+  - 模型返回 SQL 后继续进入现有 SQL Guard 和只读 Executor
+  - 模型失败或未返回 SQL 时回退 `generate_or_rewrite_sales_sql()`
+  - 新增 `test_analysis_graph_sql_selection.py` 覆盖关闭、开启、回退和 rewrite_path 不调用模型
+- 验证：
+  - `npm run backend:test`，68 个测试通过
 
 ## 当前架构边界
 
@@ -317,22 +331,22 @@
 
 ## 当前正在做
 
-Model-backed SQL Generator 基础工具已完成实现、测试和文档更新，正在提交并推送。
+Model SQL Generator cold_path 配置开关接入已完成实现、测试和文档更新，正在提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 将 `generate_sql_with_model()` 接入 analysis graph 的 `cold_path`，并确保输出 SQL 必经 Validator / Guard / Executor。
+1. 建立标准问题评估集，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 后按执行成功率、Guard 通过率、记忆命中率和失败样例持续验证。
 2. 将 Schema Retriever 从关键词召回升级为 schema metadata + embedding / pgvector 混合召回。
-3. 建立标准问题评估集，按执行成功率、Guard 通过率、记忆命中率和失败样例持续验证。
+3. 接入模型调用摘要到更细粒度 tool_calls，便于开发者定位模型 SQL 失败原因。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
 - `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator，但仍未接入真实 LLM SQL Generator / Rewriter。
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
-- Model-backed SQL Generator 基础工具已完成，但还未接入 analysis graph 的 `cold_path`。
+- Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。

@@ -12,6 +12,7 @@
 - Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新。
 - 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。
 - Model-backed SQL Generator 基础工具：已能基于召回到的 schema/metric 构造受控 prompt、调用 ModelAdapter、解析模型 JSON SQL；当前尚未替换 `/api/analyze` 主链路。
+- Model SQL Generator cold_path 接入：`/api/analyze` 已具备配置开关式模型 SQL 生成入口，默认关闭；开启后仅 `cold_path` 尝试模型生成，失败会回退到稳定生成路径，最终 SQL 仍必经 Guard 和只读 Executor。
 - SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
@@ -53,6 +54,7 @@ MODEL_PROVIDER=local
 MODEL_BASE_URL=http://127.0.0.1:11434/v1
 MODEL_NAME=local-sql-model
 MODEL_API_KEY=change_me
+MODEL_SQL_GENERATOR_ENABLED=false
 ```
 
 `MODEL_API_KEY=change_me` 是占位值，不会被 ModelAdapter 写入 Authorization header。真实密钥只放在本机 `backend/.env`，不要提交。
@@ -107,6 +109,7 @@ py -3 backend/scripts/sync_schema_metadata.py
 - SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段和指标口径，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。
 - 模型生成的 SQL 当前不直接执行；后续接入 `/api/analyze` 时仍必须经过 SQL Validator、SQL Guard 和只读 Executor。
+- `/api/analyze` 已预留 `MODEL_SQL_GENERATOR_ENABLED` 开关。默认 `false`，不调用模型；设为 `true` 后仅 `cold_path` 会尝试模型 SQL，模型失败或未返回 SQL 会回退到确定性生成路径。
 - 普通用户前端不展示 prompt、模型原始输出、provider 或模型连接状态。
 
 ## 当前验证
