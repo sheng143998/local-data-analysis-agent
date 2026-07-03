@@ -29,6 +29,7 @@
 - `/api/analyze.rows` 已改为通用表格结构，前端聊天页会根据 SQL 真实结果列动态生成表头，减少对固定销售趋势字段的依赖。
 - 前端 `AnalysisResponse` 已补齐后端 `trace` 和 `steps` 类型契约，但普通用户页面不展示内部追踪细节。
 - 已新增统一检索评分基础层，metric、schema、SQL Memory 检索复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
+- 已新增 EmbeddingAdapter 基础层，支持 OpenAI-compatible embeddings 和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须走统一入口。
 
 ## 最近完成模块
 
@@ -506,7 +507,7 @@
 
 ### 34. 统一检索评分基础层
 
-- commit: 本模块随本次提交推送完成，提交信息为 `统一检索评分基础层并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- commit: `6f62e90 统一检索评分基础层并通过验证`
 - 内容：
   - 新增 `backend/app/tools/retrieval_scoring.py`，统一文本归一化、文档拼接、文本相似、关键词命中、集合重合和加权评分。
   - `metric_retriever.py` 复用共享评分工具，指标分由名称命中、关键词命中、文本相似和趋势意图组成。
@@ -515,6 +516,21 @@
   - 新增 `test_retrieval_scoring.py`，并增强检索相关测试。
 - 验证：
   - `npm run backend:test`，80 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过
+
+### 35. EmbeddingAdapter 基础层
+
+- commit: 本模块随本次提交推送完成，提交信息为 `实现EmbeddingAdapter基础层并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- 内容：
+  - `backend/app/core/config.py` 新增 embedding provider、base URL、model、API key、dimension、timeout、retry 配置。
+  - 新增 `backend/app/core/embedding_adapter.py`，支持 OpenAI-compatible `/embeddings` 调用。
+  - 支持 `deterministic` provider，本地开发和测试无外部服务时可生成稳定向量。
+  - 新增结构化 `EmbeddingRequest`、`EmbeddingResponse`、`EmbeddingUsage`，并把空输入、HTTP 错误、transport 异常转换为结构化错误。
+  - 更新 `backend/.env.example`，只保留 embedding 占位配置。
+  - 新增 `backend/tests/test_embedding_adapter.py` 覆盖 payload、鉴权、错误和 deterministic fallback。
+- 验证：
+  - `npm run backend:test`，87 passed，1 个 `StarletteDeprecationWarning`
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过
 
@@ -530,15 +546,15 @@
 
 ## 当前正在做
 
-“统一检索评分基础层”模块已完成并通过验证，随本次提交推送完成。
+“EmbeddingAdapter 基础层”模块已完成并通过验证，随本次提交推送完成。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 在统一检索评分基础上接入 embedding / pgvector 查询，形成 schema、metric、memory 的真正混合检索。
-2. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
-3. 后续如建设开发者视图，再使用 `trace` 和 `steps` 类型展示受控执行摘要。
+1. 实现 schema/metric embedding 同步脚本，把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 填充起来。
+2. 在统一检索评分基础上接入 pgvector 查询，形成 schema、metric、memory 的真正混合检索。
+3. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
 
 ## 已知风险
 
@@ -547,6 +563,7 @@
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
+- EmbeddingAdapter 基础层已完成，但尚未写入或查询 pgvector。
 - schema/metric retriever 已有统一确定性评分基础层，但尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 仍暂用统一文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。

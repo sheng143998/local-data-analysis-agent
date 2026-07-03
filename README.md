@@ -27,6 +27,7 @@
 - 通用结果表：`/api/analyze.rows` 已改为 SQL 执行结果的通用表格结构，前端聊天页会动态生成表头，减少对固定销售趋势字段的依赖。
 - 前端接口契约补齐：`AnalysisResponse` 已声明后端返回的 `trace` 和 `steps`，但普通用户页面不展示内部调试细节。
 - 统一检索评分基础层：metric、schema、SQL Memory 检索已复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
+- EmbeddingAdapter 基础层：已提供 OpenAI-compatible embeddings 统一入口和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须通过该入口。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 - 标准问题评估：`npm run eval:standard` 可运行 20 个 V1 标准问题，并生成 `eval/reports/latest_eval_report.json`。
@@ -76,6 +77,11 @@ MODEL_BASE_URL=http://127.0.0.1:11434/v1
 MODEL_NAME=local-sql-model
 MODEL_API_KEY=change_me
 MODEL_SQL_GENERATOR_ENABLED=false
+EMBEDDING_PROVIDER=deterministic
+EMBEDDING_BASE_URL=http://127.0.0.1:11434/v1
+EMBEDDING_MODEL=text-embedding-v4
+EMBEDDING_API_KEY=change_me
+EMBEDDING_DIMENSIONS=1536
 ```
 
 `MODEL_API_KEY=change_me` 是占位值，不会被 ModelAdapter 写入 Authorization header。真实密钥只放在本机 `backend/.env`，不要提交。
@@ -130,11 +136,13 @@ py -3 backend/scripts/sync_schema_metadata.py
 ## Model-backed SQL Generator 当前说明
 
 - 模型调用统一通过 `backend/app/core/model_adapter.py`。
+- embedding 调用统一通过 `backend/app/core/embedding_adapter.py`。
 - SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段和指标口径，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。
 - 模型生成的 SQL 当前不直接执行；后续接入 `/api/analyze` 时仍必须经过 SQL Validator、SQL Guard 和只读 Executor。
 - `/api/analyze` 已预留 `MODEL_SQL_GENERATOR_ENABLED` 开关。默认 `false`，不调用模型；设为 `true` 后仅 `cold_path` 会尝试模型 SQL，模型失败或未返回 SQL 会回退到确定性生成路径。
 - 普通用户前端不展示 prompt、模型原始输出、provider 或模型连接状态。
+- 普通用户前端也不展示 embedding provider、向量状态或数据库连接状态。
 
 ## 标准问题评估
 

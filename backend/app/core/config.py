@@ -29,6 +29,22 @@ class Settings(BaseModel):
     model_sql_generator_enabled: bool = Field(
         default_factory=lambda: _env_bool("MODEL_SQL_GENERATOR_ENABLED", default=False)
     )
+    embedding_provider: str = Field(default_factory=lambda: os.getenv("EMBEDDING_PROVIDER", "deterministic"))
+    embedding_base_url: str = Field(
+        default_factory=lambda: os.getenv(
+            "EMBEDDING_BASE_URL",
+            os.getenv("MODEL_BASE_URL", "http://127.0.0.1:11434/v1"),
+        )
+    )
+    embedding_model: str = Field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "text-embedding-v4"))
+    embedding_api_key: str = Field(default_factory=lambda: os.getenv("EMBEDDING_API_KEY", os.getenv("MODEL_API_KEY", "")))
+    embedding_dimensions: int = Field(default_factory=lambda: int(os.getenv("EMBEDDING_DIMENSIONS", "1536")))
+    embedding_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("EMBEDDING_TIMEOUT_SECONDS", os.getenv("MODEL_TIMEOUT_SECONDS", "30")))
+    )
+    embedding_max_retries: int = Field(
+        default_factory=lambda: int(os.getenv("EMBEDDING_MAX_RETRIES", os.getenv("MODEL_MAX_RETRIES", "1")))
+    )
 
 
 settings = Settings()
