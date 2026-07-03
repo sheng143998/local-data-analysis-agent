@@ -24,6 +24,7 @@
 - 毛利率切片：可识别“最近 30 天毛利率最高的商品品类是什么？”，基于商品明细销售额和商品成本表计算品类毛利率。
 - 用户维度切片：可识别“最近 90 天复购率是多少？”和“每个城市的客单价是多少？”，执行真实用户复购率与城市客单价查询。
 - 前端统一 API Client：数据问答和指标 CRUD 已统一通过 `frontend/src/api/client.ts` 调用后端，支持 FastAPI `detail` 解析和中文错误提示。
+- 通用结果表：`/api/analyze.rows` 已改为 SQL 执行结果的通用表格结构，前端聊天页会动态生成表头，减少对固定销售趋势字段的依赖。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 - 标准问题评估：`npm run eval:standard` 可运行 20 个 V1 标准问题，并生成 `eval/reports/latest_eval_report.json`。

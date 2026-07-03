@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Bot, Copy, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import { analyzeQuestion } from '../api/analysisClient';
-import type { AnalysisResponse } from '../types/analysis';
+import type { AnalysisResponse, AnalysisRow, AnalysisValue } from '../types/analysis';
 
 type ChatItem = {
   id: string;
@@ -28,6 +28,58 @@ const sessions: Session[] = [
   { id: 's2', title: '退款率分析', lastAt: '12 分钟前', question: '哪个商品品类退款率最高？' },
   { id: 's3', title: '新增用户趋势', lastAt: '昨天', question: '按月查看新增用户趋势' },
 ];
+
+const columnLabels: Record<string, string> = {
+  order_date: '日期',
+  month: '月份',
+  daily_sales: '销售额',
+  sales_amount: '销售额',
+  order_count: '订单数',
+  avg_order_value: '平均客单价',
+  refund_rate: '退款率',
+  success_rate: '成功率',
+  failure_rate: '失败率',
+  gross_margin: '毛利率',
+  repeat_rate: '复购率',
+  category_label: '品类',
+  product_label: '商品',
+  city_label: '城市',
+  payment_method_label: '支付方式',
+  segment_label: '分组',
+};
+
+function getResultColumns(rows: AnalysisRow[]) {
+  const seen = new Set<string>();
+  rows.forEach((row) => {
+    Object.keys(row).forEach((key) => seen.add(key));
+  });
+  return Array.from(seen).slice(0, 6);
+}
+
+function formatColumnLabel(column: string) {
+  return columnLabels[column] ?? column.replaceAll('_', ' ');
+}
+
+function isNumericLike(value: AnalysisValue) {
+  return typeof value === 'number';
+}
+
+function formatCellValue(column: string, value: AnalysisValue) {
+  if (value === null || value === undefined || value === '') return '--';
+  if (typeof value === 'boolean') return value ? '是' : '否';
+  if (typeof value !== 'number') return String(value);
+
+  if (column.includes('rate') || column.includes('margin')) {
+    return `${value.toFixed(2)}%`;
+  }
+  if (column.includes('sales') || column.includes('amount') || column.includes('value')) {
+    return `¥${Math.round(value).toLocaleString()}`;
+  }
+  if (Number.isInteger(value)) {
+    return value.toLocaleString();
+  }
+  return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
 
 export function ChatPage() {
   const [activeSession, setActiveSession] = useState(sessions[0].id);
@@ -160,21 +212,37 @@ export function ChatPage() {
                           <table className="w-full min-w-[640px] text-sm">
                             <thead className="bg-slate-50 text-left text-xs text-slate-500">
                               <tr>
-                                <th className="px-4 py-3">维度</th>
-                                <th className="px-4 py-3 text-right">销售额</th>
-                                <th className="px-4 py-3 text-right">订单数</th>
-                                <th className="px-4 py-3 text-right">平均客单价</th>
-                                <th className="px-4 py-3 text-right">退款率</th>
+                                {getResultColumns(message.rows).map((column) => (
+                                  <th
+                                    key={column}
+                                    className={[
+                                      'px-4 py-3',
+                                      message.rows?.some((row) => isNumericLike(row[column])) ? 'text-right' : '',
+                                    ].join(' ')}
+                                  >
+                                    {formatColumnLabel(column)}
+                                  </th>
+                                ))}
                               </tr>
                             </thead>
                             <tbody>
-                              {message.rows.map((row) => (
-                                <tr key={row.date} className="border-t border-slate-100">
-                                  <td className="px-4 py-3 text-slate-700">{row.date}</td>
-                                  <td className="px-4 py-3 text-right font-mono">¥{row.amount.toLocaleString()}</td>
-                                  <td className="px-4 py-3 text-right font-mono">{row.orders.toLocaleString()}</td>
-                                  <td className="px-4 py-3 text-right font-mono">¥{row.avg.toLocaleString()}</td>
-                                  <td className="px-4 py-3 text-right font-mono">{row.refundRate}</td>
+                              {message.rows.map((row, rowIndex) => (
+                                <tr key={`${rowIndex}-${JSON.stringify(row).slice(0, 40)}`} className="border-t border-slate-100">
+                                  {getResultColumns(message.rows ?? []).map((column) => {
+                                    const value = row[column];
+                                    const numeric = isNumericLike(value);
+                                    return (
+                                      <td
+                                        key={column}
+                                        className={[
+                                          'px-4 py-3 text-slate-700',
+                                          numeric ? 'text-right font-mono' : '',
+                                        ].join(' ')}
+                                      >
+                                        {formatCellValue(column, value)}
+                                      </td>
+                                    );
+                                  })}
                                 </tr>
                               ))}
                             </tbody>

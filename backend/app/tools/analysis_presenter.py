@@ -19,22 +19,22 @@ def present_sales_trend_result(
         )
 
     rows = list(reversed(execution.rows))
-    analysis_rows = [_to_analysis_row(row) for row in rows]
-    total_sales = sum(row["amount"] for row in analysis_rows)
-    total_orders = sum(row["orders"] for row in analysis_rows)
+    summary_rows = [_to_summary_row(row) for row in rows]
+    total_sales = sum(row["amount"] for row in summary_rows)
+    total_orders = sum(row["orders"] for row in summary_rows)
     avg_order_value = round(total_sales / total_orders) if total_orders else 0
-    avg_refund_rate = _average_refund_rate(analysis_rows)
-    date_range = _date_range(analysis_rows)
+    avg_refund_rate = _average_refund_rate(summary_rows)
+    date_range = _date_range(summary_rows)
 
     period_label = _period_label(sql)
     main_metric_label = _main_metric_label(question)
-    leading_label = analysis_rows[0]["date"] if analysis_rows else "无"
+    leading_label = summary_rows[0]["date"] if summary_rows else "无"
 
     return AnalyzeResponse(
         question=question,
         path=_path_type(reuse_plan),
         summary=_summary_text(
-            row_count=len(analysis_rows),
+            row_count=len(summary_rows),
             period_label=period_label,
             main_metric_label=main_metric_label,
             total_sales=total_sales,
@@ -50,7 +50,7 @@ def present_sales_trend_result(
             {"label": "退款率", "value": f"{avg_refund_rate:.2f}%", "delta": "--", "hint": "真实查询"},
             {"label": "平均客单价", "value": f"¥ {avg_order_value:,}", "delta": "--", "hint": "真实查询"},
         ],
-        rows=analysis_rows,
+        rows=[_to_response_row(row) for row in rows],
         source={
             "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
             "tables": _source_tables(retrieval_context),
@@ -81,7 +81,7 @@ def present_sales_trend_result(
     )
 
 
-def _to_analysis_row(row: dict) -> dict:
+def _to_summary_row(row: dict) -> dict:
     amount = round(float(row.get("daily_sales") or 0))
     orders = int(row.get("order_count") or 0)
     rate_value = row.get("refund_rate")
@@ -100,6 +100,10 @@ def _to_analysis_row(row: dict) -> dict:
         "avg": round(float(row.get("avg_order_value") or 0)),
         "refundRate": f"{float(rate_value or 0):.2f}%",
     }
+
+
+def _to_response_row(row: dict) -> dict:
+    return {str(key): value for key, value in row.items()}
 
 
 def _row_label(row: dict) -> str:

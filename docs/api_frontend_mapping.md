@@ -61,7 +61,7 @@ export type AnalysisResponse = {
   summary: string;
   sql: string;
   metrics: AnalysisMetric[];
-  rows: AnalysisRow[];
+  rows: Record<string, string | number | boolean | null>[];
   source: {
     dataset: string;
     tables: string[];
@@ -97,19 +97,14 @@ export type AnalysisResponse = {
 
 ### `rows` 当前结构
 
-当前前端 `AnalysisRow` 结构为：
+当前前端 `AnalysisRow` 已改为通用结构：
 
 ```ts
-export type AnalysisRow = {
-  date: string;
-  amount: number;
-  orders: number;
-  avg: number;
-  refundRate: string;
-};
+export type AnalysisValue = string | number | boolean | null;
+export type AnalysisRow = Record<string, AnalysisValue>;
 ```
 
-这适配当前 V1 的销售、订单、退款率等分析切片。后续如果 `/api/analyze` 支持任意表格列，建议把 `rows` 调整为更通用的结构，例如 `Record<string, string | number | null>[]`，并同步更新 `docs/api.md`。
+后端 `rows` 字段直接来自 SQL Executor 的真实结果列，例如 `order_date`、`daily_sales`、`order_count`、`avg_order_value`、`city_label`、`success_rate`。`frontend/src/pages/ChatPage.tsx` 会根据返回行动态生成最多 6 列表头，并对常见列名做中文展示。
 
 ## 指标口径字段映射
 
@@ -203,4 +198,4 @@ export type MetricPayload = Omit<MetricDefinition, 'id' | 'created_at' | 'update
 
 - 前端 API client 已统一封装，但尚未实现请求超时、取消请求和鉴权 header。
 - 前端 `AnalysisResponse` 没有声明后端返回的 `trace` 和 `steps`，如果页面要展示执行步骤，需要补类型。
-- `/api/analyze` 的 `rows` 类型还不是通用表格结构，后续扩展任意 SQL 结果时要更新前后端类型和文档。
+- `/api/analyze` 的 `rows` 已改为通用表格结构；后续风险转为自然语言总结仍主要面向 V1 已覆盖指标。

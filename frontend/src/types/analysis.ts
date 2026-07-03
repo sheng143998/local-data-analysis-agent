@@ -1,10 +1,6 @@
-export type AnalysisRow = {
-  date: string;
-  amount: number;
-  orders: number;
-  avg: number;
-  refundRate: string;
-};
+export type AnalysisValue = string | number | boolean | null;
+
+export type AnalysisRow = Record<string, AnalysisValue>;
 
 export type AnalysisMetric = {
   label: string;

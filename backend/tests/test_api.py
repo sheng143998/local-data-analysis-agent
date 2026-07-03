@@ -24,6 +24,8 @@ def test_analyze_minimal_loop() -> None:
     assert "召回指标口径" in [step["name"] for step in body["steps"]]
     assert body["trace"]["toolCalls"] == 8
     assert len(body["rows"]) == 30
+    assert "daily_sales" in body["rows"][0]
+    assert "amount" not in body["rows"][0]
     assert body["steps"][-1]["status"] == "已完成"
     assert "真实 PostgreSQL 数据" in body["summary"]
 
@@ -114,4 +116,5 @@ def test_analyze_supports_city_avg_order_value_slice() -> None:
     assert "city_label" in body["sql"]
     assert "avg_order_value" in body["sql"]
     assert len(body["rows"]) <= 30
+    assert {"city_label", "avg_order_value"}.issubset(body["rows"][0])
     assert "城市" in body["summary"]

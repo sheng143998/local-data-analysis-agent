@@ -17,12 +17,8 @@ class AnalysisMetric(BaseModel):
     hint: str
 
 
-class AnalysisRow(BaseModel):
-    date: str
-    amount: int
-    orders: int
-    avg: int
-    refundRate: str
+AnalysisValue = str | int | float | bool | None
+AnalysisRow = dict[str, AnalysisValue]
 
 
 class AnalysisSource(BaseModel):
