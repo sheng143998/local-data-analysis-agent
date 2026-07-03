@@ -44,6 +44,7 @@
 - 已新增 Schema 表关系上下文，从已召回字段推断 join hints 并提供给模型 SQL Generator，不新增固定 SQL 模板。
 - 已为 SQL Validator 接入 `schema_metadata` 字段存在性校验，提前拦截模型编造字段。
 - 已为 Schema Metadata 同步增加字段名启发式中文业务含义，提升换库后 schema 检索和 embedding 文档质量。
+- 已为 Schema Metadata 同步增加历史泛化说明刷新开关，显式升级旧自动说明并保留人工说明。
 
 ## 最近完成模块
 
@@ -787,6 +788,25 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 50. Schema 历史泛化说明刷新
+
+- commit: `新增Schema历史泛化说明刷新并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `SchemaSyncService.sync_public_schema()` 新增 `refresh_generated_descriptions`。
+  - `ContextRefreshService.refresh()` 透传 `refresh_generated_descriptions`。
+  - `sync_schema_metadata.py` 新增 `--include-table`、`--exclude-table` 和 `--refresh-generated-descriptions`。
+  - `refresh_context.py` 新增 `--refresh-generated-descriptions`。
+  - 默认不覆盖非空说明；显式开启时只替换已知旧自动生成说明。
+  - 更新 README、数据模型文档、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_schema_sync_service.py backend/tests/test_context_refresh_service.py`，10 passed
+  - `py -3 backend/scripts/sync_schema_metadata.py --help` 已通过
+  - `py -3 backend/scripts/refresh_context.py --help` 已通过
+  - `npm run backend:test`，142 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -799,7 +819,7 @@
 
 ## 当前正在做
 
-“Schema 字段业务含义提示” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强换库或新增字段后的 schema metadata 默认说明，让后续检索、embedding 和模型 SQL prompt 有更好的字段语义基础。
+“Schema 历史泛化说明刷新” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只为开发者提供显式刷新旧自动说明的开关，让已有数据库也能受益于新的字段含义推断。
 
 ## 下一步建议
 

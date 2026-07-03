@@ -34,6 +34,11 @@ def main() -> None:
         help="只同步 schema_metadata，不同步 embedding",
     )
     parser.add_argument(
+        "--refresh-generated-descriptions",
+        action="store_true",
+        help="刷新早期系统生成的泛化字段说明，保留人工说明",
+    )
+    parser.add_argument(
         "--embedding-target",
         action="append",
         choices=["schema", "metric", "memory"],
@@ -63,6 +68,7 @@ def main() -> None:
     result = ContextRefreshService().refresh(
         include_tables=args.include_table,
         exclude_tables=args.exclude_table,
+        refresh_generated_descriptions=args.refresh_generated_descriptions,
         sync_embeddings=not args.skip_embeddings,
         embedding_targets=args.embedding_target,
         embedding_limit=args.embedding_limit,

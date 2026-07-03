@@ -62,12 +62,42 @@ def test_upsert_schema_metadata_preserves_existing_descriptions() -> None:
     sql, params = cursor.statements[0]
     assert "ON CONFLICT (table_name, column_name) DO UPDATE" in sql
     assert "schema_metadata.description = ''" in sql
+    assert "schema_metadata.description = %s" in sql
     assert params == (
         "orders",
         "created_at",
         "timestamp with time zone",
         "orders.created_at，时间字段，类型为 timestamp with time zone",
         "orders的创建时间，可用于时间趋势、近 N 天筛选和分组。",
+        False,
+        "orders.created_at",
+        False,
+        "业务表字段：orders.created_at",
+    )
+
+
+def test_upsert_schema_metadata_can_refresh_generated_descriptions() -> None:
+    cursor = FakeCursor()
+    service = SchemaSyncService()
+
+    synced = service._upsert_schema_metadata(
+        cursor,
+        [SchemaColumnSnapshot("orders", "total_amount", "numeric")],
+        refresh_generated_descriptions=True,
+    )
+
+    assert synced == 1
+    _, params = cursor.statements[0]
+    assert params == (
+        "orders",
+        "total_amount",
+        "numeric",
+        "orders.total_amount，金额字段，类型为 numeric",
+        "orders的金额类指标字段，可用于求和、均值、占比和规模分析。",
+        True,
+        "orders.total_amount",
+        True,
+        "业务表字段：orders.total_amount",
     )
 
 

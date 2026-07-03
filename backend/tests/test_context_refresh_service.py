@@ -9,11 +9,17 @@ class FakeSchemaService:
     def __init__(self) -> None:
         self.calls: list[dict] = []
 
-    def sync_public_schema(self, include_tables=None, exclude_tables=None) -> SchemaSyncResult:
+    def sync_public_schema(
+        self,
+        include_tables=None,
+        exclude_tables=None,
+        refresh_generated_descriptions=False,
+    ) -> SchemaSyncResult:
         self.calls.append(
             {
                 "include_tables": include_tables,
                 "exclude_tables": exclude_tables,
+                "refresh_generated_descriptions": refresh_generated_descriptions,
             }
         )
         return SchemaSyncResult(
@@ -82,7 +88,13 @@ def test_refresh_syncs_schema_then_all_embeddings_by_default() -> None:
 
     result = service.refresh()
 
-    assert schema_service.calls == [{"include_tables": None, "exclude_tables": None}]
+    assert schema_service.calls == [
+        {
+            "include_tables": None,
+            "exclude_tables": None,
+            "refresh_generated_descriptions": False,
+        }
+    ]
     assert embedding_service.calls == [("all", None, 16, True, 0)]
     assert result.schema_result.synced_columns == 3
     assert [item.target for item in result.embedding_results] == ["schema", "metric", "memory"]
@@ -99,6 +111,7 @@ def test_refresh_passes_table_filters_and_can_skip_embeddings() -> None:
     result = service.refresh(
         include_tables=["orders"],
         exclude_tables=["tmp_import"],
+        refresh_generated_descriptions=True,
         sync_embeddings=False,
     )
 
@@ -106,6 +119,7 @@ def test_refresh_passes_table_filters_and_can_skip_embeddings() -> None:
         {
             "include_tables": ["orders"],
             "exclude_tables": ["tmp_import"],
+            "refresh_generated_descriptions": True,
         }
     ]
     assert embedding_service.calls == []

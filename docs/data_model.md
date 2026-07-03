@@ -65,7 +65,7 @@ py -3 backend/scripts/init_db.py
 py -3 backend/scripts/sync_schema_metadata.py
 ```
 
-schema 同步会保留已有人工 `description` / `business_meaning`，只在字段说明为空时写入自动推断的基础含义。
+schema 同步会保留已有人工 `description` / `business_meaning`，只在字段说明为空时写入自动推断的基础含义。需要升级早期系统生成的泛化说明时，可传入 `--refresh-generated-descriptions`，该模式只替换已知自动生成格式，不覆盖人工说明。
 
 同步 schema/metric/SQL Memory embedding：
 

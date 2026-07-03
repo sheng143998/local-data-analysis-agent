@@ -35,6 +35,7 @@ class SchemaSyncService:
         self,
         include_tables: Iterable[str] | None = None,
         exclude_tables: Iterable[str] | None = None,
+        refresh_generated_descriptions: bool = False,
     ) -> SchemaSyncResult:
         includes = _normalize_filter(include_tables)
         excludes = DEFAULT_EXCLUDED_TABLES | _normalize_filter(exclude_tables)
@@ -42,7 +43,11 @@ class SchemaSyncService:
         with get_connection() as conn:
             cursor = conn.cursor()
             columns = self._load_public_columns(cursor, includes, excludes)
-            synced = self._upsert_schema_metadata(cursor, columns)
+            synced = self._upsert_schema_metadata(
+                cursor,
+                columns,
+                refresh_generated_descriptions=refresh_generated_descriptions,
+            )
 
         return SchemaSyncResult(
             scanned_columns=len(columns),
@@ -72,10 +77,18 @@ class SchemaSyncService:
             for row in cursor.fetchall()
         ]
 
-    def _upsert_schema_metadata(self, cursor, columns: list[SchemaColumnSnapshot]) -> int:
+    def _upsert_schema_metadata(
+        self,
+        cursor,
+        columns: list[SchemaColumnSnapshot],
+        *,
+        refresh_generated_descriptions: bool = False,
+    ) -> int:
         for column in columns:
             description = infer_schema_description(column)
             business_meaning = infer_schema_business_meaning(column)
+            old_generated_description = f"{column.table_name}.{column.column_name}"
+            old_generated_business_meaning = f"业务表字段：{column.table_name}.{column.column_name}"
             cursor.execute(
                 """
                 INSERT INTO schema_metadata (
@@ -86,11 +99,13 @@ class SchemaSyncService:
                   data_type = EXCLUDED.data_type,
                   description = CASE
                     WHEN schema_metadata.description = ''
+                      OR (%s AND schema_metadata.description = %s)
                     THEN EXCLUDED.description
                     ELSE schema_metadata.description
                   END,
                   business_meaning = CASE
                     WHEN schema_metadata.business_meaning = ''
+                      OR (%s AND schema_metadata.business_meaning = %s)
                     THEN EXCLUDED.business_meaning
                     ELSE schema_metadata.business_meaning
                   END,
@@ -102,6 +117,10 @@ class SchemaSyncService:
                     column.data_type,
                     description,
                     business_meaning,
+                    refresh_generated_descriptions,
+                    old_generated_description,
+                    refresh_generated_descriptions,
+                    old_generated_business_meaning,
                 ),
             )
         return len(columns)

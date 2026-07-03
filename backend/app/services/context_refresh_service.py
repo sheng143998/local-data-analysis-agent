@@ -32,6 +32,7 @@ class ContextRefreshService:
         *,
         include_tables: Iterable[str] | None = None,
         exclude_tables: Iterable[str] | None = None,
+        refresh_generated_descriptions: bool = False,
         sync_embeddings: bool = True,
         embedding_targets: Iterable[RefreshEmbeddingTarget] | None = None,
         embedding_limit: int | None = None,
@@ -42,6 +43,7 @@ class ContextRefreshService:
         schema_result = self.schema_service.sync_public_schema(
             include_tables=include_tables,
             exclude_tables=exclude_tables,
+            refresh_generated_descriptions=refresh_generated_descriptions,
         )
         embedding_results = (
             self._sync_embeddings(
