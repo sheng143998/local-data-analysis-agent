@@ -37,6 +37,13 @@ Olist 真实数据和合成增强表包括：
 - `tool_calls`：每次工具调用摘要。
 - `embedding_documents`：后续 RAG 文档和 embedding 存储。
 
+## 后端内部检索上下文
+
+- `RetrievalContext.metrics`：本次问题召回的指标口径。
+- `RetrievalContext.schema_columns`：本次问题召回的字段上下文。
+- `RetrievalContext.table_relationships`：从已召回字段推断出的表关系提示，例如 `orders.id = payments.order_id`。该字段只用于后端 SQL Generator prompt，不写入数据库，也不展示给普通用户。
+- `RetrievalContext.tables` / `fields`：本次 SQL 生成允许使用的表和字段。
+
 ## 迁移脚本
 
 迁移位于 `backend/app/db/migrations/`：

@@ -120,6 +120,16 @@ def _user_prompt(
         }
         for column in retrieval_context.schema_columns[:MAX_SCHEMA_FIELDS_IN_PROMPT]
     ]
+    relationships = [
+        {
+            "left": f"{relationship.left_table}.{relationship.left_column}",
+            "right": f"{relationship.right_table}.{relationship.right_column}",
+            "type": relationship.relationship_type,
+            "confidence": relationship.confidence,
+            "reason": relationship.reason,
+        }
+        for relationship in retrieval_context.table_relationships
+    ]
     payload = {
         "question": question,
         "reuse_plan": {
@@ -131,8 +141,10 @@ def _user_prompt(
         "allowed_fields": retrieval_context.fields,
         "metrics": metrics,
         "schema_fields": fields,
+        "table_relationships": relationships,
         "requirements": [
             "只能使用 allowed_tables 和 schema_fields 中出现的字段",
+            "跨表查询优先使用 table_relationships 中的高置信关系",
             "不要编造表名、字段名或业务口径",
             "输出 SQL 后还会经过 Validator 和 Guard",
         ],

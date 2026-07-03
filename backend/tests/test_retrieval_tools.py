@@ -1,4 +1,5 @@
-from backend.app.tools.context_builder import build_retrieval_context
+from backend.app.schemas.retrieval import SchemaColumnContext
+from backend.app.tools.context_builder import build_retrieval_context, infer_table_relationships
 from backend.app.tools.metric_retriever import retrieve_metrics
 from backend.app.tools.schema_retriever import retrieve_schema
 
@@ -45,4 +46,54 @@ def test_context_builder_combines_metrics_and_schema() -> None:
     assert "orders" in context.tables
     assert "payments" in context.tables
     assert "orders.total_amount" in context.fields
+    assert any(
+        relationship.left_table == "orders"
+        and relationship.left_column == "id"
+        and relationship.right_table == "payments"
+        and relationship.right_column == "order_id"
+        for relationship in context.table_relationships
+    )
     assert "销售额" in context.metric_summary
+
+
+def test_infer_table_relationships_from_generic_id_conventions() -> None:
+    relationships = infer_table_relationships(
+        [
+            _column("orders", "id"),
+            _column("orders", "user_id"),
+            _column("payments", "order_id"),
+            _column("coupon_usages", "order_id"),
+            _column("users", "id"),
+        ]
+    )
+
+    pairs = {
+        (
+            relationship.left_table,
+            relationship.left_column,
+            relationship.right_table,
+            relationship.right_column,
+            relationship.relationship_type,
+        )
+        for relationship in relationships
+    }
+
+    assert ("orders", "id", "payments", "order_id", "id_to_foreign_key") in pairs
+    assert ("orders", "id", "coupon_usages", "order_id", "id_to_foreign_key") in pairs
+    assert ("users", "id", "orders", "user_id", "id_to_foreign_key") in pairs
+    assert any(
+        relationship.left_column == "order_id"
+        and relationship.right_column == "order_id"
+        and relationship.relationship_type == "same_key"
+        for relationship in relationships
+    )
+
+
+def _column(table_name: str, column_name: str) -> SchemaColumnContext:
+    return SchemaColumnContext(
+        table_name=table_name,
+        column_name=column_name,
+        data_type="text",
+        description=f"{table_name}.{column_name}",
+        business_meaning=f"{table_name}.{column_name}",
+    )

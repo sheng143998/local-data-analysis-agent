@@ -1,6 +1,11 @@
 from backend.app.core.model_adapter import ModelResponse, ModelUsage
 from backend.app.schemas.memories import SqlReusePlan
-from backend.app.schemas.retrieval import MetricContext, RetrievalContext, SchemaColumnContext
+from backend.app.schemas.retrieval import (
+    MetricContext,
+    RetrievalContext,
+    SchemaColumnContext,
+    TableRelationshipContext,
+)
 from backend.app.tools.model_sql_generator import (
     build_sql_generation_messages,
     generate_sql_with_model,
@@ -29,6 +34,9 @@ def test_build_sql_generation_messages_uses_retrieved_context_only() -> None:
     assert "只生成 PostgreSQL SELECT 查询" in messages[0].content
     assert messages[1].role == "user"
     assert "orders.total_amount" in messages[1].content
+    assert "table_relationships" in messages[1].content
+    assert "orders.id" in messages[1].content
+    assert "payments.order_id" in messages[1].content
     assert "metric_definitions" not in messages[1].content
 
 
@@ -119,6 +127,13 @@ def _context() -> RetrievalContext:
         schema_columns=[
             SchemaColumnContext(
                 table_name="orders",
+                column_name="id",
+                data_type="text",
+                description="orders.id",
+                business_meaning="订单主键",
+            ),
+            SchemaColumnContext(
+                table_name="orders",
                 column_name="created_at",
                 data_type="timestamp",
                 description="orders.created_at",
@@ -131,9 +146,27 @@ def _context() -> RetrievalContext:
                 description="orders.total_amount",
                 business_meaning="订单金额",
             ),
+            SchemaColumnContext(
+                table_name="payments",
+                column_name="order_id",
+                data_type="text",
+                description="payments.order_id",
+                business_meaning="支付所属订单",
+            ),
         ],
-        tables=["orders"],
-        fields=["orders.created_at", "orders.total_amount"],
+        table_relationships=[
+            TableRelationshipContext(
+                left_table="orders",
+                left_column="id",
+                right_table="payments",
+                right_column="order_id",
+                relationship_type="id_to_foreign_key",
+                confidence=0.92,
+                reason="payments.order_id 命名上指向 orders.id",
+            )
+        ],
+        tables=["orders", "payments"],
+        fields=["orders.id", "orders.created_at", "orders.total_amount", "payments.order_id"],
         metric_summary="销售额 = 已支付订单 total_amount 汇总",
     )
 

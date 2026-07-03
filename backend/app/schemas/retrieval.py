@@ -22,9 +22,20 @@ class SchemaColumnContext(BaseModel):
     score: float = 0
 
 
+class TableRelationshipContext(BaseModel):
+    left_table: str
+    left_column: str
+    right_table: str
+    right_column: str
+    relationship_type: str
+    confidence: float
+    reason: str
+
+
 class RetrievalContext(BaseModel):
     metrics: list[MetricContext] = Field(default_factory=list)
     schema_columns: list[SchemaColumnContext] = Field(default_factory=list)
+    table_relationships: list[TableRelationshipContext] = Field(default_factory=list)
     tables: list[str] = Field(default_factory=list)
     fields: list[str] = Field(default_factory=list)
     metric_summary: str = ""

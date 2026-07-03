@@ -41,6 +41,7 @@
 - 已为 embedding batch 失败增加单条重试，避免单条坏数据拖垮整批同步。
 - 已为 embedding 同步增加 `--sleep-ms` / `--embedding-sleep-ms` 固定间隔限速，降低真实 provider 限流风险。
 - 已为标准评估报告增加断言失败聚合诊断，帮助定位缺失表、失败类别和路径。
+- 已新增 Schema 表关系上下文，从已召回字段推断 join hints 并提供给模型 SQL Generator，不新增固定 SQL 模板。
 
 ## 最近完成模块
 
@@ -735,6 +736,22 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 47. Schema 表关系上下文
+
+- commit: `新增Schema表关系上下文并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `RetrievalContext` 新增后端内部 `table_relationships`。
+  - 新增 `TableRelationshipContext`，描述左右表字段、关系类型、置信度和推断原因。
+  - `context_builder.infer_table_relationships()` 基于同名 ID 字段和 `table.id` 到 `<singular_table>_id` 的通用约定推断 join hints。
+  - `model_sql_generator` prompt 增加 `table_relationships`，跨表查询优先使用高置信关系。
+  - 更新 README、Agent 工作流、数据模型、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_retrieval_tools.py backend/tests/test_model_sql_generator.py`，10 passed
+  - `npm run backend:test`，135 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -747,7 +764,7 @@
 
 ## 当前正在做
 
-“评估断言失败聚合诊断” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强标准评估报告，帮助后续优先补强通用 SQL 生成和 schema 召回。
+“Schema 表关系上下文” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只把已召回字段推断出的 join hints 提供给模型 SQL Generator，帮助后续跨表问题走通用生成路径。
 
 ## 下一步建议
 
