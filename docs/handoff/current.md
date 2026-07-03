@@ -83,6 +83,19 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 5. SQL Guard / Validator
+
+- commit: 本模块准备提交，提交信息为 `实现SQL Guard和Validator并通过测试`
+- 内容：
+  - 新增 `SqlValidationRequest`, `SqlValidationResult`, `SqlGuardResult`
+  - 新增 `validate_sql` 和 `guard_sql`
+  - 使用 `sqlglot` 解析 PostgreSQL SQL
+  - 覆盖只读、单语句、写操作拦截、白名单表、`SELECT *`、自动 LIMIT
+- 验证：
+  - `npm run backend:test`，12 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -95,20 +108,20 @@
 
 ## 当前正在做
 
-指标口径 PostgreSQL Repository 模块已完成，准备提交并推送。
+SQL Guard / Validator 模块已完成，准备提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M1/M2：
 
-1. 开始 SQL Guard / SQL Validator 模块。
-2. 实现只读 SQL Executor。
+1. 实现只读 SQL Executor。
+2. 让 Executor 只接受 Guard 后的 `final_sql`。
 3. 让 `/api/analyze` 从 mock graph 逐步接入真实 schema/metric/sql 工具。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
-- SQL Guard、SQL Validator、只读 Executor 尚未实现。
+- SQL Guard、SQL Validator 已实现；只读 Executor 尚未实现。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。
 
