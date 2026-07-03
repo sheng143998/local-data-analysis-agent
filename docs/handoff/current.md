@@ -30,6 +30,7 @@
 - 前端 `AnalysisResponse` 已补齐后端 `trace` 和 `steps` 类型契约，但普通用户页面不展示内部追踪细节。
 - 已新增统一检索评分基础层，metric、schema、SQL Memory 检索复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
 - 已新增 EmbeddingAdapter 基础层，支持 OpenAI-compatible embeddings 和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须走统一入口。
+- 已新增 Schema / Metric Embedding 同步能力，可把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 写入 pgvector 字段；本模块不改普通用户 UI、不展示向量状态、不新增固定 SQL 模板。
 
 ## 最近完成模块
 
@@ -521,7 +522,7 @@
 
 ### 35. EmbeddingAdapter 基础层
 
-- commit: 本模块随本次提交推送完成，提交信息为 `实现EmbeddingAdapter基础层并通过验证`，具体 hash 以 `git log --oneline -1` 为准。
+- commit: `cd840d0 实现EmbeddingAdapter基础层并通过验证`
 - 内容：
   - `backend/app/core/config.py` 新增 embedding provider、base URL、model、API key、dimension、timeout、retry 配置。
   - 新增 `backend/app/core/embedding_adapter.py`，支持 OpenAI-compatible `/embeddings` 调用。
@@ -533,6 +534,22 @@
   - `npm run backend:test`，87 passed，1 个 `StarletteDeprecationWarning`
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过
+
+### 36. Schema / Metric Embedding 同步
+
+- commit: 本模块随本次提交推送完成，提交信息为 `实现SchemaMetric向量同步并通过验证`。
+- 内容：
+  - 新增 `backend/app/services/embedding_sync_service.py`，从 `schema_metadata` 和启用状态的 `metric_definitions` 构造中文检索文档。
+  - 统一调用 `EmbeddingAdapter` 生成向量，避免各处散落 embedding provider 调用。
+  - 通过 `%s::vector` 回写 `schema_metadata.embedding` 和 `metric_definitions.embedding`。
+  - 新增 `backend/scripts/sync_embeddings.py`，支持 `--target all|schema|metric`。
+  - 新增 `backend/tests/test_embedding_sync_service.py`，覆盖文档构造、向量 literal、JSON 容错、schema/metric 写入和失败不中断。
+  - 更新 README、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_embedding_sync_service.py`，7 passed
+  - `npm run backend:test`，94 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
 ## 当前架构边界
 
@@ -546,15 +563,15 @@
 
 ## 当前正在做
 
-“EmbeddingAdapter 基础层”模块已完成并通过验证，随本次提交推送完成。
+“Schema / Metric Embedding 同步” 模块已完成并通过验证，随本次提交推送完成。该模块只补齐向量写入能力，不改 `/api/analyze` 行为，不新增固定 SQL 模板。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 实现 schema/metric embedding 同步脚本，把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 填充起来。
-2. 在统一检索评分基础上接入 pgvector 查询，形成 schema、metric、memory 的真正混合检索。
-3. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
+1. 在统一检索评分基础上接入 pgvector 查询，形成 schema、metric、memory 的真正混合检索。
+2. 推进更通用的 Presenter，让自然语言总结也能适配模型生成的更多查询列。
+3. 后续单独实现 SQL Memory question/sql embedding，同样不依赖固定 SQL 模板扩展。
 
 ## 已知风险
 
@@ -563,8 +580,8 @@
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。SQL Memory fast_path 已更保守，但部分语义仍需模型生成或更强意图生成修复。
-- EmbeddingAdapter 基础层已完成，但尚未写入或查询 pgvector。
-- schema/metric retriever 已有统一确定性评分基础层，但尚未接入 embedding / pgvector 混合检索。
+- EmbeddingAdapter 基础层已完成，schema/metric embedding 同步模块正在收尾；retriever 尚未接入 pgvector 混合检索。
+- schema/metric retriever 已有统一确定性评分基础层，但尚未接入 embedding / pgvector 查询排序。
 - SQL Memory 当前 semantic similarity 仍暂用统一文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口；Top N 和复杂指标查询当前暂不带时间窗口。

@@ -28,6 +28,7 @@
 - 前端接口契约补齐：`AnalysisResponse` 已声明后端返回的 `trace` 和 `steps`，但普通用户页面不展示内部调试细节。
 - 统一检索评分基础层：metric、schema、SQL Memory 检索已复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
 - EmbeddingAdapter 基础层：已提供 OpenAI-compatible embeddings 统一入口和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须通过该入口。
+- Schema / Metric Embedding 同步：可运行脚本把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 写入 pgvector 字段，为后续混合检索准备向量资产。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 - 标准问题评估：`npm run eval:standard` 可运行 20 个 V1 标准问题，并生成 `eval/reports/latest_eval_report.json`。
@@ -97,6 +98,7 @@ npm run backend:dev
 npm run frontend:dev
 py -3 backend/scripts/init_db.py
 py -3 backend/scripts/sync_schema_metadata.py
+py -3 backend/scripts/sync_embeddings.py
 ```
 
 换库、导入新表或调整字段后，先运行：
@@ -104,9 +106,10 @@ py -3 backend/scripts/sync_schema_metadata.py
 ```bash
 py -3 backend/scripts/init_db.py
 py -3 backend/scripts/sync_schema_metadata.py
+py -3 backend/scripts/sync_embeddings.py
 ```
 
-同步脚本会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。
+`sync_schema_metadata.py` 会扫描当前 PostgreSQL `public` schema 中的业务表字段，更新 `schema_metadata`，并保留已有人工字段说明。`sync_embeddings.py` 会为 schema 字段和指标口径生成 embedding 并写入 pgvector 字段；默认本地配置使用 deterministic fallback，真实语义检索质量需要配置可用的 embedding provider。
 
 ## API 入口
 
@@ -137,6 +140,7 @@ py -3 backend/scripts/sync_schema_metadata.py
 
 - 模型调用统一通过 `backend/app/core/model_adapter.py`。
 - embedding 调用统一通过 `backend/app/core/embedding_adapter.py`。
+- schema/metric 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行。
 - SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段和指标口径，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。
 - 模型生成的 SQL 当前不直接执行；后续接入 `/api/analyze` 时仍必须经过 SQL Validator、SQL Guard 和只读 Executor。
