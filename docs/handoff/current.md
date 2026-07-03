@@ -1,4 +1,4 @@
-# 当前 Handoff
+﻿# 当前 Handoff
 
 ## 当前状态
 
@@ -13,6 +13,7 @@
 - `/api/analyze` 已写入 `query_runs` 和 `tool_calls`，开发者可通过 `/api/runs` 查看运行记录。
 - `/api/analyze` 已接入 SQL Memory 检索和成功写入，高置信历史成功问题可走 `fast_path` 复用 SQL。
 - `/api/analyze` 已支持销售趋势 SQL 参数化模板，可解析“最近 N 天”并写入 `sql_memories.parameters`。
+- `/api/analyze` 已接入 SQL Rewriter / Generator 最小切片，可识别“最近 90 天每月订单数是多少？”并生成月度订单数 SQL。
 
 ## 最近完成模块
 
@@ -186,6 +187,21 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 12. SQL Rewriter / Generator 最小切片
+
+- commit: 9f6e418 实现SQL Rewriter最小切片并通过测试
+- 内容：
+  - 新增 `GeneratedSql`
+  - 新增 `generate_or_rewrite_sales_sql`
+  - 扩展 `SalesTrendParameters`，支持 `granularity` 和 `metric`
+  - 支持“最近 90 天每月订单数是多少？”生成月度订单数 SQL
+  - `/api/analyze` 在 SQL Memory 规划后、Guard 前执行 SQL 生成/改写节点
+  - `tool_calls` 新增 SQL 生成/改写工具调用记录
+- 验证：
+  - `npm run backend:test`，33 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -198,20 +214,20 @@
 
 ## 当前正在做
 
-SQL Memory 参数化模板与时间范围改写已完成，已提交并推送。
+SQL Rewriter / Generator 最小切片已完成，已提交，正在推送。最新 commit: 9f6e418。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 接入 SQL Rewriter / Generator，让中置信候选走 `rewrite_path`。
-2. 扩展 SQL Memory 参数化模板，支持品类、城市、Top N、按月粒度。
+1. 扩展 SQL Rewriter / Generator，覆盖 Top N 商品、品类销售额、退款率等标准问题。
+2. 扩展 SQL Memory 参数化模板，支持品类、城市、Top N。
 3. 后续再接 embedding / pgvector，让 schema/metric 和 SQL Memory 从关键词召回升级为混合检索。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
-- `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever 和 SQL Memory，但仍未接入 LLM SQL Generator / Rewriter。
+- `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator，但仍未接入真实 LLM SQL Generator / Rewriter。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
 - 销售趋势“最近 N 天”当前用最近 N 个有交易日期表达，不是严格自然日窗口。
@@ -228,3 +244,4 @@ SQL Memory 参数化模板与时间范围改写已完成，已提交并推送。
 5. 模块完成后运行相关验证。
 6. 更新本文件。
 7. commit 并 push。
+

@@ -14,6 +14,7 @@
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
 - SQL Memory：成功查询会写入 `sql_memories`，高置信历史问题可走 `fast_path` 复用已验证 SQL。
 - 参数化模板：可解析“最近 7 天 / 30 天 / 90 天”等时间范围，并渲染销售趋势 SQL。
+- SQL Rewriter / Generator 最小切片：可识别“最近 90 天每月订单数是多少？”这类按月订单数问题，生成或改写可执行 SQL。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 
@@ -71,8 +72,9 @@ npm run frontend:dev
 当前 SQL Memory 已支持最小参数化复用：
 
 - 高置信历史问题会走 `fast_path`。
+- 中置信历史问题会进入 `rewrite_path`，当前先用确定性 Rewriter 支持按月粒度和订单数问题。
 - 时间范围会从用户问题中解析为 `days` 参数。
-- 成功查询会把 `parameters`、最终 SQL、结果列和行数写入 `sql_memories`。
+- 成功查询会把 `parameters`（含 `days`、`granularity`、`metric`）、最终 SQL、结果列和行数写入 `sql_memories`。
 - 普通用户不默认看到 SQL Memory 候选分数；开发者通过 `/api/memories` 和 `/api/runs` 查看。
 
 ## 当前验证

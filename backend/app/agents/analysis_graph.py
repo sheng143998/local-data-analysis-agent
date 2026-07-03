@@ -10,10 +10,8 @@ from backend.app.tools.sql_memory_tools import (
     retrieve_sql_memory,
     upsert_successful_sql_memory,
 )
-from backend.app.tools.sql_template_tools import (
-    parse_sales_trend_parameters,
-    render_sales_trend_sql,
-)
+from backend.app.tools.sql_generation_tools import generate_or_rewrite_sales_sql
+from backend.app.tools.sql_template_tools import parse_sales_trend_parameters, render_sales_trend_sql
 from backend.app.tools.sql_execution_tools import execute_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 
@@ -26,8 +24,6 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
     """V1 real slice：先检索 SQL Memory，再执行真实 SQL Guard + Executor。"""
     started = perf_counter()
     retrieval_context = build_retrieval_context(question)
-    sales_parameters = parse_sales_trend_parameters(question)
-    rendered_template_sql = render_sales_trend_sql(sales_parameters)
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     memory_candidates = retrieve_sql_memory(
         question,
@@ -35,9 +31,11 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
         tables=retrieval_context.tables,
     )
     reuse_plan = plan_sql_reuse(memory_candidates)
+    generated_sql = generate_or_rewrite_sales_sql(question, reuse_plan)
+    selected_sql = generated_sql.sql
+    sales_parameters = generated_sql.parameters or parse_sales_trend_parameters(question)
     if reuse_plan.memory_hit:
-        reuse_plan = reuse_plan.model_copy(update={"selected_sql": rendered_template_sql})
-    selected_sql = reuse_plan.selected_sql or rendered_template_sql
+        reuse_plan = reuse_plan.model_copy(update={"selected_sql": selected_sql})
 
     guard = guard_sql(selected_sql, max_rows=30)
     execution = execute_guarded_sql(guard)
@@ -46,7 +44,7 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
     if execution.status == "success" and guard.allowed:
         updated_memory = upsert_successful_sql_memory(
             question=question,
-            sql_template=SALES_TREND_SQL,
+            sql_template=render_sales_trend_sql(sales_parameters),
             final_sql=guard.final_sql or selected_sql,
             parameters=sales_parameters.model_dump(),
             tables=retrieval_context.tables,
@@ -77,6 +75,8 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
         memory_id=reuse_plan.selected_memory_id,
         memory_candidate_count=len(memory_candidates),
         reuse_plan=reuse_plan,
+        generation_path=generated_sql.path,
+        generated_sql_text=selected_sql,
         updated_memory_id=updated_memory_id,
         error_message=execution.error_message or "; ".join(guard.errors) or None,
         metric_count=len(retrieval_context.metrics),
@@ -98,6 +98,8 @@ def _log_analysis_run(
     memory_candidate_count: int,
     reuse_plan: SqlReusePlan,
     updated_memory_id,
+    generation_path: str,
+    generated_sql_text: str,
     error_message: str | None,
     metric_count: int,
     schema_column_count: int,
@@ -105,7 +107,7 @@ def _log_analysis_run(
     logger = QueryRunLogger()
     run = logger.log_run(
         user_question=question,
-        generated_sql=SALES_TREND_SQL,
+        generated_sql=generated_sql_text,
         final_sql=final_sql,
         guard_status=guard_status,
         execution_status=execution_status,
@@ -142,6 +144,13 @@ def _log_analysis_run(
             "metric_count": metric_count,
             "schema_column_count": schema_column_count,
         },
+        status="success",
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="sql_generation_tools.generate_or_rewrite_sales_sql",
+        input_payload={"path_type": reuse_plan.path_type},
+        output_payload={"generation_path": generation_path},
         status="success",
     )
     logger.log_tool_call(

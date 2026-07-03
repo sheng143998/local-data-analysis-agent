@@ -26,11 +26,14 @@ def present_sales_trend_result(
     avg_refund_rate = _average_refund_rate(analysis_rows)
     date_range = _date_range(analysis_rows)
 
+    period_label = _period_label(sql)
+    main_metric_label = _main_metric_label(question)
+
     return AnalyzeResponse(
         question=question,
         path=_path_type(reuse_plan),
         summary=(
-            f"已基于真实 PostgreSQL 数据查询最近 {len(analysis_rows)} 个有交易日期的销售趋势。"
+            f"已基于真实 PostgreSQL 数据查询最近 {len(analysis_rows)} 个{period_label}的{main_metric_label}。"
             f"区间内总销售额约为 ¥{total_sales:,.0f}，订单数 {total_orders:,}，"
             f"平均客单价约 ¥{avg_order_value:,}，平均退款率 {avg_refund_rate:.2f}%。"
         ),
@@ -53,7 +56,7 @@ def present_sales_trend_result(
             "security": "只读 SELECT，已通过 SQL Guard",
         },
         trace={
-            "toolCalls": 7,
+            "toolCalls": 8,
             "modelCalls": 0,
             "memoryCandidates": reuse_plan.candidate_count if reuse_plan else 0,
             "totalTime": f"{latency_ms}ms",
@@ -122,7 +125,7 @@ def _error_payload(
             "security": "SQL Guard / Executor",
         },
         "trace": {
-            "toolCalls": 7,
+            "toolCalls": 8,
             "modelCalls": 0,
             "memoryCandidates": reuse_plan.candidate_count if reuse_plan else 0,
             "totalTime": f"{latency_ms}ms",
@@ -164,4 +167,18 @@ def _path_type(reuse_plan: SqlReusePlan | None) -> str:
 def _template_step_name(reuse_plan: SqlReusePlan | None) -> str:
     if reuse_plan and reuse_plan.memory_hit:
         return "复用历史 SQL"
+    if reuse_plan and reuse_plan.path_type == "rewrite_path":
+        return "改写历史 SQL"
     return "选择 SQL 模板"
+
+
+def _period_label(sql: str) -> str:
+    if "DATE_TRUNC('MONTH'" in sql.upper():
+        return "月份"
+    return "有交易日期"
+
+
+def _main_metric_label(question: str) -> str:
+    if any(keyword in question for keyword in ["订单数", "订单量", "下单数", "下单量"]):
+        return "订单数趋势"
+    return "销售趋势"

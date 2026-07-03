@@ -10,6 +10,7 @@ def test_parse_sales_trend_parameters_extracts_days() -> None:
 
     assert params.days == 7
     assert params.granularity == "day"
+    assert params.metric == "sales_amount"
 
 
 def test_parse_sales_trend_parameters_supports_common_period_words() -> None:
@@ -30,3 +31,20 @@ def test_render_sales_trend_sql_uses_limit_days() -> None:
     assert "LIMIT 7" in sql
     assert "orders o" in sql
     assert "payments p" in sql
+
+
+def test_parse_sales_trend_parameters_supports_monthly_order_count() -> None:
+    params = parse_sales_trend_parameters("最近 90 天每月订单数是多少？")
+
+    assert params.days == 90
+    assert params.granularity == "month"
+    assert params.metric == "order_count"
+
+
+def test_render_sales_trend_sql_supports_monthly_bucket_limit() -> None:
+    sql = render_sales_trend_sql(parse_sales_trend_parameters("最近 90 天每月订单数是多少？"))
+
+    assert "DATE_TRUNC('month', o.created_at)::date AS order_date" in sql
+    assert "GROUP BY DATE_TRUNC('month', o.created_at)::date" in sql
+    assert "COUNT(DISTINCT o.id) AS order_count" in sql
+    assert "LIMIT 3" in sql
