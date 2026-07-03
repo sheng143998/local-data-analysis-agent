@@ -10,6 +10,7 @@
 - 指标口径 CRUD：`GET/POST/PUT/DELETE /api/metrics` 已持久化到 `metric_definitions`。
 - Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文。
 - Schema Metadata 自动同步：可从当前 PostgreSQL `information_schema` 刷新 `schema_metadata`，支持换库、换表后的字段上下文更新。
+- 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。
 - SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
@@ -47,7 +48,13 @@ schema: public
 
 ```env
 DATABASE_URL=postgresql://postgres:<password>@127.0.0.1:5432/local_data_agent
+MODEL_PROVIDER=local
+MODEL_BASE_URL=http://127.0.0.1:11434/v1
+MODEL_NAME=local-sql-model
+MODEL_API_KEY=change_me
 ```
+
+`MODEL_API_KEY=change_me` 是占位值，不会被 ModelAdapter 写入 Authorization header。真实密钥只放在本机 `backend/.env`，不要提交。
 
 ## 常用命令
 
