@@ -68,6 +68,8 @@ class SqlMemoryUpsert(BaseModel):
     canonical_question: str
     sql_template: str
     final_sql: str
+    question_embedding: list[float] | None = None
+    sql_embedding: list[float] | None = None
     parameters: dict = Field(default_factory=dict)
     tables: list[str] = Field(default_factory=list)
     metrics: list[str] = Field(default_factory=list)

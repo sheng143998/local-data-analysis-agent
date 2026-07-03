@@ -50,6 +50,18 @@ def retrieve_schema_vector_candidates(
     )
 
 
+def retrieve_sql_memory_vector_candidates(
+    question: str,
+    *,
+    limit: int = 20,
+    adapter: EmbeddingAdapter | None = None,
+) -> dict[str, float]:
+    vector = _embed_question(question, adapter=adapter)
+    if not vector:
+        return {}
+    return _query_sql_memory_vector_candidates(vector=vector, limit=limit)
+
+
 def _embed_question(question: str, *, adapter: EmbeddingAdapter | None = None) -> list[float]:
     if not question.strip():
         return []
@@ -127,6 +139,30 @@ def _query_schema_vectors(
             (_vector_literal(vector), _vector_literal(vector), limit),
         )
     return cursor.fetchall()
+
+
+def _query_sql_memory_vector_candidates(*, vector: list[float], limit: int) -> dict[str, float]:
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id::text, question_embedding <=> %s::vector AS distance
+                FROM sql_memories
+                WHERE question_embedding IS NOT NULL
+                ORDER BY question_embedding <=> %s::vector
+                LIMIT %s
+                """,
+                (_vector_literal(vector), _vector_literal(vector), limit),
+            )
+            rows = cursor.fetchall()
+    except Exception:
+        return {}
+
+    return {
+        str(memory_id): _semantic_score(distance)
+        for memory_id, distance in rows
+    }
 
 
 def _semantic_score(distance: Any) -> float:

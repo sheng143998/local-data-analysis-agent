@@ -33,7 +33,10 @@ POST /api/analyze
    - metric/schema retriever 先用 `EmbeddingAdapter` 生成问题向量。
    - pgvector 候选分与关键词、文本相似度、必需表字段等规则分融合排序。
    - embedding 或 pgvector 不可用时自动退回原文本检索，不中断分析。
-3. `retrieve_sql_memory()` 检索历史成功 SQL。
+3. `retrieve_sql_memory()` 检索历史成功 SQL：
+   - 优先使用 `sql_memories.question_embedding` 的 pgvector 候选分作为 `semantic_similarity`。
+   - 再融合文本相似、表/指标匹配和历史成功率。
+   - 向量不可用或旧 memory 没有 embedding 时回退文本相似。
 4. `plan_sql_reuse()` 决定 `fast_path`、`rewrite_path` 或 `cold_path`。
 5. `_select_generated_sql()` 选择 SQL：
    - 默认走确定性 SQL 生成/改写。
@@ -81,4 +84,5 @@ MODEL_SQL_GENERATOR_ENABLED=false
 
 - 普通用户响应只展示表、字段、SQL、结果和安全状态，不展示 embedding provider、向量分数或数据库连接状态。
 - `semantic_score` 只作为后端 `RetrievalContext` 内部排序依据，不进入普通用户页面。
-- 当前混合检索已覆盖 `metric_definitions.embedding` 和 `schema_metadata.embedding`；SQL Memory 的 `question_embedding` / `sql_embedding` 后续单独接入。
+- 当前混合检索已覆盖 `metric_definitions.embedding`、`schema_metadata.embedding` 和 `sql_memories.question_embedding`。
+- SQL Memory 写入会同步 `question_embedding` 和 `sql_embedding`；普通用户不展示 memory 候选分数或向量状态。

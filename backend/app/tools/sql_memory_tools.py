@@ -1,4 +1,5 @@
 from backend.app.db.repositories.memory_repository import SqlMemoryRepository
+from backend.app.core.embedding_adapter import EmbeddingAdapter, EmbeddingRequest
 from backend.app.schemas.memories import (
     SqlMemoryCandidate,
     SqlMemoryRecord,
@@ -7,6 +8,7 @@ from backend.app.schemas.memories import (
 )
 from backend.app.tools.retrieval_scoring import overlap_score, text_similarity
 from backend.app.tools.text_normalization import normalize_question
+from backend.app.tools.vector_retrieval import retrieve_sql_memory_vector_candidates
 
 
 FAST_PATH_THRESHOLD = 0.88
@@ -20,9 +22,16 @@ def retrieve_sql_memory(
     tables: list[str],
     limit: int = 5,
     repository: SqlMemoryRepository | None = None,
+    semantic_scores: dict[str, float] | None = None,
 ) -> list[SqlMemoryCandidate]:
-    """确定性 SQL Memory 检索，后续可替换为 pgvector + pg_trgm 混合检索。"""
+    """SQL Memory 混合检索：pgvector 语义分 + 文本相似 + 表/指标 + 成功率。"""
     repo = repository or SqlMemoryRepository()
+    if semantic_scores is None:
+        semantic_scores = (
+            {}
+            if repository is not None
+            else retrieve_sql_memory_vector_candidates(question, limit=max(limit * 4, 20))
+        )
     normalized_question = normalize_question(question)
     metric_set = set(metrics)
     table_set = set(tables)
@@ -31,7 +40,7 @@ def retrieve_sql_memory(
 
     for memory in repo.list(limit=100):
         lexical_similarity = text_similarity(normalized_question, memory.normalized_question)
-        semantic_similarity = lexical_similarity
+        semantic_similarity = semantic_scores.get(str(memory.id), lexical_similarity)
         metric_table_match = _metric_table_match(memory, metric_set, table_set)
         success_score = _success_score(memory)
         score = round(
@@ -106,13 +115,21 @@ def upsert_successful_sql_memory(
     latency_ms: int,
     parameters: dict | None = None,
     repository: SqlMemoryRepository | None = None,
+    adapter: EmbeddingAdapter | None = None,
 ) -> SqlMemoryRecord:
     repo = repository or SqlMemoryRepository()
+    question_embedding, sql_embedding = _build_sql_memory_embeddings(
+        question=question,
+        final_sql=final_sql,
+        adapter=adapter,
+    )
     return repo.upsert_success(
         SqlMemoryUpsert(
             canonical_question=question,
             sql_template=sql_template,
             final_sql=final_sql,
+            question_embedding=question_embedding,
+            sql_embedding=sql_embedding,
             parameters=parameters or {},
             tables=tables,
             metrics=metrics,
@@ -122,6 +139,18 @@ def upsert_successful_sql_memory(
             latency_ms=latency_ms,
         )
     )
+
+
+def _build_sql_memory_embeddings(
+    *,
+    question: str,
+    final_sql: str,
+    adapter: EmbeddingAdapter | None = None,
+) -> tuple[list[float] | None, list[float] | None]:
+    response = (adapter or EmbeddingAdapter()).embed(EmbeddingRequest(texts=[question, final_sql]))
+    if not response.ok or len(response.vectors) < 2:
+        return None, None
+    return response.vectors[0], response.vectors[1]
 
 
 def _metric_table_match(

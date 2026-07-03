@@ -16,7 +16,7 @@
 - SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
-- SQL Memory：成功查询会写入 `sql_memories`，高置信历史问题可走 `fast_path` 复用已验证 SQL。
+- SQL Memory：成功查询会写入 `sql_memories` 并同步 question/sql embedding；高置信历史问题可走 `fast_path` 复用已验证 SQL。
 - 参数化模板：可解析“最近 7 天 / 30 天 / 90 天”等时间范围，并渲染销售趋势 SQL。
 - SQL Rewriter / Generator 最小切片：可识别“最近 90 天每月订单数是多少？”这类按月订单数问题，生成或改写可执行 SQL。
 - 商品/品类排行切片：可识别“销售额最高的前 10 个商品是什么？”和“哪个商品品类销售额最高？”，执行真实商品/品类销售额排行查询。
@@ -30,6 +30,7 @@
 - EmbeddingAdapter 基础层：已提供 OpenAI-compatible embeddings 统一入口和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须通过该入口。
 - Schema / Metric Embedding 同步：可运行脚本把 `schema_metadata.embedding` 和 `metric_definitions.embedding` 写入 pgvector 字段，为后续混合检索准备向量资产。
 - pgvector 混合检索：metric/schema retriever 会用 `EmbeddingAdapter` 生成问题向量，并结合 pgvector 候选分与原有关键词、文本和结构化分数排序。
+- SQL Memory 混合检索：`semantic_similarity` 已优先使用 `sql_memories.question_embedding` 的 pgvector 分数，向量不可用时回退文本相似。
 - 开发者调试 API：`GET /api/runs`、`GET /api/runs/{run_id}` 可查看运行记录和工具调用摘要。
 - SQL Memory 调试 API：`GET /api/memories`、`GET /api/memories/{memory_id}` 可查看历史成功 SQL。
 - 标准问题评估：`npm run eval:standard` 可运行 20 个 V1 标准问题，并生成 `eval/reports/latest_eval_report.json`。
@@ -135,6 +136,7 @@ py -3 backend/scripts/sync_embeddings.py
 - 中置信历史问题会进入 `rewrite_path`，当前先用确定性 Rewriter 支持按月粒度和订单数问题。
 - 时间范围、Top N、分析粒度和分析指标会从用户问题中解析为参数。
 - 成功查询会把 `parameters`（含 `days`、`granularity`、`metric`、`limit`）、最终 SQL、结果列和行数写入 `sql_memories`。
+- 成功查询会同步 `question_embedding` 和 `sql_embedding`；检索时用问题向量召回历史 memory 候选。
 - 普通用户不默认看到 SQL Memory 候选分数；开发者通过 `/api/memories` 和 `/api/runs` 查看。
 
 ## Model-backed SQL Generator 当前说明
@@ -142,7 +144,7 @@ py -3 backend/scripts/sync_embeddings.py
 - 模型调用统一通过 `backend/app/core/model_adapter.py`。
 - embedding 调用统一通过 `backend/app/core/embedding_adapter.py`。
 - schema/metric 向量同步通过 `backend/app/services/embedding_sync_service.py` 和 `backend/scripts/sync_embeddings.py` 执行。
-- schema/metric 混合检索通过 `backend/app/tools/vector_retrieval.py` 查询 pgvector 候选；失败时自动退回原文本检索。
+- schema/metric/SQL Memory 混合检索通过 `backend/app/tools/vector_retrieval.py` 查询 pgvector 候选；失败时自动退回原文本检索。
 - SQL 生成 prompt 由 `backend/app/tools/model_sql_generator.py` 构造，只包含召回到的 schema 字段和指标口径，不使用全量数据库结构。
 - 模型响应要求为 JSON，解析后输出 `GeneratedSql`。
 - 模型生成的 SQL 当前不直接执行；后续接入 `/api/analyze` 时仍必须经过 SQL Validator、SQL Guard 和只读 Executor。

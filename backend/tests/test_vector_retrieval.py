@@ -9,6 +9,7 @@ from backend.app.tools.vector_retrieval import (
     _semantic_score,
     _vector_literal,
     retrieve_metric_vector_candidates,
+    retrieve_sql_memory_vector_candidates,
     retrieve_schema_vector_candidates,
 )
 
@@ -109,3 +110,16 @@ def test_vector_candidates_fallback_to_empty_when_embedding_fails(monkeypatch) -
 
     assert candidates == {}
     assert cursor.executed == []
+
+
+def test_retrieve_sql_memory_vector_candidates_queries_question_embedding(monkeypatch) -> None:
+    cursor = FakeCursor(rows=[("memory-1", 0.25)])
+    _patch_connection(monkeypatch, cursor)
+
+    candidates = retrieve_sql_memory_vector_candidates("销售趋势", limit=3, adapter=FakeAdapter())
+
+    assert candidates == {"memory-1": 0.75}
+    sql, params = cursor.executed[0]
+    assert "sql_memories" in sql
+    assert "question_embedding <=> %s::vector" in sql
+    assert params == ("[0.10000000,0.20000000]", "[0.10000000,0.20000000]", 3)

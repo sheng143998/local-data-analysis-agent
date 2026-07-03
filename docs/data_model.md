@@ -32,7 +32,7 @@ Olist 真实数据和合成增强表包括：
 
 - `schema_metadata`：表字段说明，用于 Schema Retriever；`embedding` 字段用于 pgvector 语义候选召回。
 - `metric_definitions`：指标口径，支持 API CRUD；`embedding` 字段用于 pgvector 语义候选召回。
-- `sql_memories`：历史成功问题、SQL、参数、表、指标和复用统计。
+- `sql_memories`：历史成功问题、SQL、参数、表、指标和复用统计；`question_embedding` / `sql_embedding` 用于 SQL Memory 混合检索。
 - `query_runs`：每次分析运行记录。
 - `tool_calls`：每次工具调用摘要。
 - `embedding_documents`：后续 RAG 文档和 embedding 存储。
@@ -80,4 +80,4 @@ py -3 backend/scripts/sync_embeddings.py
 - 测试直接使用本地库，尚未隔离测试数据库。
 - `product_costs.unit_cost` 是合成成本。
 - `traffic_events`、`coupons`、`coupon_usages` 的语义评估仍在增强中。
-- schema/metric 已接入 pgvector 混合检索；SQL Memory 的 question/sql embedding 尚未接入。
+- schema/metric 和 SQL Memory 已接入 pgvector 混合检索；真实质量依赖 embedding provider 和历史记录是否已写入向量。

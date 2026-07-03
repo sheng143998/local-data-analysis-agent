@@ -84,13 +84,14 @@ class SqlMemoryRepository:
                 """
                 INSERT INTO sql_memories (
                   id, canonical_question, normalized_question, question_pattern,
-                  intent, sql_template, final_sql, param_schema, parameters,
+                  intent, sql_template, final_sql, question_embedding, sql_embedding,
+                  param_schema, parameters,
                   tables, metrics, dimensions, filters, dialect, schema_version,
                   success_count, failure_count, avg_latency_ms, last_result_columns,
                   last_row_count, last_used_at
                 )
                 VALUES (
-                  %s, %s, %s, '', 'sales_trend', %s, %s, '{}'::jsonb, %s::jsonb,
+                  %s, %s, %s, '', 'sales_trend', %s, %s, %s::vector, %s::vector, '{}'::jsonb, %s::jsonb,
                   %s, %s, %s, '{}'::jsonb, 'postgresql', 'v1',
                   1, 0, %s, %s, %s, now()
                 )
@@ -106,6 +107,8 @@ class SqlMemoryRepository:
                     normalized_question,
                     payload.sql_template,
                     payload.final_sql,
+                    _vector_literal(payload.question_embedding),
+                    _vector_literal(payload.sql_embedding),
                     json.dumps(payload.parameters, ensure_ascii=False),
                     payload.tables,
                     payload.metrics,
@@ -135,6 +138,8 @@ class SqlMemoryRepository:
                 SET canonical_question = %s,
                     sql_template = %s,
                     final_sql = %s,
+                    question_embedding = COALESCE(%s::vector, question_embedding),
+                    sql_embedding = COALESCE(%s::vector, sql_embedding),
                     parameters = %s::jsonb,
                     tables = %s,
                     metrics = %s,
@@ -155,6 +160,8 @@ class SqlMemoryRepository:
                     payload.canonical_question,
                     payload.sql_template,
                     payload.final_sql,
+                    _vector_literal(payload.question_embedding),
+                    _vector_literal(payload.sql_embedding),
                     json.dumps(payload.parameters, ensure_ascii=False),
                     payload.tables,
                     payload.metrics,
@@ -200,3 +207,9 @@ def _json_payload(value) -> dict:
     if isinstance(value, str):
         return json.loads(value)
     return value or {}
+
+
+def _vector_literal(vector: list[float] | None) -> str | None:
+    if not vector:
+        return None
+    return "[" + ",".join(f"{float(value):.8f}" for value in vector) + "]"
