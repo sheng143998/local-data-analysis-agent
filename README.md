@@ -15,7 +15,7 @@
 - Model-backed SQL Generator 基础工具：已能基于召回到的 schema/metric 构造受控 prompt、调用 ModelAdapter、解析模型 JSON SQL；当前尚未替换 `/api/analyze` 主链路。
 - Schema 表关系上下文：`RetrievalContext` 会从已召回字段推断高置信 join hints，并提供给模型 SQL 生成 prompt，减少跨表问题对固定模板的依赖。
 - Model SQL Generator cold_path 接入：`/api/analyze` 已具备配置开关式模型 SQL 生成入口，默认关闭；开启后仅 `cold_path` 尝试模型生成，失败会回退到稳定生成路径，最终 SQL 仍必经 Guard 和只读 Executor。
-- SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表和 `SELECT *`。
+- SQL 安全链路：SQL Validator + SQL Guard 拦截写操作、多语句、非白名单表、不存在字段和 `SELECT *`。
 - 只读 SQL Executor：仅执行 Guard 放行后的 SELECT，并返回标准化 JSON 行数据。
 - Query Run Logging：每次 analyze 会写入 `query_runs`，关键工具调用写入 `tool_calls`。
 - SQL Memory：成功查询会写入 `sql_memories` 并同步 question/sql embedding；高置信历史问题可走 `fast_path` 复用已验证 SQL。

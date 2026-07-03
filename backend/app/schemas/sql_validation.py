@@ -21,6 +21,7 @@ class SqlValidationRequest(BaseModel):
     sql: str = Field(min_length=1)
     allowed_tables: list[str] = Field(default_factory=lambda: DEFAULT_ALLOWED_TABLES.copy())
     max_rows: int = 1000
+    schema_fields: list[str] | None = None
 
 
 class SqlValidationResult(BaseModel):

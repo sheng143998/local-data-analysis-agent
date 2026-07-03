@@ -42,6 +42,7 @@
 - 已为 embedding 同步增加 `--sleep-ms` / `--embedding-sleep-ms` 固定间隔限速，降低真实 provider 限流风险。
 - 已为标准评估报告增加断言失败聚合诊断，帮助定位缺失表、失败类别和路径。
 - 已新增 Schema 表关系上下文，从已召回字段推断 join hints 并提供给模型 SQL Generator，不新增固定 SQL 模板。
+- 已为 SQL Validator 接入 `schema_metadata` 字段存在性校验，提前拦截模型编造字段。
 
 ## 最近完成模块
 
@@ -752,6 +753,23 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 48. SQL Validator 字段存在性校验
+
+- commit: `接入SQL字段存在性校验并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `SqlValidationRequest` 新增可选 `schema_fields`。
+  - `validate_sql()` 默认从 `schema_metadata` 加载 SQL 涉及表的字段集合。
+  - Validator 支持校验单表未限定字段、JOIN 表别名字段和输出别名。
+  - `schema_metadata` 不可用时降级 warning，不中断基础只读安全校验。
+  - 更新 SQL Guard 文档、README、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_sql_validation_tools.py backend/tests/test_sql_execution_tools.py`，13 passed
+  - `py -3 -m pytest backend/tests/test_sql_validation_tools.py backend/tests/test_sql_execution_tools.py backend/tests/test_api.py::test_analyze_supports_repeat_purchase_rate_slice`，14 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run backend:test`，139 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -764,7 +782,7 @@
 
 ## 当前正在做
 
-“Schema 表关系上下文” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只把已召回字段推断出的 join hints 提供给模型 SQL Generator，帮助后续跨表问题走通用生成路径。
+“SQL Validator 字段存在性校验” 模块已完成、通过完整验证并推送到 GitHub。该模块不新增固定 SQL 模板，只增强 Guard 执行前安全校验，避免后续模型 SQL 编造字段直接进入 Executor。
 
 ## 下一步建议
 

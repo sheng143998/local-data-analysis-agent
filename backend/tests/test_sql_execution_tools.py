@@ -20,7 +20,7 @@ def test_executor_rejects_blocked_guard_result() -> None:
 
 
 def test_execute_guarded_sql_returns_error_for_runtime_issue() -> None:
-    guard = guard_sql("SELECT missing_column FROM orders", max_rows=1)
+    guard = guard_sql("SELECT 1 / 0 AS broken FROM orders", max_rows=1)
     result = execute_guarded_sql(guard)
 
     assert result.status == "error"

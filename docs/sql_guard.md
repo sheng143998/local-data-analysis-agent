@@ -19,6 +19,7 @@ backend/app/tools/sql_validation_tools.py
 - 只能 `SELECT`。
 - 禁止 `INSERT`、`UPDATE`、`DELETE`、`DROP`、`ALTER`、`CREATE` 等写操作或 DDL。
 - 禁止访问非白名单表。
+- 基于 `schema_metadata` 校验字段是否存在；元数据不可用时降级为 warning。
 - 禁止 `SELECT *`。
 - 缺少 `LIMIT` 时给出 warning。
 
@@ -83,5 +84,6 @@ npm run test:e2e
 
 ## 已知边界
 
-- 表字段存在性目前主要依赖白名单和 SQL 解析，后续可结合 `schema_metadata` 做更严格字段校验。
+- 字段存在性已接入 `schema_metadata`，但复杂 CTE、子查询和表达式血缘后续还可继续增强。
+- 换库或改表后应先运行 `sync_schema_metadata.py` 或 `npm run context:refresh`，否则字段校验可能使用旧元数据。
 - Guard 不判断业务语义正确性；语义质量通过评估集逐步增强。
