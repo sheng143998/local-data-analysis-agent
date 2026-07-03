@@ -42,9 +42,46 @@ def test_run_cases_and_summary_collect_eval_metrics() -> None:
 
     assert report["total"] == 2
     assert report["success_count"] == 1
+    assert report["strict_success_count"] == 1
     assert report["execution_success_rate"] == 0.5
+    assert report["strict_success_rate"] == 0.5
     assert report["sql_generation_success_rate"] == 0.5
+    assert report["table_match_rate"] == 0.5
+    assert report["keyword_match_rate"] == 0.5
     assert report["memory_hit_rate"] == 0.5
     assert report["reuse_success_rate"] == 0.5
     assert report["path_counts"] == {"fast_path": 1, "": 1}
     assert len(report["failures"]) == 1
+    assert report["cases"][0]["strict_ok"] is True
+    assert report["cases"][1]["strict_ok"] is False
+
+
+def test_summary_separates_execution_success_from_assertion_match() -> None:
+    cases = [
+        EvalCase(
+            id="case_1",
+            category="漏斗与营销",
+            question="哪些优惠券核销率最高？",
+            expected_tables=["coupons"],
+            expected_keywords=["coupon"],
+        )
+    ]
+
+    def fake_analyze(question: str):
+        return 200, {
+            "path": "cold_path",
+            "sql": "SELECT o.id FROM orders o LIMIT 10",
+            "source": {"security": "只读 SELECT，已通过 SQL Guard", "returnedRows": 1},
+            "trace": {},
+        }
+
+    results = run_cases(cases, fake_analyze)
+    report = summarize_results(results)
+
+    assert report["success_count"] == 1
+    assert report["strict_success_count"] == 0
+    assert report["execution_success_rate"] == 1
+    assert report["strict_success_rate"] == 0
+    assert report["table_match_rate"] == 0
+    assert report["keyword_match_rate"] == 0
+    assert report["assertion_failures"][0]["missing_tables"] == ["coupons"]

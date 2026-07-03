@@ -23,6 +23,7 @@
 - 已新增 Model-backed SQL Generator 基础工具，可基于已召回 schema/metric 构造 prompt、调用 ModelAdapter、解析模型 JSON SQL；尚未接入 `/api/analyze` 主链路执行。
 - `/api/analyze` 已通过 `MODEL_SQL_GENERATOR_ENABLED` 配置开关接入 Model SQL Generator 的 `cold_path` 尝试路径；默认关闭，开启后模型 SQL 仍必经 Guard / Executor，失败会回退确定性生成。
 - 已新增标准问题评估集基础设施，`npm run eval:standard` 可运行 20 个 V1 标准问题并生成 `eval/reports/latest_eval_report.json`。
+- 标准问题评估已增强断言指标，报告区分 `execution_success_rate` 和 `strict_success_rate`，并输出表/关键词断言失败案例。
 
 ## 最近完成模块
 
@@ -322,7 +323,7 @@
 
 ### 21. 标准问题评估集基础设施
 
-- commit: 本模块待提交并推送，建议提交信息为 `建立标准问题评估集并通过测试`。
+- commit: `e8df5ae 建立标准问题评估集并通过测试`
 - 内容：
   - 新增 `eval/datasets/standard_questions.jsonl`，包含 20 个 V1 标准问题
   - 新增 `eval/scripts/run_eval.py`，可逐条调用 `/api/analyze` 并生成评估报告
@@ -333,6 +334,19 @@
 - 验证：
   - `npm run backend:test`，70 个测试通过
   - `npm run eval:standard`，20/20 链路执行成功
+
+### 22. 标准问题评估断言增强
+
+- commit: 本模块待提交并推送，建议提交信息为 `增强标准问题评估断言并通过测试`。
+- 内容：
+  - `EvalCaseResult` 新增 `missing_tables`、`missing_keywords`、`table_match`、`keyword_match`、`strict_ok`
+  - 评估报告新增 `strict_success_count`、`strict_success_rate`、`table_match_rate`、`keyword_match_rate`、`assertion_failures`
+  - CLI 输出新增严格成功率
+  - 测试覆盖“链路成功但断言失败”的情况
+  - README 增加评估指标解释
+- 验证：
+  - `npm run backend:test`，71 个测试通过
+  - `npm run eval:standard`，20/20 链路执行成功，严格成功率 55%
 
 ## 当前架构边界
 
@@ -346,15 +360,15 @@
 
 ## 当前正在做
 
-标准问题评估集基础设施已完成实现、测试、真实评估运行和文档更新，正在提交并推送。
+标准问题评估断言增强已完成实现、测试、真实评估运行和文档更新，正在提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 在真实本地模型服务可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑 `npm run eval:standard`，记录模型 SQL 生成成功率和失败样例。
-2. 增强评估断言，从“链路成功”升级到表命中、字段命中、指标口径、结果形态和语义正确性。
-3. 将 Schema Retriever 从关键词召回升级为 schema metadata + embedding / pgvector 混合召回。
+1. 增强 SQL Memory Reuse Planner，让 fast_path 复用必须满足更严格的表/指标/意图约束，优先修复当前 9 个断言失败样例。
+2. 在真实本地模型服务可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑 `npm run eval:standard`，记录模型 SQL 生成成功率和失败样例。
+3. 继续增强评估断言，加入字段命中、指标口径、结果形态和语义正确性。
 
 ## 已知风险
 
@@ -362,7 +376,7 @@
 - `/api/analyze` 已接入真实 Guard + Executor、schema/metric retriever、SQL Memory 和确定性 SQL Rewriter / Generator，但仍未接入真实 LLM SQL Generator / Rewriter。
 - ModelAdapter 基础层已完成，但 `/api/analyze` 尚未使用真实模型生成 SQL。
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
-- 标准问题评估集已可运行，但当前主要验证链路成功，不代表 20 个问题的语义准确性全部达标。
+- 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，但严格成功率 55%，说明 SQL Memory 复用仍需更强表/意图约束。
 - schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - SQL Memory 当前 semantic similarity 暂用文本相似度替代，尚未接入 embedding / pgvector。
 - Schema Metadata 已支持自动同步字段结构，但尚未自动生成 embedding 或完整业务含义。

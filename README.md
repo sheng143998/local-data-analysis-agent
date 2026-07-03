@@ -120,9 +120,14 @@ py -3 backend/scripts/sync_schema_metadata.py
 npm run eval:standard
 ```
 
-评估数据集位于 `eval/datasets/standard_questions.jsonl`，当前包含 20 个 V1 标准问题。报告输出到 `eval/reports/latest_eval_report.json`，包含执行成功率、SQL 生成成功率、记忆命中率、复用成功率、平均延迟、路径占比和失败案例。
+评估数据集位于 `eval/datasets/standard_questions.jsonl`，当前包含 20 个 V1 标准问题。报告输出到 `eval/reports/latest_eval_report.json`，包含执行成功率、严格成功率、SQL 生成成功率、表命中率、关键词命中率、记忆命中率、复用成功率、平均延迟、路径占比、执行失败案例和断言失败案例。
 
-当前评估首先衡量“链路是否可运行”：是否返回 SQL、是否通过 SQL Guard、是否得到结果。部分尚未实现的营销/漏斗语义会走稳定回退路径，后续需要结合真实模型和更严格语义断言继续提升。
+当前评估区分两层结果：
+
+- `execution_success_rate`：API 链路是否成功返回 SQL、通过 SQL Guard、得到结果。
+- `strict_success_rate`：在链路成功基础上，SQL 是否命中预期表和关键词。
+
+最近一次评估为 20/20 链路成功，严格成功率为 55%。断言失败主要集中在用户、流量和优惠券问题，说明 SQL Memory 复用仍需要更强的表/意图约束。
 
 ## 当前验证
 

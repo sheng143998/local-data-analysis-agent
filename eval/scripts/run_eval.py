@@ -44,6 +44,11 @@ class EvalCaseResult:
     memory_hit: bool
     expected_table_hits: list[str]
     expected_keyword_hits: list[str]
+    missing_tables: list[str]
+    missing_keywords: list[str]
+    table_match: bool
+    keyword_match: bool
+    strict_ok: bool
     returned_rows: int
     error: str = ""
 
@@ -83,9 +88,16 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             keyword_hits = [
                 keyword for keyword in case.expected_keywords if keyword.lower() in sql.lower()
             ]
+            missing_tables = [table for table in case.expected_tables if table not in table_hits]
+            missing_keywords = [
+                keyword for keyword in case.expected_keywords if keyword not in keyword_hits
+            ]
             has_sql = bool(sql.strip())
             guard_passed = "SQL Guard" in str(source.get("security") or "")
             ok = status_code == 200 and has_sql and guard_passed
+            table_match = len(missing_tables) == 0
+            keyword_match = len(missing_keywords) == 0
+            strict_ok = ok and table_match and keyword_match
             results.append(
                 EvalCaseResult(
                     id=case.id,
@@ -100,6 +112,11 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     memory_hit=str(body.get("path") or "") == "fast_path",
                     expected_table_hits=table_hits,
                     expected_keyword_hits=keyword_hits,
+                    missing_tables=missing_tables,
+                    missing_keywords=missing_keywords,
+                    table_match=table_match,
+                    keyword_match=keyword_match,
+                    strict_ok=strict_ok,
                     returned_rows=int(source.get("returnedRows") or 0),
                     error=str(body.get("summary") or "") if not ok else "",
                 )
@@ -119,6 +136,11 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     memory_hit=False,
                     expected_table_hits=[],
                     expected_keyword_hits=[],
+                    missing_tables=case.expected_tables,
+                    missing_keywords=case.expected_keywords,
+                    table_match=False,
+                    keyword_match=False,
+                    strict_ok=False,
                     returned_rows=0,
                     error=str(exc),
                 )
@@ -129,9 +151,12 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
 def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
     total = len(results)
     success_count = sum(1 for result in results if result.ok)
+    strict_success_count = sum(1 for result in results if result.strict_ok)
     sql_success_count = sum(1 for result in results if result.has_sql)
     memory_hit_count = sum(1 for result in results if result.memory_hit)
     reuse_success_count = sum(1 for result in results if result.ok and result.path == "fast_path")
+    table_match_count = sum(1 for result in results if result.table_match)
+    keyword_match_count = sum(1 for result in results if result.keyword_match)
     path_counts: dict[str, int] = {}
     for result in results:
         path_counts[result.path] = path_counts.get(result.path, 0) + 1
@@ -139,8 +164,12 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": total,
         "success_count": success_count,
+        "strict_success_count": strict_success_count,
         "execution_success_rate": _rate(success_count, total),
+        "strict_success_rate": _rate(strict_success_count, total),
         "sql_generation_success_rate": _rate(sql_success_count, total),
+        "table_match_rate": _rate(table_match_count, total),
+        "keyword_match_rate": _rate(keyword_match_count, total),
         "memory_hit_rate": _rate(memory_hit_count, total),
         "reuse_success_rate": _rate(reuse_success_count, total),
         "average_latency_ms": round(
@@ -148,6 +177,11 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         ),
         "path_counts": path_counts,
         "failures": [asdict(result) for result in results if not result.ok],
+        "assertion_failures": [
+            asdict(result)
+            for result in results
+            if result.ok and not result.strict_ok
+        ],
         "cases": [asdict(result) for result in results],
     }
 
@@ -172,6 +206,7 @@ def main() -> None:
         "eval completed: "
         f"{report['success_count']}/{report['total']} ok, "
         f"execution_success_rate={report['execution_success_rate']:.2%}, "
+        f"strict_success_rate={report['strict_success_rate']:.2%}, "
         f"report={REPORT_PATH}"
     )
 

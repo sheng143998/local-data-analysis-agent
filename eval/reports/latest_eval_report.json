@@ -1,16 +1,263 @@
 {
-  "generated_at": "2026-07-03T15:09:53.957891+00:00",
+  "generated_at": "2026-07-03T15:14:03.103665+00:00",
   "total": 20,
   "success_count": 20,
+  "strict_success_count": 11,
   "execution_success_rate": 1.0,
+  "strict_success_rate": 0.55,
   "sql_generation_success_rate": 1.0,
+  "table_match_rate": 0.55,
+  "keyword_match_rate": 1.0,
   "memory_hit_rate": 1.0,
   "reuse_success_rate": 1.0,
-  "average_latency_ms": 873,
+  "average_latency_ms": 814,
   "path_counts": {
     "fast_path": 20
   },
   "failures": [],
+  "assertion_failures": [
+    {
+      "id": "user_011",
+      "category": "用户分析",
+      "question": "过去 6 个月每月新增用户数是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 597,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "error": ""
+    },
+    {
+      "id": "user_012",
+      "category": "用户分析",
+      "question": "最近 30 天下单用户数是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 541,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "user_013",
+      "category": "用户分析",
+      "question": "购买次数最多的前 10 个用户是谁？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 535,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "user_014",
+      "category": "用户分析",
+      "question": "最近 90 天复购率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 946,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders",
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "repeat_rate"
+      ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "error": ""
+    },
+    {
+      "id": "funnel_016",
+      "category": "漏斗与营销",
+      "question": "最近 30 天访问到下单转化率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 675,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "traffic_events"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "funnel_017",
+      "category": "漏斗与营销",
+      "question": "最近 30 天加购到支付转化率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 760,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "traffic_events"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "marketing_018",
+      "category": "漏斗与营销",
+      "question": "哪些优惠券核销率最高？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 776,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "coupons",
+        "coupon_usages"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "marketing_019",
+      "category": "漏斗与营销",
+      "question": "使用优惠券的订单客单价是否更高？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 655,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "coupon_usages"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    },
+    {
+      "id": "marketing_020",
+      "category": "漏斗与营销",
+      "question": "流量来源带来的订单转化率是多少？",
+      "ok": true,
+      "path": "fast_path",
+      "status_code": 200,
+      "latency_ms": 537,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": true,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "SELECT"
+      ],
+      "missing_tables": [
+        "traffic_events"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
+      "returned_rows": 30,
+      "error": ""
+    }
+  ],
   "cases": [
     {
       "id": "basic_001",
@@ -19,7 +266,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 736,
+      "latency_ms": 1012,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -31,6 +278,11 @@
         "SELECT",
         "orders"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 7,
       "error": ""
     },
@@ -41,7 +293,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 702,
+      "latency_ms": 750,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -53,6 +305,11 @@
         "SELECT",
         "orders"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 30,
       "error": ""
     },
@@ -63,7 +320,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 605,
+      "latency_ms": 824,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -75,6 +332,11 @@
         "DATE_TRUNC",
         "COUNT"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 3,
       "error": ""
     },
@@ -85,7 +347,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1050,
+      "latency_ms": 885,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -98,6 +360,11 @@
         "ORDER BY",
         "daily_sales"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 10,
       "error": ""
     },
@@ -108,7 +375,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1073,
+      "latency_ms": 947,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -120,6 +387,11 @@
         "category",
         "daily_sales"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 10,
       "error": ""
     },
@@ -130,7 +402,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 997,
+      "latency_ms": 1009,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -140,6 +412,11 @@
       "expected_keyword_hits": [
         "failure_rate"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 5,
       "error": ""
     },
@@ -150,7 +427,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 848,
+      "latency_ms": 822,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -162,6 +439,11 @@
       "expected_keyword_hits": [
         "refund_rate"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 10,
       "error": ""
     },
@@ -172,7 +454,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 880,
+      "latency_ms": 935,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -183,6 +465,11 @@
       "expected_keyword_hits": [
         "refund"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 30,
       "error": ""
     },
@@ -193,7 +480,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 913,
+      "latency_ms": 1158,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -205,6 +492,11 @@
       "expected_keyword_hits": [
         "gross_margin"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 10,
       "error": ""
     },
@@ -215,7 +507,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1026,
+      "latency_ms": 916,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -225,6 +517,11 @@
       "expected_keyword_hits": [
         "success_rate"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 5,
       "error": ""
     },
@@ -235,7 +532,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 777,
+      "latency_ms": 597,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -243,6 +540,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 1,
       "error": ""
     },
@@ -253,7 +557,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 733,
+      "latency_ms": 541,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -263,6 +567,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     },
@@ -273,7 +584,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 719,
+      "latency_ms": 535,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -283,6 +594,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     },
@@ -293,7 +611,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1219,
+      "latency_ms": 946,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -304,6 +622,13 @@
       "expected_keyword_hits": [
         "repeat_rate"
       ],
+      "missing_tables": [
+        "users"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 1,
       "error": ""
     },
@@ -314,7 +639,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 910,
+      "latency_ms": 1004,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -326,6 +651,11 @@
         "city_label",
         "avg_order_value"
       ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "table_match": true,
+      "keyword_match": true,
+      "strict_ok": true,
       "returned_rows": 30,
       "error": ""
     },
@@ -336,7 +666,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 893,
+      "latency_ms": 675,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -346,6 +676,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "traffic_events"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     },
@@ -356,7 +693,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 819,
+      "latency_ms": 760,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -366,6 +703,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "traffic_events"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     },
@@ -376,7 +720,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 767,
+      "latency_ms": 776,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -384,6 +728,14 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "coupons",
+        "coupon_usages"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     },
@@ -394,7 +746,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1087,
+      "latency_ms": 655,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -404,6 +756,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "coupon_usages"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     },
@@ -414,7 +773,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 704,
+      "latency_ms": 537,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -424,6 +783,13 @@
       "expected_keyword_hits": [
         "SELECT"
       ],
+      "missing_tables": [
+        "traffic_events"
+      ],
+      "missing_keywords": [],
+      "table_match": false,
+      "keyword_match": true,
+      "strict_ok": false,
       "returned_rows": 30,
       "error": ""
     }
