@@ -16,7 +16,7 @@ assert health.status_code == 200, health.text
 analysis = client.post("/api/analyze", json={"question": "最近 30 天销售额按天变化如何？"})
 assert analysis.status_code == 200, analysis.text
 body = analysis.json()
-assert body["source"]["security"] == "只读 SELECT"
+assert "SQL Guard" in body["source"]["security"]
 assert body["rows"]
 
-print("backend smoke passed: question -> FastAPI -> AgentService -> mock graph -> result")
+print("backend smoke passed: question -> FastAPI -> AgentService -> Guard -> Executor -> result")

@@ -1,4 +1,4 @@
-from backend.app.agents.mock_graph import run_mock_agent_graph
+from backend.app.agents.analysis_graph import run_analysis_graph
 from backend.app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
 
 
@@ -7,4 +7,4 @@ class AgentService:
 
     def analyze(self, payload: AnalyzeRequest) -> AnalyzeResponse:
         question = payload.question.strip() or "最近 30 天销售额按天变化如何？"
-        return run_mock_agent_graph(question)
+        return run_analysis_graph(question)

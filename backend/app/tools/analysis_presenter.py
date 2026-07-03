@@ -1,0 +1,123 @@
+from backend.app.schemas.analysis import AnalyzeResponse
+from backend.app.schemas.sql_execution import SqlExecutionResult
+
+
+def present_sales_trend_result(
+    question: str,
+    sql: str,
+    execution: SqlExecutionResult,
+    guard_warnings: list[str],
+    latency_ms: int,
+) -> AnalyzeResponse:
+    if execution.status != "success":
+        return AnalyzeResponse(**_error_payload(question, sql, execution, latency_ms))
+
+    rows = list(reversed(execution.rows))
+    analysis_rows = [_to_analysis_row(row) for row in rows]
+    total_sales = sum(row["amount"] for row in analysis_rows)
+    total_orders = sum(row["orders"] for row in analysis_rows)
+    avg_order_value = round(total_sales / total_orders) if total_orders else 0
+    avg_refund_rate = _average_refund_rate(analysis_rows)
+    date_range = _date_range(analysis_rows)
+
+    return AnalyzeResponse(
+        question=question,
+        path="cold_path",
+        summary=(
+            f"已基于真实 PostgreSQL 数据查询最近 {len(analysis_rows)} 个有交易日期的销售趋势。"
+            f"区间内总销售额约为 ¥{total_sales:,.0f}，订单数 {total_orders:,}，"
+            f"平均客单价约 ¥{avg_order_value:,}，平均退款率 {avg_refund_rate:.2f}%。"
+        ),
+        sql=sql,
+        metrics=[
+            {"label": "总销售额", "value": f"¥ {total_sales:,.0f}", "delta": "--", "hint": "真实查询"},
+            {"label": "订单数", "value": f"{total_orders:,}", "delta": "--", "hint": "真实查询"},
+            {"label": "退款率", "value": f"{avg_refund_rate:.2f}%", "delta": "--", "hint": "真实查询"},
+            {"label": "平均客单价", "value": f"¥ {avg_order_value:,}", "delta": "--", "hint": "真实查询"},
+        ],
+        rows=analysis_rows,
+        source={
+            "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
+            "tables": ["orders", "payments", "refunds"],
+            "fields": ["created_at", "status", "total_amount", "order_id"],
+            "metricDefinition": "销售额 = 已支付订单 total_amount 汇总",
+            "range": date_range,
+            "returnedRows": execution.row_count,
+            "queryTime": f"{execution.latency_ms}ms",
+            "security": "只读 SELECT，已通过 SQL Guard",
+        },
+        trace={
+            "toolCalls": 2,
+            "modelCalls": 0,
+            "memoryCandidates": 0,
+            "totalTime": f"{latency_ms}ms",
+        },
+        steps=[
+            {"name": "理解问题", "status": "已完成", "time": "1ms"},
+            {"name": "选择 SQL 模板", "status": "已完成", "time": "1ms"},
+            {"name": "安全校验", "status": "已完成", "time": "1ms"},
+            {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
+            {"name": "整理结论", "status": "已完成", "time": "1ms"},
+        ],
+    )
+
+
+def _to_analysis_row(row: dict) -> dict:
+    amount = round(float(row.get("daily_sales") or 0))
+    orders = int(row.get("order_count") or 0)
+    return {
+        "date": str(row.get("order_date")),
+        "amount": amount,
+        "orders": orders,
+        "avg": round(float(row.get("avg_order_value") or 0)),
+        "refundRate": f"{float(row.get('refund_rate') or 0):.2f}%",
+    }
+
+
+def _average_refund_rate(rows: list[dict]) -> float:
+    if not rows:
+        return 0
+    return sum(float(row["refundRate"].rstrip("%")) for row in rows) / len(rows)
+
+
+def _date_range(rows: list[dict]) -> str:
+    if not rows:
+        return "无数据"
+    return f"{rows[0]['date']} 至 {rows[-1]['date']}"
+
+
+def _error_payload(
+    question: str,
+    sql: str,
+    execution: SqlExecutionResult,
+    latency_ms: int,
+) -> dict:
+    return {
+        "question": question,
+        "path": "cold_path",
+        "summary": f"查询未成功执行：{execution.error_message or execution.status}",
+        "sql": sql,
+        "metrics": [],
+        "rows": [],
+        "source": {
+            "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
+            "tables": ["orders", "payments", "refunds"],
+            "fields": ["created_at", "status", "total_amount", "order_id"],
+            "metricDefinition": "销售额 = 已支付订单 total_amount 汇总",
+            "range": "无数据",
+            "returnedRows": 0,
+            "queryTime": f"{execution.latency_ms}ms",
+            "security": "SQL Guard / Executor",
+        },
+        "trace": {
+            "toolCalls": 2,
+            "modelCalls": 0,
+            "memoryCandidates": 0,
+            "totalTime": f"{latency_ms}ms",
+        },
+        "steps": [
+            {"name": "安全校验", "status": "已完成", "time": "1ms"},
+            {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
+            {"name": "整理结论", "status": "已完成", "time": "1ms"},
+        ],
+    }

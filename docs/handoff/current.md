@@ -110,6 +110,19 @@
   - `npm run test:e2e`
   - `npm run frontend:build`
 
+### 7. `/api/analyze` 真实 SQL 垂直切片
+
+- commit: 本模块准备提交，提交信息为 `接入analyze真实SQL工具链并通过测试`
+- 内容：
+  - 新增 `analysis_graph.py`，固定销售趋势问题先走真实 SQL 模板
+  - 新增 `analysis_presenter.py`，将真实查询结果转为 `AnalyzeResponse`
+  - `AgentService` 从 mock graph 切换到真实 Guard + Executor graph
+  - `/api/analyze` 现在返回真实 PostgreSQL 查询结果
+- 验证：
+  - `npm run backend:test`，15 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -122,20 +135,20 @@
 
 ## 当前正在做
 
-只读 SQL Executor 模块已完成，准备提交并推送。
+`/api/analyze` 真实 SQL 垂直切片已完成，准备提交并推送。
 
 ## 下一步建议
 
 按 `executable-plan-draft.md` 继续 M1/M2：
 
-1. 让 `/api/analyze` 从 mock graph 逐步接入真实 metric/schema/sql 工具。
-2. 在 Agent graph 中串起 Guard + Executor。
-3. 增加 `query_runs` 和 `tool_calls` 写入。
+1. 增加 schema/metric retriever，让 SQL 模板选择不再硬编码。
+2. 增加 `query_runs` 和 `tool_calls` 写入。
+3. 开始 SQL Memory Retriever / Reuse Planner。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
-- SQL Guard、SQL Validator、只读 Executor 已实现；尚未接入 `/api/analyze` 主链路。
+- `/api/analyze` 已接入真实 Guard + Executor 垂直切片，但仍是固定 SQL 模板，尚未接入 LLM SQL Generator 和 SQL Memory。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。
 
