@@ -1,11 +1,13 @@
 from fastapi import APIRouter
 
+from backend.app.api.metrics import router as metrics_router
 from backend.app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
 from backend.app.services.agent_service import AgentService
 
 
 router = APIRouter()
 agent_service = AgentService()
+router.include_router(metrics_router)
 
 
 @router.get("/health")
