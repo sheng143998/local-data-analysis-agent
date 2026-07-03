@@ -9,6 +9,7 @@
   - `backend/`: FastAPI 后端
   - `docs/`: 草案、计划、handoff
 - 当前普通用户产品方向：聊天式数据问答 + 指标口径 CRUD，不默认展示模型、数据库连接状态、SQL 记忆细节和评估报告。
+- `/api/analyze` 已接入 PostgreSQL 指标口径和表结构上下文召回，当前仍使用固定销售趋势 SQL 模板。
 
 ## 最近完成模块
 
@@ -112,7 +113,7 @@
 
 ### 7. `/api/analyze` 真实 SQL 垂直切片
 
-- commit: 本模块准备提交，提交信息为 `接入analyze真实SQL工具链并通过测试`
+- commit: `ae9f129 接入analyze真实SQL工具链并通过测试`
 - 内容：
   - 新增 `analysis_graph.py`，固定销售趋势问题先走真实 SQL 模板
   - 新增 `analysis_presenter.py`，将真实查询结果转为 `AnalyzeResponse`
@@ -120,6 +121,21 @@
   - `/api/analyze` 现在返回真实 PostgreSQL 查询结果
 - 验证：
   - `npm run backend:test`，15 个测试通过
+  - `npm run test:e2e`
+  - `npm run frontend:build`
+
+### 8. Schema + Metric Retriever 最小切片
+
+- commit: 本模块准备提交，提交信息为 `接入Schema和指标检索并通过测试`
+- 内容：
+  - 新增 `MetricContext`、`SchemaColumnContext`、`RetrievalContext`
+  - 新增 `metric_retriever.py`，从 PostgreSQL `metric_definitions` 召回相关指标口径
+  - 新增 `schema_retriever.py`，从 PostgreSQL `schema_metadata` 召回相关表字段
+  - 新增 `context_builder.py`，组合指标和 schema 上下文
+  - `/api/analyze` 在 SQL Guard / Executor 前先构建检索上下文
+  - `AnalyzeResponse.source` 中的指标口径、表、字段改由召回上下文生成
+- 验证：
+  - `npm run backend:test`，18 个测试通过
   - `npm run test:e2e`
   - `npm run frontend:build`
 
@@ -135,20 +151,21 @@
 
 ## 当前正在做
 
-`/api/analyze` 真实 SQL 垂直切片已完成，准备提交并推送。
+Schema + Metric Retriever 最小切片已完成，准备提交并推送。
 
 ## 下一步建议
 
-按 `executable-plan-draft.md` 继续 M1/M2：
+按 `executable-plan-draft.md` 继续 M5/M7：
 
-1. 增加 schema/metric retriever，让 SQL 模板选择不再硬编码。
-2. 增加 `query_runs` 和 `tool_calls` 写入。
-3. 开始 SQL Memory Retriever / Reuse Planner。
+1. 增加 `query_runs` 和 `tool_calls` 写入，把 analyze 每次运行和工具调用落库。
+2. 开始 SQL Memory Retriever / Reuse Planner。
+3. 后续再接 embedding / pgvector，让 schema/metric retriever 从关键词召回升级为混合检索。
 
 ## 已知风险
 
 - 指标 CRUD 已接入 PostgreSQL，但测试仍直接使用本地库，后续需要独立测试库。
-- `/api/analyze` 已接入真实 Guard + Executor 垂直切片，但仍是固定 SQL 模板，尚未接入 LLM SQL Generator 和 SQL Memory。
+- `/api/analyze` 已接入真实 Guard + Executor 和 schema/metric retriever，但仍是固定 SQL 模板，尚未接入 LLM SQL Generator 和 SQL Memory。
+- schema/metric retriever 当前是确定性关键词召回，尚未接入 embedding / pgvector 混合检索。
 - `FastAPI TestClient` 当前有 `StarletteDeprecationWarning`，不影响功能，但后续可评估依赖版本。
 - 用户最初提供的数据库用户名 `postgre` 认证失败；本机实际可用用户是 `postgres`。
 

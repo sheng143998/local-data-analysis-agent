@@ -1,4 +1,5 @@
 from backend.app.schemas.analysis import AnalyzeResponse
+from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
 
 
@@ -8,9 +9,12 @@ def present_sales_trend_result(
     execution: SqlExecutionResult,
     guard_warnings: list[str],
     latency_ms: int,
+    retrieval_context: RetrievalContext | None = None,
 ) -> AnalyzeResponse:
     if execution.status != "success":
-        return AnalyzeResponse(**_error_payload(question, sql, execution, latency_ms))
+        return AnalyzeResponse(
+            **_error_payload(question, sql, execution, latency_ms, retrieval_context)
+        )
 
     rows = list(reversed(execution.rows))
     analysis_rows = [_to_analysis_row(row) for row in rows]
@@ -38,22 +42,24 @@ def present_sales_trend_result(
         rows=analysis_rows,
         source={
             "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
-            "tables": ["orders", "payments", "refunds"],
-            "fields": ["created_at", "status", "total_amount", "order_id"],
-            "metricDefinition": "销售额 = 已支付订单 total_amount 汇总",
+            "tables": _source_tables(retrieval_context),
+            "fields": _source_fields(retrieval_context),
+            "metricDefinition": _metric_definition(retrieval_context),
             "range": date_range,
             "returnedRows": execution.row_count,
             "queryTime": f"{execution.latency_ms}ms",
             "security": "只读 SELECT，已通过 SQL Guard",
         },
         trace={
-            "toolCalls": 2,
+            "toolCalls": 4,
             "modelCalls": 0,
             "memoryCandidates": 0,
             "totalTime": f"{latency_ms}ms",
         },
         steps=[
             {"name": "理解问题", "status": "已完成", "time": "1ms"},
+            {"name": "召回指标口径", "status": "已完成", "time": "1ms"},
+            {"name": "读取数据结构", "status": "已完成", "time": "1ms"},
             {"name": "选择 SQL 模板", "status": "已完成", "time": "1ms"},
             {"name": "安全校验", "status": "已完成", "time": "1ms"},
             {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
@@ -91,6 +97,7 @@ def _error_payload(
     sql: str,
     execution: SqlExecutionResult,
     latency_ms: int,
+    retrieval_context: RetrievalContext | None,
 ) -> dict:
     return {
         "question": question,
@@ -101,23 +108,43 @@ def _error_payload(
         "rows": [],
         "source": {
             "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
-            "tables": ["orders", "payments", "refunds"],
-            "fields": ["created_at", "status", "total_amount", "order_id"],
-            "metricDefinition": "销售额 = 已支付订单 total_amount 汇总",
+            "tables": _source_tables(retrieval_context),
+            "fields": _source_fields(retrieval_context),
+            "metricDefinition": _metric_definition(retrieval_context),
             "range": "无数据",
             "returnedRows": 0,
             "queryTime": f"{execution.latency_ms}ms",
             "security": "SQL Guard / Executor",
         },
         "trace": {
-            "toolCalls": 2,
+            "toolCalls": 4,
             "modelCalls": 0,
             "memoryCandidates": 0,
             "totalTime": f"{latency_ms}ms",
         },
         "steps": [
+            {"name": "召回指标口径", "status": "已完成", "time": "1ms"},
+            {"name": "读取数据结构", "status": "已完成", "time": "1ms"},
             {"name": "安全校验", "status": "已完成", "time": "1ms"},
             {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
             {"name": "整理结论", "status": "已完成", "time": "1ms"},
         ],
     }
+
+
+def _source_tables(retrieval_context: RetrievalContext | None) -> list[str]:
+    if retrieval_context and retrieval_context.tables:
+        return retrieval_context.tables
+    return ["orders", "payments", "refunds"]
+
+
+def _source_fields(retrieval_context: RetrievalContext | None) -> list[str]:
+    if retrieval_context and retrieval_context.fields:
+        return retrieval_context.fields
+    return ["orders.created_at", "orders.status", "orders.total_amount", "payments.order_id"]
+
+
+def _metric_definition(retrieval_context: RetrievalContext | None) -> str:
+    if retrieval_context and retrieval_context.metric_summary:
+        return retrieval_context.metric_summary
+    return "销售额 = 已支付订单 total_amount 汇总"

@@ -2,6 +2,7 @@ from time import perf_counter
 
 from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.tools.analysis_presenter import present_sales_trend_result
+from backend.app.tools.context_builder import build_retrieval_context
 from backend.app.tools.sql_execution_tools import execute_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 
@@ -25,8 +26,9 @@ LIMIT 30
 
 
 def run_analysis_graph(question: str) -> AnalyzeResponse:
-    """V1 real slice：固定销售趋势问题先走真实 SQL Guard + Executor。"""
+    """V1 real slice：先召回业务上下文，再执行真实 SQL Guard + Executor。"""
     started = perf_counter()
+    retrieval_context = build_retrieval_context(question)
     guard = guard_sql(SALES_TREND_SQL, max_rows=30)
     execution = execute_guarded_sql(guard)
     latency_ms = int((perf_counter() - started) * 1000)
@@ -36,4 +38,5 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
         execution=execution,
         guard_warnings=guard.warnings,
         latency_ms=latency_ms,
+        retrieval_context=retrieval_context,
     )

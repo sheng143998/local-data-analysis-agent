@@ -19,6 +19,9 @@ def test_analyze_minimal_loop() -> None:
     assert body["path"] == "cold_path"
     assert "orders" in body["sql"]
     assert "SQL Guard" in body["source"]["security"]
+    assert "销售额" in body["source"]["metricDefinition"]
+    assert "召回指标口径" in [step["name"] for step in body["steps"]]
+    assert body["trace"]["toolCalls"] == 4
     assert len(body["rows"]) == 30
     assert body["steps"][-1]["status"] == "已完成"
     assert "真实 PostgreSQL 数据" in body["summary"]
