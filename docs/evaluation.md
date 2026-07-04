@@ -69,6 +69,7 @@ eval/reports/latest_eval_report.json
 - `cases[].run_detail_path`：对应开发者调试接口路径，例如 `/api/runs/{run_id}`。
 - `cases[].run_trace_summary`：从 `/api/runs/{run_id}` 提取的运行摘要，包含召回表、字段样例、表关系数量、SQL 生成路径、Guard warning/error 和 SQL Memory 规划摘要。
 - `assertion_failure_summary.by_missing_table_context_status`：对缺失表做进一步聚合，区分该表是没有进入召回上下文，还是已进入上下文但最终 SQL 没有使用。
+- `/api/runs/{run_id}` 的 `analysis_graph.select_generated_sql` 工具调用会包含 `context_table_coverage`，用于判断已召回的非默认业务表是否被最终 SQL 使用。
 
 ## 最近基线
 
@@ -90,6 +91,7 @@ eval/reports/latest_eval_report.json
 - 如果 `assertion_failure_summary.by_missing_table` 集中在某些表，优先检查这些表是否被召回、是否进入模型 SQL prompt、是否被 SQL Memory fast_path 错误绕过。
 - 如果某个 case 需要进一步排查，优先打开该 case 的 `run_detail_path`，查看上下文召回、SQL 生成、Guard 和 Executor 的工具调用摘要。
 - 如果 `by_missing_table_context_status` 显示 `missing_from_context` 高，优先修 schema/metric 检索；如果显示 `present_in_context` 高，优先修 SQL 生成、SQL Memory 复用或模型路径。
+- 如果 `context_table_coverage.missing_tables` 非空，说明表已经进入上下文但当前 SQL 未覆盖；模型开关开启时应优先验证模型 SQL Generator 是否能生成覆盖这些表的查询。
 - 流量、优惠券、用户等主题的 schema 召回已加强；如果这些表仍缺失，优先检查字段说明、embedding 同步和业务主题词覆盖。
 
 ## 后续方向

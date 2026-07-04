@@ -1,5 +1,8 @@
 from time import perf_counter
 
+from sqlglot import exp, parse_one
+from sqlglot.errors import ParseError
+
 from backend.app.core.config import settings
 from backend.app.core.model_adapter import ModelAdapter
 from backend.app.schemas.analysis import AnalyzeResponse
@@ -23,6 +26,14 @@ from backend.app.tools.sql_validation_tools import guard_sql
 
 SALES_TREND_PARAMETERS = parse_sales_trend_parameters("")
 SALES_TREND_SQL = render_sales_trend_sql(SALES_TREND_PARAMETERS)
+BASE_TRANSACTION_TABLES = {
+    "orders",
+    "payments",
+    "order_items",
+    "products",
+    "refunds",
+    "product_costs",
+}
 
 
 def run_analysis_graph(question: str) -> AnalyzeResponse:
@@ -179,6 +190,10 @@ def _log_analysis_run(
             "has_sql": bool(generated_sql_text),
             "warning_count": len(generation_warnings),
             "warnings": generation_warnings[:5],
+            "context_table_coverage": _context_table_coverage(
+                generated_sql_text,
+                context_tables,
+            ),
         },
         status="success",
     )
@@ -249,4 +264,73 @@ def _select_generated_sql(
             }
         )
 
-    return generate_or_rewrite_sales_sql(question, reuse_plan)
+    deterministic_result = generate_or_rewrite_sales_sql(question, reuse_plan)
+    coverage = _context_table_coverage(deterministic_result.sql, retrieval_context.tables)
+    if coverage["covered"]:
+        return deterministic_result
+
+    coverage_warning = _context_table_coverage_warning(coverage["missing_tables"])
+    if enabled:
+        cold_reuse_plan = reuse_plan.model_copy(
+            update={"path_type": "cold_path", "reuse_type": "none", "memory_hit": False}
+        )
+        model_result = generate_sql_with_model(
+            question=question,
+            retrieval_context=retrieval_context,
+            reuse_plan=cold_reuse_plan,
+            adapter=adapter,
+        )
+        model_coverage = _context_table_coverage(model_result.sql, retrieval_context.tables)
+        if model_result.sql and model_coverage["covered"]:
+            return model_result.model_copy(
+                update={"warnings": [*model_result.warnings, coverage_warning]}
+            )
+
+        return deterministic_result.model_copy(
+            update={
+                "warnings": [
+                    *deterministic_result.warnings,
+                    coverage_warning,
+                    *model_result.warnings,
+                    "模型 SQL 未能覆盖关键上下文表，已保留确定性 SQL 结果",
+                ]
+            }
+        )
+
+    return deterministic_result.model_copy(
+        update={"warnings": [*deterministic_result.warnings, coverage_warning]}
+    )
+
+
+def _context_table_coverage(sql: str, context_tables: list[str]) -> dict:
+    required_tables = _required_context_tables(context_tables)
+    sql_tables = _extract_sql_tables(sql)
+    missing_tables = sorted(required_tables - sql_tables)
+    return {
+        "required_tables": sorted(required_tables),
+        "sql_tables": sorted(sql_tables),
+        "missing_tables": missing_tables,
+        "covered": not missing_tables,
+    }
+
+
+def _required_context_tables(context_tables: list[str]) -> set[str]:
+    return {
+        table
+        for table in context_tables
+        if table and table not in BASE_TRANSACTION_TABLES
+    }
+
+
+def _extract_sql_tables(sql: str) -> set[str]:
+    if not sql.strip():
+        return set()
+    try:
+        expression = parse_one(sql, dialect="postgres")
+    except ParseError:
+        return set()
+    return {table.name for table in expression.find_all(exp.Table) if table.name}
+
+
+def _context_table_coverage_warning(missing_tables: list[str]) -> str:
+    return "SQL 未覆盖已召回的关键上下文表：" + ", ".join(missing_tables)

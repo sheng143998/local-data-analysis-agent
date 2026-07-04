@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-03T19:13:56.012748+00:00",
+  "generated_at": "2026-07-03T19:21:39.692146+00:00",
   "total": 20,
   "success_count": 20,
   "strict_success_count": 11,
@@ -10,7 +10,7 @@
   "keyword_match_rate": 1.0,
   "memory_hit_rate": 0.6,
   "reuse_success_rate": 0.6,
-  "average_latency_ms": 1291,
+  "average_latency_ms": 1230,
   "path_counts": {
     "fast_path": 12,
     "rewrite_path": 8
@@ -24,7 +24,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 915,
+      "latency_ms": 1590,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -40,8 +40,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "cc0f54dd-2259-4fef-94da-bd0d2269267b",
-      "run_detail_path": "/api/runs/cc0f54dd-2259-4fef-94da-bd0d2269267b",
+      "run_id": "ef1b8ba9-8594-43eb-81fd-6dc4743b7328",
+      "run_detail_path": "/api/runs/ef1b8ba9-8594-43eb-81fd-6dc4743b7328",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -75,9 +75,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -98,7 +99,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 951,
+      "latency_ms": 1127,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -116,8 +117,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "16fecd3e-d7aa-4e59-8da1-83c9a3881747",
-      "run_detail_path": "/api/runs/16fecd3e-d7aa-4e59-8da1-83c9a3881747",
+      "run_id": "b2b50279-802a-4608-9d62-6582138b9b66",
+      "run_detail_path": "/api/runs/b2b50279-802a-4608-9d62-6582138b9b66",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -151,9 +152,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -174,7 +176,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1376,
+      "latency_ms": 1131,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -192,8 +194,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "73147291-d670-449b-b5af-20e6a61ef5ff",
-      "run_detail_path": "/api/runs/73147291-d670-449b-b5af-20e6a61ef5ff",
+      "run_id": "c578278f-f288-4e28-8203-fd9de6931140",
+      "run_detail_path": "/api/runs/c578278f-f288-4e28-8203-fd9de6931140",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -227,9 +229,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -239,7 +242,7 @@
         "memory_path_type": "rewrite_path",
         "memory_reuse_type": "regenerate",
         "memory_hit": false,
-        "memory_score": 0.975
+        "memory_score": 1.0
       },
       "error": ""
     },
@@ -250,7 +253,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1555,
+      "latency_ms": 1320,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -269,8 +272,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "f96b5f18-258a-4e63-8dd6-948698f9321b",
-      "run_detail_path": "/api/runs/f96b5f18-258a-4e63-8dd6-948698f9321b",
+      "run_id": "5d319a3a-a77e-474f-afd1-67831037f8ea",
+      "run_detail_path": "/api/runs/5d319a3a-a77e-474f-afd1-67831037f8ea",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -304,8 +307,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "template_render",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
+        "generation_warning_count": 1,
+        "generation_warnings": [
+          "SQL 未覆盖已召回的关键上下文表：users"
+        ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
         "guard_warnings": [],
@@ -325,7 +330,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 834,
+      "latency_ms": 1058,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -343,8 +348,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "015ce3de-060d-442f-90b0-633ecae8feaf",
-      "run_detail_path": "/api/runs/015ce3de-060d-442f-90b0-633ecae8feaf",
+      "run_id": "95073be5-d392-4543-8857-30f03b5e53a3",
+      "run_detail_path": "/api/runs/95073be5-d392-4543-8857-30f03b5e53a3",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -379,9 +384,10 @@
         "schema_column_count": 35,
         "relationship_count": 16,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：traffic_events, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -402,7 +408,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1070,
+      "latency_ms": 985,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -420,8 +426,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "8e8eb0ad-b316-4740-a633-e89c04402a0a",
-      "run_detail_path": "/api/runs/8e8eb0ad-b316-4740-a633-e89c04402a0a",
+      "run_id": "bc9ebe51-c127-4652-9591-ac1caf1f3359",
+      "run_detail_path": "/api/runs/bc9ebe51-c127-4652-9591-ac1caf1f3359",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -456,9 +462,10 @@
         "schema_column_count": 35,
         "relationship_count": 16,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：traffic_events, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -479,7 +486,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1371,
+      "latency_ms": 1057,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -496,8 +503,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "1472e5fc-4fe9-4946-a384-cb4cb98c60c8",
-      "run_detail_path": "/api/runs/1472e5fc-4fe9-4946-a384-cb4cb98c60c8",
+      "run_id": "969e7ac3-32fd-4c03-a4e2-df9527d53ce3",
+      "run_detail_path": "/api/runs/969e7ac3-32fd-4c03-a4e2-df9527d53ce3",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -533,9 +540,10 @@
         "schema_column_count": 40,
         "relationship_count": 24,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -556,7 +564,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1550,
+      "latency_ms": 923,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -574,8 +582,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "de4858c6-0f44-4833-ada7-f8a708d715c7",
-      "run_detail_path": "/api/runs/de4858c6-0f44-4833-ada7-f8a708d715c7",
+      "run_id": "15c910c6-3577-4678-bc18-bcf2e0b4b0e6",
+      "run_detail_path": "/api/runs/15c910c6-3577-4678-bc18-bcf2e0b4b0e6",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -611,9 +619,10 @@
         "schema_column_count": 40,
         "relationship_count": 24,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -634,7 +643,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1248,
+      "latency_ms": 1041,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -652,8 +661,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "fef77ada-d5ad-4aa2-aaa9-40523d8f9ac4",
-      "run_detail_path": "/api/runs/fef77ada-d5ad-4aa2-aaa9-40523d8f9ac4",
+      "run_id": "cdf91dc3-3a84-4c58-a7a0-f77f0977022d",
+      "run_detail_path": "/api/runs/cdf91dc3-3a84-4c58-a7a0-f77f0977022d",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -688,9 +697,10 @@
         "schema_column_count": 35,
         "relationship_count": 16,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：traffic_events, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -787,7 +797,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1438,
+      "latency_ms": 1079,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -805,8 +815,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 7,
-      "run_id": "20a412e9-7707-4410-9d2a-08dbc079ab7b",
-      "run_detail_path": "/api/runs/20a412e9-7707-4410-9d2a-08dbc079ab7b",
+      "run_id": "f73b94e3-4604-443d-a57a-201fb7a6c5d9",
+      "run_detail_path": "/api/runs/f73b94e3-4604-443d-a57a-201fb7a6c5d9",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -860,7 +870,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1363,
+      "latency_ms": 1042,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -878,8 +888,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "09e7271d-5035-4996-9d59-14bd08589ee3",
-      "run_detail_path": "/api/runs/09e7271d-5035-4996-9d59-14bd08589ee3",
+      "run_id": "412ae787-57b7-4ba5-a23b-0a6d0225a494",
+      "run_detail_path": "/api/runs/412ae787-57b7-4ba5-a23b-0a6d0225a494",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -933,7 +943,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1290,
+      "latency_ms": 1173,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -951,8 +961,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 3,
-      "run_id": "118c3992-26d0-41a7-89b9-30626ae4f689",
-      "run_detail_path": "/api/runs/118c3992-26d0-41a7-89b9-30626ae4f689",
+      "run_id": "c510bb4c-ea8e-4bb4-aaf5-7c7c9a64615c",
+      "run_detail_path": "/api/runs/c510bb4c-ea8e-4bb4-aaf5-7c7c9a64615c",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1006,7 +1016,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1451,
+      "latency_ms": 1449,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1025,8 +1035,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "7b55e0d0-b540-4ce7-b599-d905be93b2ff",
-      "run_detail_path": "/api/runs/7b55e0d0-b540-4ce7-b599-d905be93b2ff",
+      "run_id": "451a8f97-d762-483c-affc-643c6b491e0a",
+      "run_detail_path": "/api/runs/451a8f97-d762-483c-affc-643c6b491e0a",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1082,7 +1092,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1414,
+      "latency_ms": 1909,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1100,8 +1110,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "a4d9eda7-aca0-4d06-92b0-788eaa0f20a6",
-      "run_detail_path": "/api/runs/a4d9eda7-aca0-4d06-92b0-788eaa0f20a6",
+      "run_id": "c22db3fd-6750-4681-8206-df7acf16ac0f",
+      "run_detail_path": "/api/runs/c22db3fd-6750-4681-8206-df7acf16ac0f",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1156,7 +1166,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1599,
+      "latency_ms": 1498,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1172,8 +1182,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 5,
-      "run_id": "0d0e2735-d008-4611-83bc-4efefe617793",
-      "run_detail_path": "/api/runs/0d0e2735-d008-4611-83bc-4efefe617793",
+      "run_id": "36f2a7ef-3b3d-424f-9777-a8de0843a68e",
+      "run_detail_path": "/api/runs/36f2a7ef-3b3d-424f-9777-a8de0843a68e",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1227,7 +1237,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1226,
+      "latency_ms": 1172,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1245,8 +1255,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "5983af8a-bb98-45dc-9bdf-fc83be21648f",
-      "run_detail_path": "/api/runs/5983af8a-bb98-45dc-9bdf-fc83be21648f",
+      "run_id": "74f74f95-b5bc-450d-a23b-49e9842c8bbd",
+      "run_detail_path": "/api/runs/74f74f95-b5bc-450d-a23b-49e9842c8bbd",
       "run_trace_summary": {
         "context_tables": [
           "refunds",
@@ -1302,7 +1312,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 995,
+      "latency_ms": 1446,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1319,8 +1329,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "51427b93-0b17-4e70-a7ee-4bed4cf8c0b9",
-      "run_detail_path": "/api/runs/51427b93-0b17-4e70-a7ee-4bed4cf8c0b9",
+      "run_id": "f537a417-f3a1-404a-a18e-c255bf0adef4",
+      "run_detail_path": "/api/runs/f537a417-f3a1-404a-a18e-c255bf0adef4",
       "run_trace_summary": {
         "context_tables": [
           "refunds",
@@ -1376,7 +1386,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1461,
+      "latency_ms": 1303,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1394,8 +1404,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "3b1bff53-9b71-47b4-b50c-49dd7e60a905",
-      "run_detail_path": "/api/runs/3b1bff53-9b71-47b4-b50c-49dd7e60a905",
+      "run_id": "1d1c3fc6-64f8-45d8-b287-bfd6311c6a67",
+      "run_detail_path": "/api/runs/1d1c3fc6-64f8-45d8-b287-bfd6311c6a67",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1452,7 +1462,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1640,
+      "latency_ms": 1197,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1468,8 +1478,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 5,
-      "run_id": "c81c9e1f-49c9-4c0d-b620-264d2f700404",
-      "run_detail_path": "/api/runs/c81c9e1f-49c9-4c0d-b620-264d2f700404",
+      "run_id": "af651e80-050d-47df-a3d1-35dc6c021f39",
+      "run_detail_path": "/api/runs/af651e80-050d-47df-a3d1-35dc6c021f39",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1523,7 +1533,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 915,
+      "latency_ms": 1590,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1539,8 +1549,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "cc0f54dd-2259-4fef-94da-bd0d2269267b",
-      "run_detail_path": "/api/runs/cc0f54dd-2259-4fef-94da-bd0d2269267b",
+      "run_id": "ef1b8ba9-8594-43eb-81fd-6dc4743b7328",
+      "run_detail_path": "/api/runs/ef1b8ba9-8594-43eb-81fd-6dc4743b7328",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1574,9 +1584,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -1597,7 +1608,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 951,
+      "latency_ms": 1127,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1615,8 +1626,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "16fecd3e-d7aa-4e59-8da1-83c9a3881747",
-      "run_detail_path": "/api/runs/16fecd3e-d7aa-4e59-8da1-83c9a3881747",
+      "run_id": "b2b50279-802a-4608-9d62-6582138b9b66",
+      "run_detail_path": "/api/runs/b2b50279-802a-4608-9d62-6582138b9b66",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1650,9 +1661,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -1673,7 +1685,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1376,
+      "latency_ms": 1131,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1691,8 +1703,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "73147291-d670-449b-b5af-20e6a61ef5ff",
-      "run_detail_path": "/api/runs/73147291-d670-449b-b5af-20e6a61ef5ff",
+      "run_id": "c578278f-f288-4e28-8203-fd9de6931140",
+      "run_detail_path": "/api/runs/c578278f-f288-4e28-8203-fd9de6931140",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1726,9 +1738,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -1738,7 +1751,7 @@
         "memory_path_type": "rewrite_path",
         "memory_reuse_type": "regenerate",
         "memory_hit": false,
-        "memory_score": 0.975
+        "memory_score": 1.0
       },
       "error": ""
     },
@@ -1749,7 +1762,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1555,
+      "latency_ms": 1320,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1768,8 +1781,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 1,
-      "run_id": "f96b5f18-258a-4e63-8dd6-948698f9321b",
-      "run_detail_path": "/api/runs/f96b5f18-258a-4e63-8dd6-948698f9321b",
+      "run_id": "5d319a3a-a77e-474f-afd1-67831037f8ea",
+      "run_detail_path": "/api/runs/5d319a3a-a77e-474f-afd1-67831037f8ea",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1803,8 +1816,10 @@
         "schema_column_count": 29,
         "relationship_count": 10,
         "generation_path": "template_render",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
+        "generation_warning_count": 1,
+        "generation_warnings": [
+          "SQL 未覆盖已召回的关键上下文表：users"
+        ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
         "guard_warnings": [],
@@ -1824,7 +1839,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 1079,
+      "latency_ms": 1090,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1842,8 +1857,8 @@
       "keyword_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "0eafa3fb-78c4-4f4c-ab81-96eb2c81ac38",
-      "run_detail_path": "/api/runs/0eafa3fb-78c4-4f4c-ab81-96eb2c81ac38",
+      "run_id": "1968a750-04cd-4dbc-b032-edfccb82c3b1",
+      "run_detail_path": "/api/runs/1968a750-04cd-4dbc-b032-edfccb82c3b1",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1898,7 +1913,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 834,
+      "latency_ms": 1058,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1916,8 +1931,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "015ce3de-060d-442f-90b0-633ecae8feaf",
-      "run_detail_path": "/api/runs/015ce3de-060d-442f-90b0-633ecae8feaf",
+      "run_id": "95073be5-d392-4543-8857-30f03b5e53a3",
+      "run_detail_path": "/api/runs/95073be5-d392-4543-8857-30f03b5e53a3",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1952,9 +1967,10 @@
         "schema_column_count": 35,
         "relationship_count": 16,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：traffic_events, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -1975,7 +1991,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1070,
+      "latency_ms": 985,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1993,8 +2009,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "8e8eb0ad-b316-4740-a633-e89c04402a0a",
-      "run_detail_path": "/api/runs/8e8eb0ad-b316-4740-a633-e89c04402a0a",
+      "run_id": "bc9ebe51-c127-4652-9591-ac1caf1f3359",
+      "run_detail_path": "/api/runs/bc9ebe51-c127-4652-9591-ac1caf1f3359",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2029,9 +2045,10 @@
         "schema_column_count": 35,
         "relationship_count": 16,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：traffic_events, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -2052,7 +2069,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1371,
+      "latency_ms": 1057,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2069,8 +2086,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "1472e5fc-4fe9-4946-a384-cb4cb98c60c8",
-      "run_detail_path": "/api/runs/1472e5fc-4fe9-4946-a384-cb4cb98c60c8",
+      "run_id": "969e7ac3-32fd-4c03-a4e2-df9527d53ce3",
+      "run_detail_path": "/api/runs/969e7ac3-32fd-4c03-a4e2-df9527d53ce3",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2106,9 +2123,10 @@
         "schema_column_count": 40,
         "relationship_count": 24,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -2129,7 +2147,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1550,
+      "latency_ms": 923,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2147,8 +2165,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "de4858c6-0f44-4833-ada7-f8a708d715c7",
-      "run_detail_path": "/api/runs/de4858c6-0f44-4833-ada7-f8a708d715c7",
+      "run_id": "15c910c6-3577-4678-bc18-bcf2e0b4b0e6",
+      "run_detail_path": "/api/runs/15c910c6-3577-4678-bc18-bcf2e0b4b0e6",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2184,9 +2202,10 @@
         "schema_column_count": 40,
         "relationship_count": 24,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,
@@ -2207,7 +2226,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 1248,
+      "latency_ms": 1041,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2225,8 +2244,8 @@
       "keyword_match": true,
       "strict_ok": false,
       "returned_rows": 30,
-      "run_id": "fef77ada-d5ad-4aa2-aaa9-40523d8f9ac4",
-      "run_detail_path": "/api/runs/fef77ada-d5ad-4aa2-aaa9-40523d8f9ac4",
+      "run_id": "cdf91dc3-3a84-4c58-a7a0-f77f0977022d",
+      "run_detail_path": "/api/runs/cdf91dc3-3a84-4c58-a7a0-f77f0977022d",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2261,9 +2280,10 @@
         "schema_column_count": 35,
         "relationship_count": 16,
         "generation_path": "deterministic_rewrite",
-        "generation_warning_count": 1,
+        "generation_warning_count": 2,
         "generation_warnings": [
-          "已基于历史 SQL Memory 和当前问题参数进行确定性改写"
+          "已基于历史 SQL Memory 和当前问题参数进行确定性改写",
+          "SQL 未覆盖已召回的关键上下文表：traffic_events, users"
         ],
         "guard_status": "allowed",
         "guard_warning_count": 0,

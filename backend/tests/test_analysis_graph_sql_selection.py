@@ -1,4 +1,4 @@
-from backend.app.agents.analysis_graph import _select_generated_sql
+from backend.app.agents.analysis_graph import _context_table_coverage, _select_generated_sql
 from backend.app.core.model_adapter import ModelResponse
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import MetricContext, RetrievalContext, SchemaColumnContext
@@ -109,6 +109,70 @@ def test_select_generated_sql_does_not_use_model_for_rewrite_path() -> None:
     assert adapter.calls == 0
 
 
+def test_select_generated_sql_warns_when_context_table_is_missing_with_model_disabled() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content='{"sql":"SELECT source FROM traffic_events LIMIT 10"}',
+            provider="local",
+            model="test",
+            latency_ms=1,
+        )
+    )
+
+    result = _select_generated_sql(
+        question="按流量来源统计访问到下单的转化率",
+        retrieval_context=_context_with_extra_table("traffic_events"),
+        reuse_plan=_plan("rewrite_path"),
+        adapter=adapter,
+        model_enabled=False,
+    )
+
+    assert result.path == "deterministic_rewrite"
+    assert "traffic_events" not in result.sql
+    assert any("关键上下文表" in warning for warning in result.warnings)
+    assert adapter.calls == 0
+
+
+def test_select_generated_sql_uses_model_when_rewrite_misses_context_table() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content='{"sql":"SELECT source, COUNT(*) AS visits FROM traffic_events GROUP BY source LIMIT 10","warnings":[]}',
+            provider="local",
+            model="test",
+            latency_ms=1,
+        )
+    )
+
+    result = _select_generated_sql(
+        question="按流量来源统计访问到下单的转化率",
+        retrieval_context=_context_with_extra_table("traffic_events"),
+        reuse_plan=_plan("rewrite_path"),
+        adapter=adapter,
+        model_enabled=True,
+    )
+
+    assert result.path == "model_generate"
+    assert "traffic_events" in result.sql
+    assert any("关键上下文表" in warning for warning in result.warnings)
+    assert adapter.calls == 1
+
+
+def test_context_table_coverage_reports_missing_non_default_tables() -> None:
+    coverage = _context_table_coverage(
+        "SELECT COUNT(*) FROM orders LIMIT 10",
+        ["orders", "payments", "traffic_events"],
+    )
+
+    assert coverage == {
+        "required_tables": ["traffic_events"],
+        "sql_tables": ["orders"],
+        "missing_tables": ["traffic_events"],
+        "covered": False,
+    }
+
+
 def _plan(path_type: str) -> SqlReusePlan:
     return SqlReusePlan(
         path_type=path_type,
@@ -150,4 +214,24 @@ def _context() -> RetrievalContext:
         tables=["orders"],
         fields=["orders.id", "orders.total_amount"],
         metric_summary="销售额 = 已支付订单 total_amount 汇总",
+    )
+
+
+def _context_with_extra_table(table_name: str) -> RetrievalContext:
+    context = _context()
+    return context.model_copy(
+        update={
+            "schema_columns": [
+                *context.schema_columns,
+                SchemaColumnContext(
+                    table_name=table_name,
+                    column_name="source",
+                    data_type="text",
+                    description=f"{table_name}.source",
+                    business_meaning="流量来源",
+                ),
+            ],
+            "tables": [*context.tables, table_name],
+            "fields": [*context.fields, f"{table_name}.source"],
+        }
     )

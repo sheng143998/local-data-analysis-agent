@@ -45,6 +45,7 @@ POST /api/analyze
    - 开启 `MODEL_SQL_GENERATOR_ENABLED=true` 且 `cold_path` 时尝试模型 SQL 生成。
    - 模型 SQL Generator 的 prompt payload 只包含已召回字段、指标口径、复用计划和表关系上下文。
    - 模型失败或无 SQL 时回退确定性路径。
+   - 如果确定性 SQL 没有覆盖已召回的非默认业务表，会写入 `context_table_coverage` 诊断；模型开关开启时，会转为模型 cold path 再尝试一次。
 6. `guard_sql()` 做 SQL 安全拦截；即使 SQL 来自模型，也会经过字段存在性、只读、白名单表、`SELECT *` 和 LIMIT 等校验。
 7. `execute_guarded_sql()` 用只读连接执行。
 8. `present_sales_trend_result()` 组织业务结果：
@@ -78,7 +79,7 @@ MODEL_SQL_GENERATOR_ENABLED=false
 - `query_runs`：问题、SQL、Guard 状态、执行状态、耗时、错误。
 - `tool_calls`：SQL Memory、上下文召回、SQL 生成、Guard、Executor、Presenter、Memory 更新等摘要。
   - 上下文召回摘要包含指标数、字段数、表关系数、召回表和字段样例。
-  - SQL 生成摘要包含生成路径、是否有 SQL、warning 数量和 warning 样例。
+  - SQL 生成摘要包含生成路径、是否有 SQL、warning 数量、warning 样例和 `context_table_coverage`。
   - Guard 摘要包含放行状态、warning/error 数量和样例。
 
 开发者接口：

@@ -288,7 +288,8 @@ def _build_run_trace_summary(run_detail: dict[str, Any]) -> dict[str, Any]:
     generation = _output_payload(tools, "analysis_graph.select_generated_sql")
     guard = _output_payload(tools, "sql_validation_tools.guard_sql")
     memory_plan = _output_payload(tools, "sql_memory_tools.plan_sql_reuse")
-    return {
+    context_table_coverage = generation.get("context_table_coverage")
+    summary = {
         "context_tables": _string_list(context.get("tables")),
         "context_fields_sample": _string_list(context.get("fields_sample")),
         "metric_count": _safe_int(context.get("metric_count")),
@@ -307,6 +308,9 @@ def _build_run_trace_summary(run_detail: dict[str, Any]) -> dict[str, Any]:
         "memory_hit": bool(memory_plan.get("memory_hit") or False),
         "memory_score": memory_plan.get("score"),
     }
+    if isinstance(context_table_coverage, dict) and context_table_coverage:
+        summary["context_table_coverage"] = context_table_coverage
+    return summary
 
 
 def _output_payload(tools: dict[str, Any], tool_name: str) -> dict[str, Any]:

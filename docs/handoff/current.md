@@ -51,6 +51,7 @@
 - 已增强模型 SQL Generator 上下文 smoke，prompt payload 可结构化测试，模型编造字段会在 Guard/Validator smoke 中被拦截。
 - 已为标准评估报告增加 `run_trace_summary`，并聚合缺失表是否进入召回上下文，帮助区分 schema 召回不足和 SQL 生成不足。
 - 已增强 Schema 主题表召回，用户、流量、优惠券相关问题会把 `users`、`traffic_events`、`coupons`、`coupon_usages` 纳入上下文。
+- 已新增 SQL 关键上下文表覆盖检查，能诊断已召回非默认业务表是否进入最终 SQL；模型生成开启时可在 rewrite/确定性结果漏表后转向模型 cold path。
 
 ## 最近完成模块
 
@@ -910,6 +911,22 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 57. SQL 关键上下文表覆盖检查
+
+- commit: `0c68f9b 新增SQL上下文表覆盖检查并通过验证`，已推送到 `origin/main`。
+- 内容：
+  - `analysis_graph._context_table_coverage()` 从召回上下文和最终 SQL 中计算关键表覆盖情况。
+  - 当前只把非默认业务表作为强覆盖要求，避免把基础订单/支付/商品表误判为必须全部出现在每条 SQL 中。
+  - `_select_generated_sql()` 在确定性 SQL 漏掉关键上下文表时写入 warning；模型 SQL Generator 开启时，会尝试转为模型 cold path 重新生成。
+  - `analysis_graph.select_generated_sql` 工具调用输出新增 `context_table_coverage`，包含 `required_tables`、`sql_tables`、`missing_tables`、`covered`。
+  - 更新 README、Agent 工作流、评估说明、计划文档和模块完成说明。
+- 验证：
+  - `py -3 -m pytest backend/tests/test_analysis_graph_sql_selection.py`，7 passed
+  - `npm run backend:test`，158 passed，1 个 `StarletteDeprecationWarning`
+  - `npm run eval:standard`，20/20 链路成功，严格成功率 55%
+  - `npm run frontend:build` 已通过
+  - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -922,15 +939,15 @@
 
 ## 当前正在做
 
-“Schema 主题表召回增强” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增强 schema 上下文召回。
+“SQL 关键上下文表覆盖检查” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增加最终 SQL 与召回上下文之间的覆盖诊断和模型开启时的转向能力。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
-1. 处理已召回但 SQL 未使用的问题：当前 `users`、`traffic_events`、`coupons`、`coupon_usages` 已进入上下文，但确定性 rewrite/SQL Memory 仍生成订单类 SQL。
+1. 在真实本地模型可用后开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑标准评估，观察 `context_table_coverage.missing_tables` 是否下降。
 2. 为模型 SQL Generator 增加可选的离线 provider smoke，使用 fake adapter 覆盖用户、流量、优惠券跨表场景，不调用真实模型。
-3. 继续评估是否要对 `rewrite_path` 引入更保守的表覆盖检查，避免相似历史 SQL 覆盖新问题关键表。
+3. 继续处理 `present_in_context` 但 SQL 未使用的评估失败，优先改进模型 prompt、SQL 选择策略和通用验证，不新增固定 SQL 模板。
 
 ## 已知风险
 
@@ -940,6 +957,7 @@
 - Model SQL Generator 已接入 analysis graph 的 `cold_path` 尝试路径，但默认关闭，尚未用真实模型服务跑标准问题评估集。
 - 模型 SQL Generator prompt payload 已有结构化 smoke，但真实模型输出质量仍未验证。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。当前主要失败表已进入上下文，剩余问题更偏 SQL 生成/复用策略。
+- SQL 关键上下文表覆盖检查已能诊断漏表并在模型开启时尝试转向模型 cold path；默认模型关闭时仍只会记录 warning 和保留确定性 SQL。
 - 评估报告已带 `run_id` / `run_detail_path`，但当前通过串行评估后查询最近 runs 匹配问题；如果未来并发评估，需要请求级 correlation id。
 - 评估报告已带 `run_trace_summary`，但摘要依赖工具调用名称稳定；后续重命名工具需要同步 eval runner。
 - EmbeddingAdapter 基础层、schema/metric embedding 同步、schema/metric pgvector 混合检索、SQL Memory embedding 写入和 question_embedding 检索已完成。
