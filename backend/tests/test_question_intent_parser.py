@@ -110,3 +110,25 @@ def test_parse_question_intent_heuristic_fallback_when_model_fails() -> None:
     assert intent.needs_clarification is False
     assert intent.metrics == ["avg_order_value", "sales_amount"]
     assert "timeout" in intent.warnings
+
+
+def test_parse_question_intent_heuristic_fallback_maps_average_sold_phrase() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=False,
+            provider="local",
+            model="test",
+            latency_ms=1,
+            error_message="timeout",
+        )
+    )
+
+    intent = parse_question_intent(
+        "2017年卖了多少钱，平均卖了多少钱",
+        adapter=adapter,
+        model_enabled=True,
+    )
+
+    assert intent.needs_clarification is False
+    assert intent.metrics == ["avg_order_value", "sales_amount"]
+    assert intent.time_range == "2017年"

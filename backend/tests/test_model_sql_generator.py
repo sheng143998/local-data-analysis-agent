@@ -84,6 +84,32 @@ def test_build_sql_generation_payload_contains_context_contract() -> None:
     assert any("Validator" in requirement for requirement in payload["requirements"])
 
 
+def test_build_sql_generation_payload_includes_intent_and_metric_semantics() -> None:
+    payload = build_sql_generation_payload(
+        "2017年卖了多少钱，平均卖了多少钱",
+        _context(relationship_type="foreign_key"),
+        _plan(),
+        question_intent={
+            "original_question": "2017年卖了多少钱，平均卖了多少钱",
+            "normalized_question": "查询2017年总销售额和客单价",
+            "metrics": ["sales_amount", "avg_order_value"],
+            "dimensions": [],
+            "time_range": "2017年",
+            "confidence": 0.9,
+            "needs_clarification": False,
+            "source": "llm",
+            "clarification": "internal details should not be forwarded",
+        },
+    )
+
+    assert payload["question_intent"]["metrics"] == ["sales_amount", "avg_order_value"]
+    assert payload["question_intent"]["time_range"] == "2017年"
+    assert "clarification" not in payload["question_intent"]
+    assert payload["metric_semantics"]["sales_amount"]["grain"] == "order"
+    assert "COUNT(DISTINCT orders.id)" in payload["metric_semantics"]["avg_order_value"]["preferred_formula"]
+    assert any("重复累计" in requirement for requirement in payload["requirements"])
+
+
 def test_parse_model_sql_response_extracts_json_sql() -> None:
     response = ModelResponse(
         ok=True,

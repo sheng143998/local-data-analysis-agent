@@ -41,6 +41,8 @@ BASE_TRANSACTION_TABLES = {
 
 class AnalysisGraphState(TypedDict, total=False):
     question: str
+    original_question: str
+    question_intent: dict[str, Any]
     started: float
     retrieval_context: RetrievalContext
     metric_names: list[str]
@@ -261,6 +263,7 @@ def _generate_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         question=question,
         retrieval_context=retrieval_context,
         reuse_plan=reuse_plan,
+        question_intent=state.get("question_intent"),
     )
     selected_sql = generated_sql.sql
     if reuse_plan.memory_hit:
@@ -336,6 +339,7 @@ def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         reuse_plan=state["reuse_plan"],
         repair_context=repair_context,
         adapter=state.get("_test_adapter"),
+        question_intent=state.get("question_intent"),
     )
     warnings = [*generated_sql.warnings, *repaired_sql.warnings]
     return {
@@ -599,6 +603,7 @@ def _select_generated_sql(
     adapter: ModelAdapter | None = None,
     model_enabled: bool | None = None,
     repair_context: dict[str, Any] | None = None,
+    question_intent: dict[str, Any] | None = None,
 ) -> GeneratedSql:
     enabled = settings.model_sql_generator_enabled if model_enabled is None else model_enabled
     if not enabled:
@@ -613,6 +618,7 @@ def _select_generated_sql(
         reuse_plan=reuse_plan,
         adapter=adapter,
         repair_context=repair_context,
+        question_intent=question_intent,
     )
     warnings = [*model_result.warnings]
     if model_result.sql:
@@ -694,6 +700,11 @@ def _sql_intent_warnings(
     if _uses_orders_status_paid(sql):
         warnings.append(
             f"{subject} 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。"
+        )
+    if _duplicates_order_amount_through_payments_join(sql):
+        warnings.append(
+            f"{subject} 可能在 JOIN payments 后直接汇总 orders.total_amount，"
+            "一单多支付会导致订单金额重复累计；请先按 orders.id 去重或先按 payments.order_id 聚合。"
         )
     return warnings
 
@@ -862,6 +873,42 @@ def _uses_orders_status_paid(sql: str) -> bool:
         if _is_paid_literal(left) and _is_orders_status_column(right, alias_to_table):
             return True
     return False
+
+
+def _duplicates_order_amount_through_payments_join(sql: str) -> bool:
+    if not sql.strip():
+        return False
+    try:
+        expression = parse_one(sql, dialect="postgres")
+    except ParseError:
+        return False
+
+    tables = [table for table in expression.find_all(exp.Table) if table.name]
+    table_names = {table.name for table in tables}
+    if "orders" not in table_names or "payments" not in table_names:
+        return False
+
+    alias_to_table = {
+        table.alias_or_name: table.name
+        for table in tables
+        if table.name
+    }
+    alias_to_table.update({table.name: table.name for table in tables if table.name})
+
+    for aggregate in expression.find_all(exp.Sum):
+        if _sum_uses_distinct(aggregate):
+            continue
+        for column in aggregate.find_all(exp.Column):
+            if column.name != "total_amount":
+                continue
+            table_name = alias_to_table.get(column.table or "")
+            if table_name == "orders":
+                return True
+    return False
+
+
+def _sum_uses_distinct(aggregate: exp.Sum) -> bool:
+    return isinstance(aggregate.this, exp.Distinct) or bool(aggregate.args.get("distinct"))
 
 
 def _is_paid_literal(expression: exp.Expression | None) -> bool:

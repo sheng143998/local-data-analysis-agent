@@ -53,6 +53,7 @@
 - 已增强 Schema 主题表召回，用户、流量、优惠券相关问题会把 `users`、`traffic_events`、`coupons`、`coupon_usages` 纳入上下文。
 - 已新增 SQL 关键上下文表覆盖检查，能诊断已召回非默认业务表是否进入最终 SQL；模型生成开启时可在 rewrite/确定性结果漏表后转向模型 cold path。
 - 已新增专用意图识别模型适配，`question_intent_parser` 支持通过 `INTENT_*` 配置使用独立语义模型；本机 `backend/.env` 已创建占位项，真实密钥不提交。
+- 已增强 SQL Generator prompt 的意图上下文和指标语义，结构化传入 `question_intent`，并明确总销售额、订单数、客单价口径；SQL 意图校验会拦截 `JOIN payments` 后直接 `SUM(orders.total_amount)` 的重复累计风险。
 
 ## 最近完成模块
 
@@ -941,6 +942,20 @@
 - 验证：
   - `.venv\Scripts\python -m pytest backend\tests\test_question_intent_parser.py backend\tests\test_model_sql_generator.py backend\tests\test_analysis_graph_sql_selection.py`，38 passed
 
+### 59. 意图上下文 Prompt 与聚合口径修正
+
+- commit: 本模块随本次提交并推送，提交信息为 `增强意图上下文Prompt和聚合校验`。
+- 内容：
+  - `model_sql_generator` 的 prompt payload 新增 `question_intent` 和 `metric_semantics`，将意图模型解析出的指标、维度、时间范围、置信度传给 SQL 生成模型。
+  - 明确 `sales_amount`、`order_count`、`avg_order_value` 的订单粒度口径，要求“总共卖了多少”和“平均卖了多少”分开输出。
+  - prompt 明确要求 JOIN `payments` 后不能直接重复汇总 `orders.total_amount`，必须先按订单去重或先聚合支付表。
+  - `analysis_graph` 将 `question_intent` 透传给模型 SQL 生成和 repair 请求。
+  - SQL 意图校验新增重复聚合风险拦截，识别 `JOIN payments` 后直接 `SUM(o.total_amount)` 的 SQL 并触发 repair。
+  - 启发式兜底新增“平均卖了多少钱 / 平均卖了多少”到 `avg_order_value` 的映射，并对模型失败下的复杂多指标问题更保守地反问。
+  - 新增计划文档和模块完成文档：`docs/plans/2026-07-06-intent-context-prompt-and-aggregation.md`、`docs/modules/2026-07-06-intent-context-prompt-and-aggregation.md`。
+- 验证：
+  - `.venv\Scripts\python -m pytest backend\tests\test_question_intent_parser.py backend\tests\test_model_sql_generator.py backend\tests\test_analysis_graph_sql_selection.py`，42 passed
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -953,15 +968,16 @@
 
 ## 当前正在做
 
-“专用意图识别模型适配” 模块已完成代码、计划文档、模块文档、focused tests、commit 和 push；本机 `backend/.env` 已创建 `INTENT_*` 占位配置，但该文件不提交。
+“意图上下文 Prompt 与聚合口径修正” 模块已完成代码、计划文档、模块文档、focused tests、commit 和 push。本机 `backend/.env` 仍只保留 `INTENT_*` 占位配置，真实密钥由用户填写且不提交。
 
 ## 下一步建议
 
 按用户最新要求，不再继续堆固定 SQL 模板，优先推进换库、换表后仍能工作的通用能力：
 
 1. 在真实本地模型可用后开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑标准评估，观察 `context_table_coverage.missing_tables` 是否下降。
-2. 为模型 SQL Generator 增加可选的离线 provider smoke，使用 fake adapter 覆盖用户、流量、优惠券跨表场景，不调用真实模型。
-3. 继续处理 `present_in_context` 但 SQL 未使用的评估失败，优先改进模型 prompt、SQL 选择策略和通用验证，不新增固定 SQL 模板。
+2. 使用真实意图模型和 SQL 生成模型复测“2017年卖了多少钱，平均卖了多少钱”，确认生成 SQL 使用订单去重口径，标准结果应区分 `sales_amount` 和 `avg_order_value`。
+3. 为模型 SQL Generator 增加可选的离线 provider smoke，使用 fake adapter 覆盖用户、流量、优惠券跨表场景，不调用真实模型。
+4. 继续处理 `present_in_context` 但 SQL 未使用的评估失败，优先改进模型 prompt、SQL 选择策略和通用验证，不新增固定 SQL 模板。
 
 ## 已知风险
 
@@ -972,6 +988,7 @@
 - 模型 SQL Generator prompt payload 已有结构化 smoke，但真实模型输出质量仍未验证。
 - 标准问题评估已可运行并区分严格断言；最近一次 20/20 链路成功，严格成功率 55%。当前主要失败表已进入上下文，剩余问题更偏 SQL 生成/复用策略。
 - SQL 关键上下文表覆盖检查已能诊断漏表并在模型开启时尝试转向模型 cold path；默认模型关闭时仍只会记录 warning 和保留确定性 SQL。
+- 重复聚合校验目前重点覆盖显式 `SUM(<orders alias>.total_amount)` 与 `payments` 同查的风险；更复杂的子查询和 CTE 仍需依赖模型 repair、Validator 和后续评估继续增强。
 - 评估报告已带 `run_id` / `run_detail_path`，但当前通过串行评估后查询最近 runs 匹配问题；如果未来并发评估，需要请求级 correlation id。
 - 评估报告已带 `run_trace_summary`，但摘要依赖工具调用名称稳定；后续重命名工具需要同步 eval runner。
 - EmbeddingAdapter 基础层、schema/metric embedding 同步、schema/metric pgvector 混合检索、SQL Memory embedding 写入和 question_embedding 检索已完成。

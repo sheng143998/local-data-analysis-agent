@@ -113,7 +113,7 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
     checks = [
         ("sales_amount", ["销售额", "gmv", "成交额", "交易金额", "流水", "收入", "卖了多少钱", "卖多少钱", "卖得怎么样"]),
         ("order_count", ["订单数", "订单量", "下单数", "多少单", "几单"]),
-        ("avg_order_value", ["客单价", "平均每单", "每单平均", "平均订单金额", "一单多少钱"]),
+        ("avg_order_value", ["客单价", "平均每单", "每单平均", "平均订单金额", "一单多少钱", "平均卖了多少钱", "平均卖了多少"]),
         ("refund_rate", ["退款率", "退款占比", "退货率", "售后率"]),
         ("gross_margin", ["毛利率", "毛利", "利润率"]),
         ("repeat_rate", ["复购率", "复购", "回购"]),
@@ -143,6 +143,8 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
     confidence = 0.8 if metrics else 0.45 if dimensions else 0.25
     if vague:
         confidence = min(confidence, 0.4)
+    if warnings and _looks_like_complex_metric_question(question) and len(set(metrics)) < 2:
+        confidence = min(confidence, 0.5)
 
     normalized = _build_normalized_question(question, metrics, dimensions, time_range)
     needs_clarification = confidence < CONFIDENCE_THRESHOLD
@@ -231,6 +233,16 @@ def _looks_vague(question: str) -> bool:
     return any(token in question for token in vague_tokens) and not any(
         token in question for token in ["销售", "订单", "客单", "退款", "毛利", "复购", "支付"]
     )
+
+
+def _looks_like_complex_metric_question(question: str) -> bool:
+    conjunction_count = sum(question.count(token) for token in ["和", "以及", "并且", "同时", "，", ","])
+    metric_hints = sum(
+        1
+        for token in ["一共", "总共", "总", "平均", "多少", "多少钱", "客单价", "订单数", "销售额"]
+        if token in question
+    )
+    return conjunction_count > 0 and metric_hints >= 2
 
 
 def _known_items(value: Any, known: dict[str, str]) -> list[str]:

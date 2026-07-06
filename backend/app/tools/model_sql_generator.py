@@ -18,10 +18,17 @@ def generate_sql_with_model(
     reuse_plan: SqlReusePlan,
     adapter: ModelAdapter | None = None,
     repair_context: dict[str, Any] | None = None,
+    question_intent: dict[str, Any] | None = None,
 ) -> GeneratedSql:
     """通过统一 ModelAdapter 生成 SQL 文本，但不执行 SQL。"""
     model_adapter = adapter or ModelAdapter()
-    messages = build_sql_generation_messages(question, retrieval_context, reuse_plan, repair_context)
+    messages = build_sql_generation_messages(
+        question,
+        retrieval_context,
+        reuse_plan,
+        repair_context,
+        question_intent=question_intent,
+    )
     response = model_adapter.chat(
         ModelRequest(
             messages=messages,
@@ -61,12 +68,19 @@ def build_sql_generation_messages(
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
     repair_context: dict[str, Any] | None = None,
+    question_intent: dict[str, Any] | None = None,
 ) -> list[ModelMessage]:
     return [
         ModelMessage(role="system", content=_system_prompt()),
         ModelMessage(
             role="user",
-            content=_user_prompt(question, retrieval_context, reuse_plan, repair_context),
+            content=_user_prompt(
+                question,
+                retrieval_context,
+                reuse_plan,
+                repair_context,
+                question_intent=question_intent,
+            ),
         ),
     ]
 
@@ -76,6 +90,7 @@ def build_sql_generation_payload(
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
     repair_context: dict[str, Any] | None = None,
+    question_intent: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     metrics = [
         {
@@ -109,6 +124,7 @@ def build_sql_generation_payload(
     ]
     payload = {
         "question": question,
+        "question_intent": _compact_question_intent(question_intent),
         "reuse_plan": {
             "path_type": reuse_plan.path_type,
             "reuse_type": reuse_plan.reuse_type,
@@ -119,12 +135,39 @@ def build_sql_generation_payload(
         "metrics": metrics,
         "schema_fields": fields,
         "table_relationships": relationships,
+        "metric_semantics": {
+            "sales_amount": {
+                "meaning": "总销售额 / 一共卖了多少钱",
+                "preferred_formula": "SUM(orders.total_amount)",
+                "grain": "order",
+                "notes": [
+                    "orders.total_amount is already an order-level amount.",
+                    "When joining payments, do not multiply order totals by payment rows.",
+                ],
+            },
+            "order_count": {
+                "meaning": "订单数",
+                "preferred_formula": "COUNT(DISTINCT orders.id)",
+                "grain": "order",
+            },
+            "avg_order_value": {
+                "meaning": "客单价 / 平均每单卖了多少钱",
+                "preferred_formula": "SUM(orders.total_amount) / NULLIF(COUNT(DISTINCT orders.id), 0)",
+                "grain": "order",
+                "notes": [
+                    "Do not use AVG(payments.amount) for average order value.",
+                    "If payments is joined, calculate on distinct orders or pre-aggregate payments by order_id first.",
+                ],
+            },
+        },
         "requirements": [
             "只能使用 allowed_tables 和 schema_fields 中出现的字段",
             "跨表查询优先使用 table_relationships 中的高置信关系",
             "不要编造表名、字段名或业务口径",
             "Olist 订单状态 orders.status 没有 paid；已支付口径必须使用 payments.status = 'paid'，并通过 orders.id = payments.order_id 关联",
             "跨表条件必须使用显式 JOIN；如果使用 payments.status 或 payments.amount，SQL 必须包含 JOIN payments ON payments.order_id = orders.id",
+            "同时查询总销售额和平均销售额时，必须分别输出 sales_amount 和 avg_order_value，不能把二者混为一个指标",
+            "如果 JOIN payments 后汇总 orders.total_amount，必须先按 orders.id 去重或先按 payments.order_id 聚合，避免一单多支付导致订单金额重复累计",
             "输出 SQL 后还会经过 Validator 和 Guard",
         ],
     }
@@ -175,9 +218,33 @@ def _user_prompt(
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
     repair_context: dict[str, Any] | None = None,
+    question_intent: dict[str, Any] | None = None,
 ) -> str:
-    payload = build_sql_generation_payload(question, retrieval_context, reuse_plan, repair_context)
+    payload = build_sql_generation_payload(
+        question,
+        retrieval_context,
+        reuse_plan,
+        repair_context,
+        question_intent=question_intent,
+    )
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _compact_question_intent(question_intent: dict[str, Any] | None) -> dict[str, Any]:
+    if not question_intent:
+        return {}
+    allowed_keys = {
+        "original_question",
+        "normalized_question",
+        "metrics",
+        "dimensions",
+        "filters",
+        "time_range",
+        "confidence",
+        "needs_clarification",
+        "source",
+    }
+    return {key: question_intent[key] for key in allowed_keys if key in question_intent}
 
 
 def _loads_json_object(content: str) -> dict[str, Any]:

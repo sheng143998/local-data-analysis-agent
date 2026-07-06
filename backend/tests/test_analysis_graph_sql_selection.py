@@ -595,6 +595,46 @@ def test_verify_generated_sql_intent_rejects_orders_status_paid_filter() -> None
     assert any("payments.status" in warning for warning in verification["warnings"])
 
 
+def test_verify_generated_sql_intent_rejects_duplicate_order_amount_after_payments_join() -> None:
+    verification = _verify_generated_sql_intent(
+        question="2017年卖了多少钱，平均卖了多少钱",
+        retrieval_context=_context_with_payments(),
+        sql=(
+            "SELECT SUM(o.total_amount) AS sales_amount, "
+            "COUNT(DISTINCT o.id) AS order_count, "
+            "ROUND(SUM(o.total_amount) / NULLIF(COUNT(DISTINCT o.id), 0), 2) AS avg_order_value "
+            "FROM orders o JOIN payments p ON p.order_id = o.id "
+            "WHERE p.status = 'paid' AND o.created_at >= DATE '2017-01-01' "
+            "AND o.created_at < DATE '2018-01-01' LIMIT 1"
+        ),
+    )
+
+    assert verification["decision"] == "reject"
+    assert any("重复累计" in warning for warning in verification["warnings"])
+
+
+def test_verify_generated_sql_intent_accepts_deduplicated_order_amount_with_payments_filter() -> None:
+    verification = _verify_generated_sql_intent(
+        question="2017年卖了多少钱，平均卖了多少钱",
+        retrieval_context=_context_with_payments(),
+        sql=(
+            "WITH paid_orders AS ("
+            "SELECT DISTINCT o.id, o.total_amount FROM orders o "
+            "JOIN payments p ON p.order_id = o.id "
+            "WHERE p.status = 'paid' AND o.created_at >= DATE '2017-01-01' "
+            "AND o.created_at < DATE '2018-01-01'"
+            ") "
+            "SELECT SUM(total_amount) AS sales_amount, "
+            "COUNT(DISTINCT id) AS order_count, "
+            "ROUND(SUM(total_amount) / NULLIF(COUNT(DISTINCT id), 0), 2) AS avg_order_value "
+            "FROM paid_orders LIMIT 1"
+        ),
+    )
+
+    assert verification["decision"] == "accept"
+    assert verification["warnings"] == []
+
+
 def _plan(path_type: str, score: float = 0) -> SqlReusePlan:
     return SqlReusePlan(
         path_type=path_type,
@@ -656,5 +696,32 @@ def _context_with_extra_table(table_name: str) -> RetrievalContext:
             ],
             "tables": [*context.tables, table_name],
             "fields": [*context.fields, f"{table_name}.source"],
+        }
+    )
+
+
+def _context_with_payments() -> RetrievalContext:
+    context = _context()
+    return context.model_copy(
+        update={
+            "schema_columns": [
+                *context.schema_columns,
+                SchemaColumnContext(
+                    table_name="payments",
+                    column_name="order_id",
+                    data_type="text",
+                    description="payments.order_id",
+                    business_meaning="支付所属订单",
+                ),
+                SchemaColumnContext(
+                    table_name="payments",
+                    column_name="status",
+                    data_type="text",
+                    description="payments.status",
+                    business_meaning="支付状态",
+                ),
+            ],
+            "tables": [*context.tables, "payments"],
+            "fields": [*context.fields, "payments.order_id", "payments.status"],
         }
     )
