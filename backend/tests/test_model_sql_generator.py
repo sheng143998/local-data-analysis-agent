@@ -136,6 +136,33 @@ def test_generate_sql_with_model_returns_generated_sql() -> None:
     assert adapter.requests[0].response_format == {"type": "json_object"}
 
 
+def test_generate_sql_with_model_does_not_replace_model_sql_with_summary_rule() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"sql":"SELECT SUM(orders.total_amount) AS sales_amount, '
+                'COUNT(DISTINCT orders.id) AS order_count, '
+                'AVG(orders.total_amount) / COUNT(DISTINCT orders.id) AS avg_order_value '
+                "FROM orders WHERE orders.status = 'paid' LIMIT 30\"}"
+            ),
+            provider="local",
+            model="test-model",
+            latency_ms=8,
+        )
+    )
+
+    result = generate_sql_with_model(
+        "当前数据库总销售额、订单数和客单价是多少？",
+        _context(),
+        _plan(),
+        adapter,
+    )
+
+    assert "orders.status = 'paid'" in result.sql
+    assert result.warnings == []
+
+
 def test_generate_sql_with_model_returns_structured_model_error() -> None:
     adapter = FakeAdapter(
         ModelResponse(

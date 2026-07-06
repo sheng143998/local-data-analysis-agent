@@ -5,6 +5,7 @@ from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
+from backend.app.tools.question_intent_parser import ParsedQuestionIntent
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,42 @@ def present_sales_trend_result(
             {"name": "安全校验", "status": "已完成", "time": "1ms"},
             {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
             {"name": "整理结论", "status": "已完成", "time": "1ms"},
+        ],
+    )
+
+
+def present_clarification_response(
+    question: str,
+    intent: ParsedQuestionIntent,
+    latency_ms: int,
+) -> AnalyzeResponse:
+    summary = intent.clarification or "我还不能确定你想查询的具体指标，请确认后我再继续。"
+    return AnalyzeResponse(
+        question=question,
+        path="cold_path",
+        summary=summary,
+        sql="",
+        metrics=[],
+        rows=[],
+        source={
+            "dataset": "Olist 巴西电商公开数据集 + 合成增强数据",
+            "tables": [],
+            "fields": [],
+            "metricDefinition": intent.normalized_question,
+            "range": "等待用户确认",
+            "returnedRows": 0,
+            "queryTime": "0ms",
+            "security": "未生成 SQL，等待用户确认",
+        },
+        trace={
+            "toolCalls": 1,
+            "modelCalls": 1 if intent.source == "llm" else 0,
+            "memoryCandidates": 0,
+            "totalTime": f"{latency_ms}ms",
+        },
+        steps=[
+            {"name": "理解问题", "status": "已完成", "time": f"{latency_ms}ms"},
+            {"name": "等待确认", "status": "已跳过", "time": "--"},
         ],
     )
 
@@ -384,10 +421,10 @@ def _path_type(reuse_plan: SqlReusePlan | None) -> str:
 
 def _template_step_name(reuse_plan: SqlReusePlan | None) -> str:
     if reuse_plan and reuse_plan.memory_hit:
-        return "复用历史 SQL"
+        return "校验并复用历史 SQL"
     if reuse_plan and reuse_plan.path_type == "rewrite_path":
-        return "改写历史 SQL"
-    return "选择 SQL 模板"
+        return "模型改写历史 SQL"
+    return "模型生成 SQL"
 
 
 def _period_label(sql: str) -> str:

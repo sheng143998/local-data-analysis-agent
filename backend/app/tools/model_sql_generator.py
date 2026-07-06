@@ -17,10 +17,11 @@ def generate_sql_with_model(
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
     adapter: ModelAdapter | None = None,
+    repair_context: dict[str, Any] | None = None,
 ) -> GeneratedSql:
     """通过统一 ModelAdapter 生成 SQL 文本，但不执行 SQL。"""
     model_adapter = adapter or ModelAdapter()
-    messages = build_sql_generation_messages(question, retrieval_context, reuse_plan)
+    messages = build_sql_generation_messages(question, retrieval_context, reuse_plan, repair_context)
     response = model_adapter.chat(
         ModelRequest(
             messages=messages,
@@ -39,7 +40,12 @@ def generate_sql_with_model(
         )
 
     parsed = parse_model_sql_response(response)
-    path = "model_rewrite" if reuse_plan.path_type == "rewrite_path" else "model_generate"
+    path = (
+        "model_repair"
+        if repair_context
+        else "model_rewrite" if reuse_plan.path_type == "rewrite_path"
+        else "model_generate"
+    )
     return GeneratedSql(
         path=path,
         sql=parsed["sql"],
@@ -54,12 +60,13 @@ def build_sql_generation_messages(
     question: str,
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
+    repair_context: dict[str, Any] | None = None,
 ) -> list[ModelMessage]:
     return [
         ModelMessage(role="system", content=_system_prompt()),
         ModelMessage(
             role="user",
-            content=_user_prompt(question, retrieval_context, reuse_plan),
+            content=_user_prompt(question, retrieval_context, reuse_plan, repair_context),
         ),
     ]
 
@@ -68,6 +75,7 @@ def build_sql_generation_payload(
     question: str,
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
+    repair_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     metrics = [
         {
@@ -99,7 +107,7 @@ def build_sql_generation_payload(
         }
         for relationship in retrieval_context.table_relationships
     ]
-    return {
+    payload = {
         "question": question,
         "reuse_plan": {
             "path_type": reuse_plan.path_type,
@@ -115,9 +123,20 @@ def build_sql_generation_payload(
             "只能使用 allowed_tables 和 schema_fields 中出现的字段",
             "跨表查询优先使用 table_relationships 中的高置信关系",
             "不要编造表名、字段名或业务口径",
+            "Olist 订单状态 orders.status 没有 paid；已支付口径必须使用 payments.status = 'paid'，并通过 orders.id = payments.order_id 关联",
+            "跨表条件必须使用显式 JOIN；如果使用 payments.status 或 payments.amount，SQL 必须包含 JOIN payments ON payments.order_id = orders.id",
             "输出 SQL 后还会经过 Validator 和 Guard",
         ],
     }
+    if repair_context:
+        payload["repair_context"] = repair_context
+        payload["requirements"].extend(
+            [
+                "这是一次 SQL 修复请求，必须优先修复 repair_context.intent_errors 中列出的问题",
+                "不要重复输出 repair_context.previous_sql 中已被判定不符合意图的错误写法",
+            ]
+        )
+    return payload
 
 
 def parse_model_sql_response(response: ModelResponse) -> dict[str, Any]:
@@ -155,8 +174,9 @@ def _user_prompt(
     question: str,
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
+    repair_context: dict[str, Any] | None = None,
 ) -> str:
-    payload = build_sql_generation_payload(question, retrieval_context, reuse_plan)
+    payload = build_sql_generation_payload(question, retrieval_context, reuse_plan, repair_context)
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 

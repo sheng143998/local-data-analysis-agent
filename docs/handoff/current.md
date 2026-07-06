@@ -52,6 +52,7 @@
 - 已为标准评估报告增加 `run_trace_summary`，并聚合缺失表是否进入召回上下文，帮助区分 schema 召回不足和 SQL 生成不足。
 - 已增强 Schema 主题表召回，用户、流量、优惠券相关问题会把 `users`、`traffic_events`、`coupons`、`coupon_usages` 纳入上下文。
 - 已新增 SQL 关键上下文表覆盖检查，能诊断已召回非默认业务表是否进入最终 SQL；模型生成开启时可在 rewrite/确定性结果漏表后转向模型 cold path。
+- 已新增专用意图识别模型适配，`question_intent_parser` 支持通过 `INTENT_*` 配置使用独立语义模型；本机 `backend/.env` 已创建占位项，真实密钥不提交。
 
 ## 最近完成模块
 
@@ -927,6 +928,19 @@
   - `npm run frontend:build` 已通过
   - `npm run test:e2e` 已通过，1 个 `StarletteDeprecationWarning`
 
+### 58. 专用意图识别模型适配
+
+- commit: `接入专用意图识别模型配置`，已推送到 `origin/main`。
+- 内容：
+  - 新增 `INTENT_PARSER_ENABLED` 和 `INTENT_MODEL_*` 配置，允许意图识别模型和 SQL 生成模型分开部署。
+  - `question_intent_parser` 优先使用专用意图模型配置；未配置时回退到 `MODEL_*`，模型失败时保留本地启发式兜底。
+  - 移除上一轮针对单个口语 case 的意图维度清洗和核心汇总 SQL 强制覆盖。
+  - `backend/.env.example` 增加意图模型配置示例。
+  - 本机 `backend/.env` 已创建 `INTENT_*` 占位配置，真实值由用户自行填写且不提交。
+  - 新增计划文档和模块完成文档：`docs/plans/2026-07-06-intent-model-adapter.md`、`docs/modules/2026-07-06-intent-model-adapter.md`。
+- 验证：
+  - `.venv\Scripts\python -m pytest backend\tests\test_question_intent_parser.py backend\tests\test_model_sql_generator.py backend\tests\test_analysis_graph_sql_selection.py`，38 passed
+
 ## 当前架构边界
 
 - React 只通过 `frontend/src/api/` 调 FastAPI。
@@ -939,7 +953,7 @@
 
 ## 当前正在做
 
-“SQL 关键上下文表覆盖检查” 模块已完成代码、文档、完整验证、commit 和 push。该模块不新增固定 SQL 模板，只增加最终 SQL 与召回上下文之间的覆盖诊断和模型开启时的转向能力。
+“专用意图识别模型适配” 模块已完成代码、计划文档、模块文档、focused tests、commit 和 push；本机 `backend/.env` 已创建 `INTENT_*` 占位配置，但该文件不提交。
 
 ## 下一步建议
 
