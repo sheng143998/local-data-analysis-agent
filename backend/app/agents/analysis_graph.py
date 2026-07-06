@@ -43,6 +43,7 @@ class AnalysisGraphState(TypedDict, total=False):
     question: str
     original_question: str
     question_intent: dict[str, Any]
+    node_timings: dict[str, int]
     started: float
     retrieval_context: RetrievalContext
     metric_names: list[str]
@@ -120,6 +121,7 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
             "question": effective_question,
             "original_question": question,
             "question_intent": intent.model_dump(),
+            "node_timings": {"intent_parse": latency_ms},
             "started": started,
         }
     )
@@ -134,17 +136,33 @@ def _analysis_graph():
     return _build_analysis_graph()
 
 
+def _add_node_timing(state: AnalysisGraphState, node_name: str, started: float) -> dict[str, int]:
+    timings = dict(state.get("node_timings", {}))
+    timings[node_name] = int((perf_counter() - started) * 1000)
+    return timings
+
+
+def _slowest_node(timings: dict[str, int]) -> dict[str, Any]:
+    if not timings:
+        return {}
+    name, latency_ms = max(timings.items(), key=lambda item: item[1])
+    return {"name": name, "latency_ms": latency_ms}
+
+
 def _retrieve_context_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     question = state["question"]
     retrieval_context = build_retrieval_context(question)
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     return {
         "retrieval_context": retrieval_context,
         "metric_names": metric_names,
+        "node_timings": _add_node_timing(state, "context_retrieval", started),
     }
 
 
 def _plan_memory_reuse_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     question = state["question"]
     retrieval_context = state["retrieval_context"]
     metric_names = state["metric_names"]
@@ -157,6 +175,7 @@ def _plan_memory_reuse_node(state: AnalysisGraphState) -> AnalysisGraphState:
     return {
         "memory_candidates": memory_candidates,
         "reuse_plan": reuse_plan,
+        "node_timings": _add_node_timing(state, "memory_retrieval_and_plan", started),
     }
 
 
@@ -195,6 +214,7 @@ def _route_execution_result(state: AnalysisGraphState) -> str:
 
 
 def _verify_memory_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     reuse_plan = state["reuse_plan"]
     selected_sql = reuse_plan.selected_sql or ""
     verification = _verify_memory_sql(
@@ -212,6 +232,7 @@ def _verify_memory_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
                 warnings=verification["warnings"],
             ),
             "selected_sql": selected_sql,
+            "node_timings": _add_node_timing(state, "memory_sql_verification", started),
         }
 
     rewrite_plan = reuse_plan.model_copy(
@@ -225,6 +246,7 @@ def _verify_memory_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     return {
         "memory_verification": verification,
         "reuse_plan": rewrite_plan,
+        "node_timings": _add_node_timing(state, "memory_sql_verification", started),
     }
 
 
@@ -256,10 +278,11 @@ def _verify_memory_sql(
 
 
 def _generate_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     question = state["question"]
     retrieval_context = state["retrieval_context"]
     reuse_plan = state["reuse_plan"]
-    generated_sql = _select_generated_sql(
+    generated_sql = _select_generated_sql_compat(
         question=question,
         retrieval_context=retrieval_context,
         reuse_plan=reuse_plan,
@@ -274,13 +297,18 @@ def _generate_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         "reuse_plan": reuse_plan,
         "repair_attempts": 0,
         "execution_repair_attempts": 0,
+        "node_timings": _add_node_timing(state, "sql_generation", started),
     }
 
 
 def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     generated_sql = state["generated_sql"]
     if generated_sql.path == "memory_reuse_verified":
-        return {"sql_intent_verification": {"decision": "accept", "warnings": []}}
+        return {
+            "sql_intent_verification": {"decision": "accept", "warnings": []},
+            "node_timings": _add_node_timing(state, "sql_intent_validation", started),
+        }
 
     verification = _verify_generated_sql_intent(
         question=state["question"],
@@ -295,6 +323,7 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
     updates: AnalysisGraphState = {
         "sql_intent_verification": verification,
         "generated_sql": generated_sql.model_copy(update={"warnings": warnings}),
+        "node_timings": _add_node_timing(state, "sql_intent_validation", started),
     }
     if verification["decision"] == "reject" and state.get("repair_attempts", 0) >= 1:
         updates["generated_sql"] = generated_sql.model_copy(
@@ -309,6 +338,7 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
 
 
 def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     generated_sql = state["generated_sql"]
     verification = state.get("sql_intent_verification", {})
     execution = state.get("execution")
@@ -333,7 +363,7 @@ def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
             "guard_errors": guard.errors if guard else [],
             "user_summary": execution.user_error_message or "",
         }
-    repaired_sql = _select_generated_sql(
+    repaired_sql = _select_generated_sql_compat(
         question=state["question"],
         retrieval_context=state["retrieval_context"],
         reuse_plan=state["reuse_plan"],
@@ -351,10 +381,12 @@ def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
             if execution and execution.status in {"error", "blocked"}
             else state.get("execution_repair_attempts", 0)
         ),
+        "node_timings": _add_node_timing(state, "sql_repair", started),
     }
 
 
 def _guard_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     selected_sql = state["selected_sql"]
     if not selected_sql.strip():
         generated_sql = state.get("generated_sql")
@@ -364,23 +396,27 @@ def _guard_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
                 allowed=False,
                 errors=errors,
                 warnings=state.get("memory_verification", {}).get("warnings", []),
-            )
+            ),
+            "node_timings": _add_node_timing(state, "sql_guard", started),
         }
     guard = guard_sql(selected_sql, max_rows=30)
-    return {"guard": guard}
+    return {"guard": guard, "node_timings": _add_node_timing(state, "sql_guard", started)}
 
 
 def _execute_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     guard = state["guard"]
     execution = execute_guarded_sql(guard)
     latency_ms = int((perf_counter() - state["started"]) * 1000)
     return {
         "execution": execution,
         "latency_ms": latency_ms,
+        "node_timings": _add_node_timing(state, "sql_execution", started),
     }
 
 
 def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     execution = state["execution"]
     guard = state["guard"]
     selected_sql = state["selected_sql"]
@@ -402,10 +438,14 @@ def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
             latency_ms=execution.latency_ms,
         )
         updated_memory_id = updated_memory.id
-    return {"updated_memory_id": updated_memory_id}
+    return {
+        "updated_memory_id": updated_memory_id,
+        "node_timings": _add_node_timing(state, "memory_update", started),
+    }
 
 
 def _present_result_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    started = perf_counter()
     guard = state["guard"]
     execution = state["execution"]
     presented_execution = (
@@ -423,7 +463,10 @@ def _present_result_node(state: AnalysisGraphState) -> AnalysisGraphState:
         retrieval_context=state["retrieval_context"],
         reuse_plan=state["reuse_plan"],
     )
-    return {"response": response}
+    return {
+        "response": response,
+        "node_timings": _add_node_timing(state, "present_result", started),
+    }
 
 
 def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
@@ -434,7 +477,8 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
     generated_sql = state["generated_sql"]
     selected_sql = state["selected_sql"]
     _log_analysis_run(
-        question=state["question"],
+        question=state.get("original_question", state["question"]),
+        rewritten_question=state["question"],
         final_sql=guard.final_sql or selected_sql,
         guard_status="allowed" if guard.allowed else "blocked",
         execution_status=execution.status,
@@ -459,6 +503,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
         repair_attempts=state.get("repair_attempts", 0),
         guard_warnings=guard.warnings,
         guard_errors=guard.errors,
+        node_timings=state.get("node_timings", {}),
     )
     return {}
 
@@ -466,6 +511,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
 def _log_analysis_run(
     *,
     question: str,
+    rewritten_question: str | None,
     final_sql: str,
     guard_status: str,
     execution_status: str,
@@ -490,10 +536,12 @@ def _log_analysis_run(
     repair_attempts: int,
     guard_warnings: list[str],
     guard_errors: list[str],
+    node_timings: dict[str, int],
 ) -> None:
     logger = QueryRunLogger()
     run = logger.log_run(
         user_question=question,
+        rewritten_question=rewritten_question,
         generated_sql=generated_sql_text,
         final_sql=final_sql,
         guard_status=guard_status,
@@ -510,6 +558,7 @@ def _log_analysis_run(
         input_payload={"question": question},
         output_payload={"candidate_count": memory_candidate_count},
         status="success",
+        latency_ms=node_timings.get("memory_retrieval_and_plan", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -522,6 +571,7 @@ def _log_analysis_run(
             "score": reuse_plan.score,
         },
         status="success",
+        latency_ms=node_timings.get("memory_retrieval_and_plan", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -536,6 +586,7 @@ def _log_analysis_run(
             "rerank_diagnostics": rerank_diagnostics,
         },
         status="success",
+        latency_ms=node_timings.get("context_retrieval", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -558,6 +609,7 @@ def _log_analysis_run(
             ),
         },
         status="success",
+        latency_ms=node_timings.get("sql_generation", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -571,6 +623,7 @@ def _log_analysis_run(
             "errors": guard_errors[:5],
         },
         status="success" if guard_status == "allowed" else "blocked",
+        latency_ms=node_timings.get("sql_guard", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -578,6 +631,7 @@ def _log_analysis_run(
         input_payload={"guard_status": guard_status},
         output_payload={"execution_status": execution_status, "row_count": row_count},
         status=execution_status,
+        latency_ms=node_timings.get("sql_execution", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -585,6 +639,7 @@ def _log_analysis_run(
         input_payload={"row_count": row_count},
         output_payload={"response_status": "success" if not error_message else "error"},
         status="success" if not error_message else "error",
+        latency_ms=node_timings.get("present_result", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,
@@ -592,6 +647,19 @@ def _log_analysis_run(
         input_payload={"memory_hit": memory_hit},
         output_payload={"updated_memory_id": str(updated_memory_id) if updated_memory_id else None},
         status="success" if updated_memory_id else "skipped",
+        latency_ms=node_timings.get("memory_update", 0),
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="analysis_graph.pipeline_timings",
+        input_payload={"question": question},
+        output_payload={
+            "node_timings_ms": node_timings,
+            "total_latency_ms": latency_ms,
+            "slowest_node": _slowest_node(node_timings),
+        },
+        status="success",
+        latency_ms=latency_ms,
     )
 
 
@@ -631,6 +699,19 @@ def _select_generated_sql(
         )
 
     return model_result.model_copy(update={"warnings": warnings})
+
+
+def _select_generated_sql_compat(**kwargs) -> GeneratedSql:
+    try:
+        return _select_generated_sql(**kwargs)
+    except TypeError as exc:
+        if "question_intent" not in str(exc):
+            raise
+        fallback_kwargs = dict(kwargs)
+        question_intent = fallback_kwargs.pop("question_intent", None)
+        if isinstance(question_intent, dict) and question_intent.get("original_question"):
+            fallback_kwargs["question"] = str(question_intent["original_question"])
+        return _select_generated_sql(**fallback_kwargs)
 
 
 def _verify_generated_sql_intent(

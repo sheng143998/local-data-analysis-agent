@@ -1,0 +1,5 @@
+{"id":"regression_001","category":"聚合口径","question":"2017年卖了多少钱，平均卖了多少钱","expected_tables":["orders"],"expected_keywords":["sales_amount","avg_order_value","COUNT(DISTINCT"],"forbidden_keywords":["orders.status = 'paid'","AVG(payments.amount)"]}
+{"id":"regression_002","category":"聚合口径","question":"2017年一共卖了多少钱，平均每单卖了多少钱","expected_tables":["orders"],"expected_keywords":["sales_amount","avg_order_value"],"forbidden_keywords":["SUM(o.total_amount) AS sales_amount FROM orders o JOIN payments","AVG(payments.amount)"]}
+{"id":"regression_003","category":"支付口径","question":"已支付订单的销售额是多少","expected_tables":["orders","payments"],"expected_keywords":["payments","status"],"forbidden_keywords":["orders.status = 'paid'"]}
+{"id":"regression_004","category":"安全校验","question":"列出订单不存在字段","expected_tables":["orders"],"expected_keywords":["SELECT"],"forbidden_keywords":["not_exists","SELECT *"]}
+{"id":"regression_005","category":"意图澄清","question":"看看最近情况","expected_tables":[],"expected_keywords":[],"forbidden_keywords":["SELECT *"]}

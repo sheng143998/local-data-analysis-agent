@@ -18,6 +18,7 @@ from backend.app.main import app
 
 
 DATASET_PATH = ROOT / "eval" / "datasets" / "standard_questions.jsonl"
+REGRESSION_DATASET_PATH = ROOT / "eval" / "datasets" / "regression_questions.jsonl"
 REPORT_PATH = ROOT / "eval" / "reports" / "latest_eval_report.json"
 
 
@@ -28,6 +29,7 @@ class EvalCase:
     question: str
     expected_tables: list[str]
     expected_keywords: list[str]
+    forbidden_keywords: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -46,8 +48,10 @@ class EvalCaseResult:
     expected_keyword_hits: list[str]
     missing_tables: list[str]
     missing_keywords: list[str]
+    forbidden_keyword_hits: list[str]
     table_match: bool
     keyword_match: bool
+    forbidden_match: bool
     strict_ok: bool
     returned_rows: int
     run_id: str | None = None
@@ -72,9 +76,14 @@ def load_cases(path: Path = DATASET_PATH) -> list[EvalCase]:
                 question=payload["question"],
                 expected_tables=list(payload.get("expected_tables") or []),
                 expected_keywords=list(payload.get("expected_keywords") or []),
+                forbidden_keywords=list(payload.get("forbidden_keywords") or []),
             )
         )
     return cases
+
+
+def load_regression_cases(path: Path = REGRESSION_DATASET_PATH) -> list[EvalCase]:
+    return load_cases(path)
 
 
 def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResult]:
@@ -95,12 +104,18 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             missing_keywords = [
                 keyword for keyword in case.expected_keywords if keyword not in keyword_hits
             ]
+            forbidden_keyword_hits = [
+                keyword
+                for keyword in case.forbidden_keywords
+                if keyword.lower() in sql.lower()
+            ]
             has_sql = bool(sql.strip())
             guard_passed = "SQL Guard" in str(source.get("security") or "")
             ok = status_code == 200 and has_sql and guard_passed
             table_match = len(missing_tables) == 0
             keyword_match = len(missing_keywords) == 0
-            strict_ok = ok and table_match and keyword_match
+            forbidden_match = len(forbidden_keyword_hits) == 0
+            strict_ok = ok and table_match and keyword_match and forbidden_match
             results.append(
                 EvalCaseResult(
                     id=case.id,
@@ -117,8 +132,10 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     expected_keyword_hits=keyword_hits,
                     missing_tables=missing_tables,
                     missing_keywords=missing_keywords,
+                    forbidden_keyword_hits=forbidden_keyword_hits,
                     table_match=table_match,
                     keyword_match=keyword_match,
+                    forbidden_match=forbidden_match,
                     strict_ok=strict_ok,
                     returned_rows=int(source.get("returnedRows") or 0),
                     run_id=run_id,
@@ -144,8 +161,10 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     expected_keyword_hits=[],
                     missing_tables=case.expected_tables,
                     missing_keywords=case.expected_keywords,
+                    forbidden_keyword_hits=[],
                     table_match=False,
                     keyword_match=False,
+                    forbidden_match=False,
                     strict_ok=False,
                     returned_rows=0,
                     run_id=None,
@@ -166,6 +185,7 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
     reuse_success_count = sum(1 for result in results if result.ok and result.path == "fast_path")
     table_match_count = sum(1 for result in results if result.table_match)
     keyword_match_count = sum(1 for result in results if result.keyword_match)
+    forbidden_match_count = sum(1 for result in results if result.forbidden_match)
     path_counts: dict[str, int] = {}
     for result in results:
         path_counts[result.path] = path_counts.get(result.path, 0) + 1
@@ -184,6 +204,7 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         "sql_generation_success_rate": _rate(sql_success_count, total),
         "table_match_rate": _rate(table_match_count, total),
         "keyword_match_rate": _rate(keyword_match_count, total),
+        "forbidden_match_rate": _rate(forbidden_match_count, total),
         "memory_hit_rate": _rate(memory_hit_count, total),
         "reuse_success_rate": _rate(reuse_success_count, total),
         "average_latency_ms": round(
@@ -288,6 +309,7 @@ def _build_run_trace_summary(run_detail: dict[str, Any]) -> dict[str, Any]:
     generation = _output_payload(tools, "analysis_graph.select_generated_sql")
     guard = _output_payload(tools, "sql_validation_tools.guard_sql")
     memory_plan = _output_payload(tools, "sql_memory_tools.plan_sql_reuse")
+    timings = _output_payload(tools, "analysis_graph.pipeline_timings")
     context_table_coverage = generation.get("context_table_coverage")
     summary = {
         "context_tables": _string_list(context.get("tables")),
@@ -307,6 +329,9 @@ def _build_run_trace_summary(run_detail: dict[str, Any]) -> dict[str, Any]:
         "memory_reuse_type": str(memory_plan.get("reuse_type") or ""),
         "memory_hit": bool(memory_plan.get("memory_hit") or False),
         "memory_score": memory_plan.get("score"),
+        "node_timings_ms": timings.get("node_timings_ms") if isinstance(timings.get("node_timings_ms"), dict) else {},
+        "total_latency_ms": _safe_int(timings.get("total_latency_ms")),
+        "slowest_node": timings.get("slowest_node") if isinstance(timings.get("slowest_node"), dict) else {},
     }
     if isinstance(context_table_coverage, dict) and context_table_coverage:
         summary["context_table_coverage"] = context_table_coverage
@@ -323,6 +348,7 @@ def _output_payload(tools: dict[str, Any], tool_name: str) -> dict[str, Any]:
 
 def _assertion_failure_summary(results: list[EvalCaseResult]) -> dict[str, Any]:
     missing_table_counts: dict[str, int] = {}
+    forbidden_keyword_counts: dict[str, int] = {}
     category_counts: dict[str, int] = {}
     path_counts: dict[str, int] = {}
     context_status_counts: dict[tuple[str, str], int] = {}
@@ -336,10 +362,13 @@ def _assertion_failure_summary(results: list[EvalCaseResult]) -> dict[str, Any]:
             status = "present_in_context" if table in context_tables else "missing_from_context"
             key = (table, status)
             context_status_counts[key] = context_status_counts.get(key, 0) + 1
+        for keyword in result.forbidden_keyword_hits:
+            forbidden_keyword_counts[keyword] = forbidden_keyword_counts.get(keyword, 0) + 1
 
     return {
         "total": len(results),
         "by_missing_table": _sorted_count_items(missing_table_counts),
+        "by_forbidden_keyword": _sorted_count_items(forbidden_keyword_counts),
         "by_missing_table_context_status": _sorted_context_status_items(context_status_counts),
         "by_category": _sorted_count_items(category_counts),
         "by_path": _sorted_count_items(path_counts),

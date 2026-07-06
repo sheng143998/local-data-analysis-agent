@@ -35,6 +35,7 @@ class QueryRunRecord(BaseModel):
 
 class QueryRunDetail(QueryRunRecord):
     tool_calls: list[ToolCallRecord] = Field(default_factory=list)
+    debug_summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class QueryRunCreate(BaseModel):

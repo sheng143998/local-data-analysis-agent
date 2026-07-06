@@ -5,6 +5,7 @@ from eval.scripts.run_eval import (
     _fetch_run_trace_summary,
     _find_latest_run_id,
     load_cases,
+    load_regression_cases,
     run_cases,
     summarize_results,
 )
@@ -16,6 +17,15 @@ def test_load_standard_questions_contains_twenty_cases() -> None:
     assert len(cases) == 20
     assert cases[0].id == "basic_001"
     assert cases[-1].id == "marketing_020"
+
+
+def test_load_regression_questions_contains_forbidden_assertions() -> None:
+    cases = load_regression_cases()
+
+    assert len(cases) == 5
+    assert cases[0].id == "regression_001"
+    assert "avg_order_value" in cases[0].expected_keywords
+    assert "AVG(payments.amount)" in cases[0].forbidden_keywords
 
 
 def test_run_cases_and_summary_collect_eval_metrics() -> None:
@@ -48,7 +58,7 @@ def test_run_cases_and_summary_collect_eval_metrics() -> None:
             "_eval_run_detail_path": "/api/runs/11111111-1111-1111-1111-111111111111",
             "_eval_run_trace_summary": {
                 "context_tables": ["orders"],
-                "generation_path": "template_render",
+                "generation_path": "model_generate",
             },
         }
 
@@ -63,6 +73,7 @@ def test_run_cases_and_summary_collect_eval_metrics() -> None:
     assert report["sql_generation_success_rate"] == 0.5
     assert report["table_match_rate"] == 0.5
     assert report["keyword_match_rate"] == 0.5
+    assert report["forbidden_match_rate"] == 1
     assert report["memory_hit_rate"] == 0.5
     assert report["reuse_success_rate"] == 0.5
     assert report["path_counts"] == {"fast_path": 1, "": 1}
@@ -109,6 +120,7 @@ def test_summary_separates_execution_success_from_assertion_match() -> None:
     assert report["assertion_failure_summary"] == {
         "total": 1,
         "by_missing_table": [{"name": "coupons", "count": 1}],
+        "by_forbidden_keyword": [],
         "by_missing_table_context_status": [
             {"name": "coupons", "missing_from_context": 1, "present_in_context": 0}
         ],
@@ -116,6 +128,43 @@ def test_summary_separates_execution_success_from_assertion_match() -> None:
         "by_path": [{"name": "cold_path", "count": 1}],
         "case_ids": ["case_1"],
     }
+
+
+def test_summary_reports_forbidden_keyword_regression() -> None:
+    cases = [
+        EvalCase(
+            id="regression_1",
+            category="聚合口径",
+            question="2017年卖了多少钱，平均卖了多少钱",
+            expected_tables=["orders", "payments"],
+            expected_keywords=["sales_amount"],
+            forbidden_keywords=["SUM(o.total_amount) AS sales_amount FROM orders o JOIN payments"],
+        )
+    ]
+
+    def fake_analyze(question: str):
+        return 200, {
+            "path": "model_generate",
+            "sql": (
+                "SELECT SUM(o.total_amount) AS sales_amount FROM orders o "
+                "JOIN payments p ON p.order_id = o.id"
+            ),
+            "source": {"security": "只读 SELECT，已通过 SQL Guard", "returnedRows": 1},
+            "trace": {},
+            "_eval_run_trace_summary": {"context_tables": ["orders", "payments"]},
+        }
+
+    report = summarize_results(run_cases(cases, fake_analyze))
+
+    assert report["success_count"] == 1
+    assert report["strict_success_count"] == 0
+    assert report["forbidden_match_rate"] == 0
+    assert report["assertion_failures"][0]["forbidden_keyword_hits"] == [
+        "SUM(o.total_amount) AS sales_amount FROM orders o JOIN payments"
+    ]
+    assert report["assertion_failure_summary"]["by_forbidden_keyword"] == [
+        {"name": "SUM(o.total_amount) AS sales_amount FROM orders o JOIN payments", "count": 1}
+    ]
 
 
 def test_eval_run_trace_extracts_detail_path() -> None:
@@ -198,6 +247,14 @@ def test_build_run_trace_summary_from_tool_calls() -> None:
                         "score": 0,
                     },
                 },
+                {
+                    "tool_name": "analysis_graph.pipeline_timings",
+                    "output_payload": {
+                        "node_timings_ms": {"sql_generation": 12},
+                        "total_latency_ms": 30,
+                        "slowest_node": {"name": "sql_generation", "latency_ms": 12},
+                    },
+                },
             ]
         }
     )
@@ -220,6 +277,9 @@ def test_build_run_trace_summary_from_tool_calls() -> None:
         "memory_reuse_type": "regenerate",
         "memory_hit": False,
         "memory_score": 0,
+        "node_timings_ms": {"sql_generation": 12},
+        "total_latency_ms": 30,
+        "slowest_node": {"name": "sql_generation", "latency_ms": 12},
     }
 
 
@@ -299,6 +359,7 @@ def test_summary_groups_assertion_failures_by_table_category_and_path() -> None:
             {"name": "traffic_events", "count": 2},
             {"name": "users", "count": 1},
         ],
+        "by_forbidden_keyword": [],
         "by_missing_table_context_status": [
             {"name": "traffic_events", "missing_from_context": 2, "present_in_context": 0},
             {"name": "users", "missing_from_context": 0, "present_in_context": 1},
