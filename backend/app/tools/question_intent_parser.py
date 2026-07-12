@@ -51,6 +51,8 @@ class ParsedQuestionIntent(BaseModel):
     normalized_question: str
     metrics: list[str] = Field(default_factory=list)
     dimensions: list[str] = Field(default_factory=list)
+    semantic_metrics: list[str] = Field(default_factory=list)
+    semantic_dimensions: list[str] = Field(default_factory=list)
     filters: list[str] = Field(default_factory=list)
     time_range: str = ""
     confidence: float = 0
@@ -116,14 +118,7 @@ def _parse_model_intent(question: str, response: ModelResponse) -> ParsedQuestio
         labels=METRIC_LABELS,
         aliases=METRIC_CONCEPT_ALIASES,
     )
-    needs_clarification = (
-        bool(payload.get("needs_clarification"))
-        or confidence < CONFIDENCE_THRESHOLD
-        or bool(unknown_metric_candidates)
-    )
     clarification = str(payload.get("clarification") or "").strip()
-    if unknown_metric_candidates:
-        clarification = f"当前项目尚未定义“{unknown_metric_candidates[0]}”的业务口径。请说明要使用的计算公式或选择已有指标。"
     if not normalized_question:
         normalized_question = _build_normalized_question(question, metrics, dimensions, str(payload.get("time_range") or ""))
     return ParsedQuestionIntent(
@@ -131,13 +126,16 @@ def _parse_model_intent(question: str, response: ModelResponse) -> ParsedQuestio
         normalized_question=normalized_question or question,
         metrics=metrics,
         dimensions=dimensions,
+        semantic_metrics=metric_candidates,
+        semantic_dimensions=dimension_candidates,
         filters=[str(item) for item in payload.get("filters") or [] if item],
         time_range=str(payload.get("time_range") or ""),
         confidence=confidence,
-        needs_clarification=needs_clarification,
+        # 高置信模型候选可以进入后续检索与 SQL 生成；只有模型明确要求或置信度不足才澄清。
+        needs_clarification=bool(payload.get("needs_clarification")) or confidence < CONFIDENCE_THRESHOLD,
         clarification=clarification,
         source="llm",
-        warnings=[f"未映射的指标候选：{candidate}" for candidate in unknown_metric_candidates],
+        warnings=[f"模型候选未映射到预置指标：{candidate}" for candidate in unknown_metric_candidates],
     )
 
 
@@ -399,8 +397,8 @@ def _user_prompt(question: str, conversation_context: str = "") -> str:
             "normalized_question": "把口语表达改写成清晰业务问题",
             "metrics": "数组，可填标准 ID 或业务概念；不确定时留空",
             "dimensions": "数组，可填标准 ID 或业务概念；不确定时留空",
-            "metric_candidates": "数组，保留用户实际表达或模型理解的自然语言指标候选",
-            "dimension_candidates": "数组，保留用户实际表达或模型理解的自然语言维度候选",
+            "metric_candidates": "数组，必须保留模型理解的自然语言指标候选；即使该概念不在 business_concepts 中也要填写",
+            "dimension_candidates": "数组，必须保留模型理解的自然语言维度候选；即使该概念不在 business_concepts 中也要填写",
             "filters": "数组，自然语言过滤条件",
             "time_range": "自然语言时间范围，无法判断则为空字符串",
             "confidence": "0 到 1",

@@ -120,7 +120,7 @@ def test_parse_question_intent_heuristic_fallback_recognizes_order_total() -> No
     assert intent.metrics == ["order_count"]
 
 
-def test_parse_question_intent_clarifies_unknown_model_metric_candidate() -> None:
+def test_parse_question_intent_keeps_high_confidence_unknown_model_metric_candidate() -> None:
     adapter = FakeAdapter(
         ModelResponse(
             ok=True,
@@ -138,9 +138,33 @@ def test_parse_question_intent_clarifies_unknown_model_metric_candidate() -> Non
 
     intent = parse_question_intent("物流及时率是多少？", adapter=adapter, model_enabled=True)
 
-    assert intent.needs_clarification is True
-    assert "尚未定义" in intent.clarification
-    assert "未映射的指标候选：物流及时率" in intent.warnings
+    assert intent.needs_clarification is False
+    assert intent.metrics == []
+    assert intent.semantic_metrics == ["物流及时率"]
+    assert "模型候选未映射到预置指标：物流及时率" in intent.warnings
+
+
+def test_parse_question_intent_keeps_user_total_candidate_for_sql_generation() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"查询累计用户总数",'
+                '"metrics":[],"metric_candidates":["用户总数"],'
+                '"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.92,"needs_clarification":false}'
+            ),
+            provider="cloud",
+            model="semantic-model",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("用户总数是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is False
+    assert intent.metrics == []
+    assert intent.semantic_metrics == ["用户总数"]
 
 
 def test_parse_question_intent_heuristic_fallback_when_model_fails() -> None:

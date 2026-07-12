@@ -250,6 +250,8 @@ def _compact_question_intent(question_intent: dict[str, Any] | None) -> dict[str
         "normalized_question",
         "metrics",
         "dimensions",
+        "semantic_metrics",
+        "semantic_dimensions",
         "filters",
         "time_range",
         "confidence",

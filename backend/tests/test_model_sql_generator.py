@@ -94,6 +94,8 @@ def test_build_sql_generation_payload_includes_intent_and_metric_semantics() -> 
             "normalized_question": "查询2017年总销售额和客单价",
             "metrics": ["sales_amount", "avg_order_value"],
             "dimensions": [],
+            "semantic_metrics": ["累计交易金额", "平均订单金额"],
+            "semantic_dimensions": [],
             "time_range": "2017年",
             "confidence": 0.9,
             "needs_clarification": False,
@@ -108,6 +110,7 @@ def test_build_sql_generation_payload_includes_intent_and_metric_semantics() -> 
     )
 
     assert payload["question_intent"]["metrics"] == ["sales_amount", "avg_order_value"]
+    assert payload["question_intent"]["semantic_metrics"] == ["累计交易金额", "平均订单金额"]
     assert payload["question_intent"]["time_range"] == "2017年"
     assert payload["question_intent"]["query_spec"]["required_metric_tokens"] == ["total_amount", "avg_order_value"]
     assert "clarification" not in payload["question_intent"]
