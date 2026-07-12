@@ -51,7 +51,7 @@ export type ConversationMessage = {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
-  response?: { summary?: string } | null;
+  response?: { summary?: string; failure?: boolean } | null;
 };
 
 export type ConversationSummary = {

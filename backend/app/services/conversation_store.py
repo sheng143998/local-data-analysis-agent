@@ -4,6 +4,7 @@ from typing import Protocol
 from uuid import UUID
 
 from backend.app.core.config import settings
+from backend.app.db.repositories.conversation_repository import ConversationRepository
 from backend.app.schemas.conversation import ConversationState
 
 
@@ -11,6 +12,7 @@ class ConversationStore(Protocol):
     def get(self, conversation_id: UUID) -> ConversationState | None: ...
     def save(self, state: ConversationState) -> None: ...
     def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]: ...
+    def claim_development_conversations(self, owner_id: UUID) -> int: ...
 
 
 class InMemoryConversationStore:
@@ -35,6 +37,14 @@ class InMemoryConversationStore:
             reverse=True,
         )[:limit]
 
+    def claim_development_conversations(self, owner_id: UUID) -> int:
+        claimed = 0
+        for conversation_id, (state, expires_at) in list(self._items.items()):
+            if state.owner_id is None:
+                self._items[conversation_id] = (state.model_copy(update={"owner_id": owner_id}), expires_at)
+                claimed += 1
+        return claimed
+
     def _expires_at(self) -> datetime:
         return datetime.now(timezone.utc) + timedelta(hours=settings.conversation_retention_hours)
 
@@ -46,29 +56,45 @@ class InMemoryConversationStore:
 
 
 class RedisConversationStore:
-    def __init__(self, redis_client) -> None:
+    def __init__(self, redis_client, repository: ConversationRepository | None = None) -> None:
         self._redis = redis_client
+        self._repository = repository or ConversationRepository()
 
     def get(self, conversation_id: UUID) -> ConversationState | None:
-        payload = self._redis.get(self._key(conversation_id))
-        if not payload:
-            return None
-        return ConversationState.model_validate_json(payload)
+        # 持久化副本优先，确保管理员迁移归属后不会读到 Redis 的旧 owner。
+        persisted = self._repository.get(conversation_id)
+        if persisted is not None:
+            return persisted
+        try:
+            payload = self._redis.get(self._key(conversation_id))
+        except Exception:  # noqa: BLE001 - Redis 是加速层，故障时必须降级到持久化副本
+            payload = None
+        if payload:
+            return ConversationState.model_validate_json(payload)
+        return None
 
     def save(self, state: ConversationState) -> None:
+        # 数据库副本用于 Redis 停止、重启或过期时的会话恢复，保留相同的三天生命周期。
+        self._repository.save(state)
         encoded = state.model_dump_json()
         ttl = settings.conversation_retention_hours * 60 * 60
         owner_key = self._owner_key(state.owner_id)
-        pipeline = self._redis.pipeline(transaction=False)
-        pipeline.set(self._key(state.id), encoded, ex=ttl)
-        pipeline.zadd(owner_key, {str(state.id): state.updated_at.timestamp()})
-        pipeline.expire(owner_key, ttl)
-        pipeline.execute()
+        try:
+            pipeline = self._redis.pipeline(transaction=False)
+            pipeline.set(self._key(state.id), encoded, ex=ttl)
+            pipeline.zadd(owner_key, {str(state.id): state.updated_at.timestamp()})
+            pipeline.expire(owner_key, ttl)
+            pipeline.execute()
+        except Exception:
+            # Redis 不可用时数据库副本已保存，会话请求不能因此丢失。
+            return
 
     def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]:
-        ids = self._redis.zrevrange(self._owner_key(owner_id), 0, max(limit - 1, 0))
-        states = [self.get(UUID(value)) for value in ids]
-        return [state for state in states if state is not None and state.owner_id == owner_id]
+        # 列表以数据库副本为准，避免 Redis 失效后历史列表突然变空。
+        return self._repository.list_for_owner(owner_id, limit)
+
+    def claim_development_conversations(self, owner_id: UUID) -> int:
+        return self._repository.claim_development_conversations(owner_id)
 
     @staticmethod
     def _key(conversation_id: UUID) -> str:
@@ -98,10 +124,33 @@ def get_conversation_store() -> ConversationStore:
         except Exception:
             if settings.app_env in {"production", "prod"}:
                 raise RuntimeError("Redis is required for production conversation memory")
-    _store = _memory_store
-    return _store
+    try:
+        _store = PostgresConversationStore()
+        return _store
+    except Exception:
+        _store = _memory_store
+        return _store
 
 
 def reset_conversation_store_for_tests() -> None:
     global _store
     _store = InMemoryConversationStore()
+
+
+class PostgresConversationStore:
+    """Redis 不可用时的本地恢复层，不将会话降级为易失内存。"""
+
+    def __init__(self, repository: ConversationRepository | None = None) -> None:
+        self._repository = repository or ConversationRepository()
+
+    def get(self, conversation_id: UUID) -> ConversationState | None:
+        return self._repository.get(conversation_id)
+
+    def save(self, state: ConversationState) -> None:
+        self._repository.save(state)
+
+    def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]:
+        return self._repository.list_for_owner(owner_id, limit)
+
+    def claim_development_conversations(self, owner_id: UUID) -> int:
+        return self._repository.claim_development_conversations(owner_id)

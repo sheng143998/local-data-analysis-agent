@@ -8,7 +8,7 @@ from backend.app.api import conversations, routes
 from backend.app.core.config import settings
 from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.services import agent_service
-from backend.app.services.agent_service import AgentService
+from backend.app.services.agent_service import AgentService, AnalysisUnavailableError
 from backend.app.services.conversation_store import InMemoryConversationStore
 from backend.app.main import app
 
@@ -64,7 +64,47 @@ def test_conversations_are_scoped_to_authenticated_owner(monkeypatch) -> None:
     assert service.list_conversations(other_owner) == []
     with pytest.raises(HTTPException) as error:
         service.get_conversation(response.conversation_id, other_owner)
-    assert error.value.status_code == 404
+        assert error.value.status_code == 404
+
+
+def test_failed_analysis_is_saved_to_conversation_history(monkeypatch) -> None:
+    def unavailable_response(question, **_kwargs):
+        return AnalyzeResponse(
+            question=question,
+            path="cold_path",
+            summary="没有可执行 SQL",
+            sql="",
+            metrics=[],
+            rows=[],
+            source={"dataset": "test", "tables": [], "fields": [], "metricDefinition": "test", "range": "", "returnedRows": 0, "queryTime": "0ms", "security": "模型 SQL 失败"},
+            trace={"toolCalls": 0, "modelCalls": 0, "memoryCandidates": 0, "totalTime": "0ms"},
+            steps=[],
+        )
+
+    monkeypatch.setattr(agent_service, "run_analysis_graph", unavailable_response)
+    store = InMemoryConversationStore()
+    service = AgentService(conversation_store=store)
+
+    with pytest.raises(AnalysisUnavailableError):
+        service.analyze(type("Payload", (), {"question": "当前订单总数是多少？", "conversation_id": None})())
+
+    history = service.list_conversations(None)
+    assert len(history) == 1
+    detail = service.get_conversation(history[0].id, None)
+    assert [message.role for message in detail.messages] == ["user", "assistant"]
+    assert detail.messages[-1].response["failure"] is True
+
+
+def test_explicit_claim_moves_development_history_to_authenticated_owner(monkeypatch) -> None:
+    monkeypatch.setattr(agent_service, "run_analysis_graph", _graph_response)
+    store = InMemoryConversationStore()
+    service = AgentService(conversation_store=store)
+    service.analyze(type("Payload", (), {"question": "匿名历史", "conversation_id": None})())
+    owner = uuid4()
+
+    assert service.claim_development_conversations(owner) == 1
+    assert service.list_conversations(None) == []
+    assert len(service.list_conversations(owner)) == 1
 
 
 def test_conversation_api_continues_clarification_and_exposes_history(monkeypatch) -> None:

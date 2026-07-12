@@ -697,6 +697,13 @@ def _select_generated_sql(
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
 ) -> GeneratedSql:
+    fallback_sql = _single_order_count_fallback(question_intent)
+    if fallback_sql:
+        return GeneratedSql(
+            path="query_spec_fallback",
+            sql=fallback_sql,
+            warnings=["已使用 QuerySpec 验证的单指标订单数 SQL，仍将经过 SQL Guard 和只读 Executor。"],
+        )
     enabled = settings.model_sql_generator_enabled if model_enabled is None else model_enabled
     if not enabled:
         return GeneratedSql(
@@ -723,6 +730,40 @@ def _select_generated_sql(
         )
 
     return model_result.model_copy(update={"warnings": warnings})
+
+
+def _single_order_count_fallback(question_intent: dict[str, Any] | None) -> str:
+    """只覆盖无维度的已支付订单数，避免小模型在明确口径上反复生成错误 SQL。"""
+    query_spec = _query_spec_from_intent(question_intent)
+    if query_spec is None or query_spec.metrics != ["order_count"]:
+        return ""
+    if query_spec.dimensions or query_spec.top_n or query_spec.requires_order_by:
+        return ""
+
+    filters = [
+        "EXISTS (",
+        "  SELECT 1",
+        "  FROM payments pay",
+        "  WHERE pay.order_id = o.id",
+        "    AND pay.status = 'paid'",
+        ")",
+    ]
+    if query_spec.time_start and query_spec.time_end:
+        filters.extend(
+            [
+                f"AND o.created_at >= DATE '{query_spec.time_start}'",
+                f"AND o.created_at < DATE '{query_spec.time_end}'",
+            ]
+        )
+    return "\n".join(
+        [
+            "SELECT COUNT(DISTINCT o.id) AS order_count",
+            "FROM orders o",
+            "WHERE " + filters[0],
+            *filters[1:],
+            "LIMIT 1",
+        ]
+    )
 
 
 def _select_generated_sql_compat(**kwargs) -> GeneratedSql:

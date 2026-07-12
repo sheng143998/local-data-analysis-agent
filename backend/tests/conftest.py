@@ -1,7 +1,15 @@
 import pytest
 
 from backend.app.agents import analysis_graph
+from backend.app.core.config import settings
 from backend.app.schemas.sql_generation import GeneratedSql
+
+
+@pytest.fixture(autouse=True)
+def _use_development_auth_default(monkeypatch):
+    """测试默认不依赖开发机 .env；需要登录的用例自行显式开启鉴权。"""
+    monkeypatch.setattr(settings, "auth_required", False)
+    monkeypatch.setattr(settings, "auth_allow_self_registration", False)
 
 
 def _test_sql_for_question(question: str) -> str:

@@ -16,3 +16,10 @@ export function listConversations() {
 export function getConversation(conversationId: string) {
   return apiRequest<ConversationDetail>(`/api/conversations/${conversationId}`, { fallbackMessage: '读取会话内容失败' });
 }
+
+export function claimDevelopmentConversations() {
+  return apiRequest<{ claimed: number }>('/api/conversations/claim-development', {
+    method: 'POST',
+    fallbackMessage: '迁移本机历史失败',
+  });
+}

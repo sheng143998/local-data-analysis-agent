@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 
-load_dotenv("backend/.env")
+# 本项目本地服务始终以 backend/.env 为准，避免旧终端变量让登录与会话归属配置失效。
+load_dotenv("backend/.env", override=True)
 
 
 def _env_bool(name: str, *, default: bool) -> bool:
@@ -28,6 +29,8 @@ class Settings(BaseModel):
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]

@@ -463,6 +463,27 @@ def test_select_generated_sql_returns_error_when_model_disabled() -> None:
     assert adapter.calls == 0
 
 
+def test_select_generated_sql_uses_guarded_fallback_for_single_order_count() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(ok=False, provider="local", model="test", latency_ms=1, error_message="should not be called")
+    )
+
+    result = _select_generated_sql(
+        question="当前订单总数是多少？",
+        retrieval_context=_context(),
+        reuse_plan=_plan("cold_path"),
+        adapter=adapter,
+        model_enabled=False,
+        question_intent={"query_spec": {"metrics": ["order_count"], "dimensions": [], "time_start": "", "time_end": ""}},
+    )
+
+    assert result.path == "query_spec_fallback"
+    assert "COUNT(DISTINCT o.id) AS order_count" in result.sql
+    assert "payments pay" in result.sql
+    assert "pay.status = 'paid'" in result.sql
+    assert adapter.calls == 0
+
+
 def test_select_generated_sql_uses_model_for_enabled_cold_path() -> None:
     adapter = FakeAdapter(
         ModelResponse(

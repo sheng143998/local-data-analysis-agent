@@ -33,9 +33,31 @@ class FakeRedis:
         return [item[0] for item in values[start:end + 1]]
 
 
+class FakeConversationRepository:
+    def __init__(self) -> None:
+        self.states = {}
+
+    def get(self, conversation_id):
+        return self.states.get(conversation_id)
+
+    def save(self, state) -> None:
+        self.states[state.id] = state
+
+    def list_for_owner(self, owner_id, limit):
+        return [state for state in self.states.values() if state.owner_id == owner_id][:limit]
+
+    def claim_development_conversations(self, owner_id):
+        claimed = 0
+        for conversation_id, state in list(self.states.items()):
+            if state.owner_id is None:
+                self.states[conversation_id] = state.model_copy(update={"owner_id": owner_id})
+                claimed += 1
+        return claimed
+
+
 def test_redis_store_round_trips_owner_scoped_conversation() -> None:
     redis = FakeRedis()
-    store = RedisConversationStore(redis)
+    store = RedisConversationStore(redis, repository=FakeConversationRepository())
     owner = uuid4()
     now = datetime.now(timezone.utc)
     state = ConversationState(id=uuid4(), owner_id=owner, title="conversation", created_at=now, updated_at=now)

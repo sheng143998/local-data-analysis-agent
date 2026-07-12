@@ -19,6 +19,7 @@ venv/
 !.env.example
 backend/.env
 frontend/.env
+frontend/.env.local
 
 # local data
 backend/app/data/raw/

@@ -10,6 +10,14 @@ def test_required_migrations_exist() -> None:
     assert "001_extensions.sql" in names
     assert "002_business_tables.sql" in names
     assert "003_agent_metadata.sql" in names
+    assert "007_conversation_states.sql" in names
+
+
+def test_conversation_state_persistence_declared() -> None:
+    sql = (MIGRATION_DIR / "007_conversation_states.sql").read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS conversation_states" in sql
+    assert "owner_id UUID REFERENCES app_users" in sql
+    assert "state JSONB NOT NULL" in sql
 
 
 def test_business_tables_declared() -> None:

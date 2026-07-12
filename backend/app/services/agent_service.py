@@ -86,6 +86,8 @@ class AgentService:
         )
         response = run_analysis_graph(intent.original_question, app_user_id=app_user_id, parsed_intent=intent)
         if not response.sql and response.source.security != "未生成 SQL，等待用户确认":
+            state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
+            self._finish(state, _analysis_failure_response(question))
             raise AnalysisUnavailableError("分析服务暂时无法生成可执行查询，请稍后重试。")
         state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
         return self._finish(state, response)
@@ -98,6 +100,9 @@ class AgentService:
         if state is None or state.owner_id != app_user_id:
             raise HTTPException(status_code=404, detail="会话不存在")
         return state.detail()
+
+    def claim_development_conversations(self, app_user_id: UUID) -> int:
+        return self.conversation_store.claim_development_conversations(app_user_id)
 
     def _load_or_create(self, conversation_id: UUID | None, app_user_id: UUID | None, question: str) -> ConversationState:
         if conversation_id is None:
@@ -129,7 +134,12 @@ class AgentService:
 
 
 def _response_preview(response: AnalyzeResponse) -> dict:
-    return {"summary": response.summary, "metrics": [item.model_dump() for item in response.metrics], "status": response.conversation_status}
+    return {
+        "summary": response.summary,
+        "metrics": [item.model_dump() for item in response.metrics],
+        "status": response.conversation_status,
+        "failure": response.source.security == "未生成 SQL，已保存失败记录",
+    }
 
 
 def _pending_response(question: str, clarification: str) -> AnalyzeResponse:
@@ -151,6 +161,20 @@ def _memory_confirmation_response(question: str, summary: str) -> AnalyzeRespons
         source={"dataset": "用户长期偏好", "tables": [], "fields": [], "metricDefinition": "显式偏好", "range": "长期生效", "returnedRows": 0, "queryTime": "0ms", "security": "未生成 SQL，已更新用户偏好"},
         trace={"toolCalls": 1, "modelCalls": 0, "memoryCandidates": 0, "totalTime": "0ms"},
         steps=[{"name": "更新长期偏好", "status": "已完成", "time": "0ms"}],
+    )
+
+
+def _analysis_failure_response(question: str) -> AnalyzeResponse:
+    return AnalyzeResponse(
+        question=question,
+        path="cold_path",
+        summary="本次分析未生成符合业务口径和安全规则的查询，已保存到会话历史。请稍后重试。",
+        sql="",
+        metrics=[],
+        rows=[],
+        source={"dataset": "Olist 巴西电商公开数据集 + 合成增强数据", "tables": [], "fields": [], "metricDefinition": "安全失败摘要", "range": "等待重试", "returnedRows": 0, "queryTime": "0ms", "security": "未生成 SQL，已保存失败记录"},
+        trace={"toolCalls": 0, "modelCalls": 0, "memoryCandidates": 0, "totalTime": "0ms"},
+        steps=[{"name": "保存失败会话", "status": "已完成", "time": "0ms"}],
     )
 
 

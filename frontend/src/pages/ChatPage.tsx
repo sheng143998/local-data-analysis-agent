@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, Bot, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
+import { AlertTriangle, ArchiveRestore, Bot, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
+import { useAuth } from '../auth/AuthProvider';
 import { PageHeader } from '../components/common/PageHeader';
 import { SqlPanel } from '../components/data-qa/SqlPanel';
-import { analyzeQuestion, getConversation, listConversations } from '../api/analysisClient';
+import { analyzeQuestion, claimDevelopmentConversations, getConversation, listConversations } from '../api/analysisClient';
 import { ApiError } from '../api/client';
 import type { AnalysisResponse, AnalysisRow, AnalysisValue, ConversationDetail } from '../types/analysis';
 
@@ -130,6 +131,7 @@ function ErrorCard({ error }: { error: ChatError }) {
 }
 
 export function ChatPage() {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSession, setActiveSession] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -173,6 +175,7 @@ export function ChatPage() {
           error: friendlyError,
         },
       ]);
+      void refreshSessions();
     },
   });
 
@@ -197,10 +200,21 @@ export function ChatPage() {
         title: message.role === 'assistant' ? '助手' : undefined,
         text: message.content,
         summary: message.response?.summary,
+        error: message.response?.failure ? { message: message.content } : undefined,
       })));
     } catch (error) {
       const friendlyError = toChatError(error);
       setMessages([{ id: `e-${Date.now()}`, role: 'assistant', title: '读取会话失败', text: friendlyError.message, error: friendlyError }]);
+    }
+  };
+
+  const claimHistory = async () => {
+    try {
+      await claimDevelopmentConversations();
+      await refreshSessions();
+    } catch (error) {
+      const friendlyError = toChatError(error);
+      setMessages([{ id: `e-${Date.now()}`, role: 'assistant', title: '迁移历史失败', text: friendlyError.message, error: friendlyError }]);
     }
   };
 
@@ -225,6 +239,11 @@ export function ChatPage() {
           <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
             <MessageSquareText className="h-4 w-4 text-cyan-600" /> 会话历史
           </div>
+          {user?.role === 'admin' ? (
+            <button onClick={() => void claimHistory()} className="mb-3 flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50" title="迁移本机匿名历史">
+              <ArchiveRestore className="h-4 w-4" /> 迁移本机历史
+            </button>
+          ) : null}
           <div className="space-y-2">
             {sessions.map((session) => (
               <button

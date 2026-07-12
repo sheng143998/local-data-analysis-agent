@@ -4,7 +4,7 @@
 
 ## 当前结论
 
-- 当前 API 没有登录鉴权层，适合本地单机开发和受控演示环境。
+- 项目已支持 Session Cookie 登录鉴权；本机是否强制登录由 `AUTH_REQUIRED` 控制。
 - 普通业务接口和开发者调试接口都挂在 `/api` 下。
 - `/api/runs` 和 `/api/memories` 会暴露运行记录、工具调用摘要、SQL 和 SQL Memory，应视为开发者调试接口。
 - 前端已通过 `frontend/src/api/client.ts` 统一解析后端 `detail`，并把错误收敛为中文业务提示。
@@ -172,7 +172,7 @@ apiRequest<T>('/api/analyze', {
 - `PUT /api/metrics/{metric_id}`
 - `DELETE /api/metrics/{metric_id}`
 
-当前权限状态：未加登录鉴权。
+当前权限状态：`AUTH_REQUIRED=true` 时启用登录鉴权。
 
 本地 V1 阶段可接受原因：
 
@@ -198,7 +198,7 @@ apiRequest<T>('/api/analyze', {
 - 表名、字段名和指标名。
 - 执行状态、错误和耗时。
 
-当前权限状态：未加登录鉴权，但文档和产品边界已要求不进入普通用户主导航。
+当前权限状态：`AUTH_REQUIRED=true` 时仅 `admin` 可访问开发者调试接口。
 
 上线或多人使用前建议：
 
