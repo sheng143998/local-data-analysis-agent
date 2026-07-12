@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Cloud Dialogue Model Connectivity。计划：`docs/plans/2026-07-12-cloud-dialogue-model-connectivity.md`；完成记录：`docs/modules/2026-07-12-cloud-dialogue-model-connectivity.md`。已修复阿里云云端意图模型继承本机 SOCKS 代理而缺少 `socksio` 的问题，改为 provider 直连；本机意图调用预算为单次 45 秒。真实云端调用“当前用户总数”已返回 `source=llm`、`needs_clarification=false` 与用户总数语义候选；“我想修改”也返回模型生成的上下文追问。模型不可用时只会返回中性缺失信息提示，不再推荐固定经营指标。验证：focused `29 passed, 1 warning`、后端全量 `217 passed, 1 warning`、前端构建通过。风险：云端响应可能需要数十秒；鉴权环境中的标准评测仍缺测试会话。模块提交将在本次交付后记录。
+
 - 已完成：Model First Clarification Flow。计划：`docs/plans/2026-07-12-model-first-clarification-flow.md`；完成记录：`docs/modules/2026-07-12-model-first-clarification-flow.md`。模型语义候选不会再被低置信度或弱词表匹配覆盖，完整问题可直接进入 SQL 链路；澄清只由模型显式判定缺少关键业务信息时触发。用户拒绝上一轮建议时会重读原问题，不再重复旧话术；前端回复摘要只展示一次。`INTENT_MODEL_*` 可安全接入云端对话语义模型，`MODEL_*` 保持 SQL 模型并继续经过 QuerySpec/Guard/只读 Executor。验证：focused `52 passed, 1 warning`、后端全量 `214 passed, 1 warning`、前端构建通过。标准评测在本机 `AUTH_REQUIRED=true` 下全部 `401`，已恢复旧报告，不作为质量结论。风险：云端意图模型不可用时仍会保守澄清；评测脚本需补认证测试会话。模块提交将在本次交付后记录。
 
 - 已完成：Local API Target Alignment。计划：`docs/plans/2026-07-12-local-api-target-alignment.md`；完成记录：`docs/modules/2026-07-12-local-api-target-alignment.md`。前端被忽略的本地环境 API 目标已由 `127.0.0.1:8002` 同步为用户实际启动的 `127.0.0.1:8000`，并已重启 Vite。验证：前端 HTTP 200、后端健康检查通过、`/api/auth/login` 从 `127.0.0.1:3000` 的 credentialed CORS 预检为 HTTP 200、前端构建通过且 bundle 使用 `8000`。风险：本机后端端口变更后，必须同步 `.env.local` 并重启 Vite；错误账号密码仍属于正常鉴权错误。模块提交将在本次文档交付后记录。

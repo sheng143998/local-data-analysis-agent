@@ -93,7 +93,9 @@ class ModelAdapter:
     ) -> None:
         self.config = config or ModelAdapterConfig()
         self.transport = transport or HttpxChatTransport(
-            trust_env=self.config.provider not in {"local", "ollama"}
+            # 阿里云兼容端点在当前本机环境会继承不可用的 SOCKS 代理；
+            # 该 provider 默认直连，避免对话意图解析静默退回到启发式逻辑。
+            trust_env=self.config.provider.lower() not in {"local", "ollama", "aliyun", "dashscope"}
         )
 
     def chat(self, request: ModelRequest) -> ModelResponse:

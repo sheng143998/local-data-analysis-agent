@@ -119,6 +119,35 @@ def test_complete_semantic_candidate_enters_analysis_graph_without_clarification
     assert graph_calls[0][1].semantic_metrics == ["当前用户总数"]
 
 
+def test_modification_followup_uses_model_generated_clarification(monkeypatch) -> None:
+    pending = PendingClarification(
+        original_question="看看最近情况",
+        parsed_intent={},
+        query_spec=QuerySpec(),
+        missing_slots=["metrics"],
+        clarification="旧澄清问题",
+        created_at=datetime.now(timezone.utc),
+    )
+
+    def fake_parse(question, **_kwargs):
+        return ParsedQuestionIntent(
+            original_question=question,
+            normalized_question=question,
+            confidence=0.2,
+            needs_clarification=True,
+            clarification="你希望把问题修改为分析哪个业务指标或对象？",
+            source="llm",
+        )
+
+    monkeypatch.setattr(followup_resolver, "parse_question_intent", fake_parse)
+
+    resolution = followup_resolver.resolve_followup("我想修改", pending)
+
+    assert resolution.decision == "still_pending"
+    assert resolution.pending is not None
+    assert resolution.pending.clarification == "你希望把问题修改为分析哪个业务指标或对象？"
+
+
 def test_conversations_are_scoped_to_authenticated_owner(monkeypatch) -> None:
     monkeypatch.setattr(settings, "intent_parser_enabled", False)
     monkeypatch.setattr(agent_service, "run_analysis_graph", _graph_response)

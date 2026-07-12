@@ -92,7 +92,13 @@ def parse_question_intent(
     parsed = _parse_model_intent(question, response)
     # 模型已提供未映射的自然语言候选时，不能让词表兜底覆盖它；
     # 否则“当前用户总数”会被泛化成“用户维度”，再次错误触发澄清。
-    if not parsed.metrics and not parsed.dimensions and not parsed.semantic_metrics and not parsed.semantic_dimensions:
+    if (
+        not parsed.metrics
+        and not parsed.dimensions
+        and not parsed.semantic_metrics
+        and not parsed.semantic_dimensions
+        and not (parsed.needs_clarification and parsed.clarification)
+    ):
         heuristic = _heuristic_intent(question, parsed.warnings)
         if heuristic.confidence > parsed.confidence:
             return _finalize_intent(heuristic)
@@ -233,12 +239,12 @@ def _build_normalized_question(
 
 def _clarification(question: str, metrics: list[str], dimensions: list[str], time_range: str) -> str:
     if not metrics:
-        return "我理解你想查看最近的核心经营概览。是否查询销售额、订单数和客单价，还是需要修改？"
+        return "请补充你想分析的业务对象或指标，我会据此继续查询。"
     metric_text = "、".join(METRIC_LABELS[item] for item in metrics if item in METRIC_LABELS) or "一个业务指标"
     dimension_text = "，".join(DIMENSION_LABELS[item] for item in dimensions if item in DIMENSION_LABELS)
     time_text = f"，时间范围是{time_range}" if time_range else ""
     dimension_suffix = f"，并{dimension_text}拆分" if dimension_text else ""
-    return f"我理解你想查询{metric_text}{dimension_suffix}{time_text}。是否按这个理解查询，还是需要修改？"
+    return f"我已识别到你想查询{metric_text}{dimension_suffix}{time_text}。请补充会影响结果的缺失条件后继续。"
 
 
 def _heuristic_time_range(question: str) -> str:

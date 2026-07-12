@@ -63,6 +63,29 @@ def test_parse_question_intent_asks_for_clarification_when_uncertain() -> None:
     assert "是否查询" in intent.clarification
 
 
+def test_parse_question_intent_keeps_model_generated_followup_clarification() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"我想修改",'
+                '"metrics":[],"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.1,"needs_clarification":true,'
+                '"clarification":"你希望把问题修改为分析哪个业务指标或对象？"}'
+            ),
+            provider="cloud",
+            model="dialogue-model",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("我想修改", adapter=adapter, model_enabled=True)
+
+    assert intent.source == "llm"
+    assert intent.needs_clarification is True
+    assert intent.clarification == "你希望把问题修改为分析哪个业务指标或对象？"
+
+
 def test_parse_question_intent_keeps_dimensions_from_intent_model() -> None:
     adapter = FakeAdapter(
         ModelResponse(

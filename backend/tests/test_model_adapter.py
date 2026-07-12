@@ -100,6 +100,19 @@ def test_remote_model_adapter_keeps_environment_configuration() -> None:
     assert adapter.transport.trust_env is True
 
 
+def test_aliyun_model_adapter_does_not_inherit_local_proxy_environment() -> None:
+    adapter = ModelAdapter(
+        config=ModelAdapterConfig(
+            provider="aliyun",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            model="qwen-max",
+        )
+    )
+
+    assert isinstance(adapter.transport, HttpxChatTransport)
+    assert adapter.transport.trust_env is False
+
+
 def test_model_adapter_adds_authorization_for_real_api_key() -> None:
     transport = FakeTransport(
         responses=[httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})]

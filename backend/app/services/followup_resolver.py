@@ -86,6 +86,14 @@ def resolve_followup(answer: str, pending: PendingClarification) -> FollowupReso
     if (answer_intent.metrics or answer_intent.semantic_metrics) and "metrics" not in pending.missing_slots:
         return FollowupResolution(decision="new_question", intent=answer_intent)
 
+    if answer_intent.needs_clarification and answer_intent.clarification:
+        # 补充回复本身可能是在修改问题。此时采用模型结合会话生成的新问题，
+        # 不能继续把上一轮的澄清文案原样返回给用户。
+        return FollowupResolution(
+            decision="still_pending",
+            pending=pending.model_copy(update={"clarification": answer_intent.clarification}),
+        )
+
     missing_slots = list(pending.missing_slots)
     if "metrics" in missing_slots and answer_intent.metrics:
         missing_slots.remove("metrics")
