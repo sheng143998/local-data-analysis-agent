@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Model First Clarification Flow。计划：`docs/plans/2026-07-12-model-first-clarification-flow.md`；完成记录：`docs/modules/2026-07-12-model-first-clarification-flow.md`。模型语义候选不会再被低置信度或弱词表匹配覆盖，完整问题可直接进入 SQL 链路；澄清只由模型显式判定缺少关键业务信息时触发。用户拒绝上一轮建议时会重读原问题，不再重复旧话术；前端回复摘要只展示一次。`INTENT_MODEL_*` 可安全接入云端对话语义模型，`MODEL_*` 保持 SQL 模型并继续经过 QuerySpec/Guard/只读 Executor。验证：focused `52 passed, 1 warning`、后端全量 `214 passed, 1 warning`、前端构建通过。标准评测在本机 `AUTH_REQUIRED=true` 下全部 `401`，已恢复旧报告，不作为质量结论。风险：云端意图模型不可用时仍会保守澄清；评测脚本需补认证测试会话。模块提交将在本次交付后记录。
+
 - 已完成：Local API Target Alignment。计划：`docs/plans/2026-07-12-local-api-target-alignment.md`；完成记录：`docs/modules/2026-07-12-local-api-target-alignment.md`。前端被忽略的本地环境 API 目标已由 `127.0.0.1:8002` 同步为用户实际启动的 `127.0.0.1:8000`，并已重启 Vite。验证：前端 HTTP 200、后端健康检查通过、`/api/auth/login` 从 `127.0.0.1:3000` 的 credentialed CORS 预检为 HTTP 200、前端构建通过且 bundle 使用 `8000`。风险：本机后端端口变更后，必须同步 `.env.local` 并重启 Vite；错误账号密码仍属于正常鉴权错误。模块提交将在本次文档交付后记录。
 
 - 已完成：Model Semantic Candidates。计划：`docs/plans/2026-07-12-model-semantic-candidates.md`；完成记录：`docs/modules/2026-07-12-model-semantic-candidates.md`。语义模型高置信的未知候选不再被 `metrics` 规范化阻断；`semantic_metrics`/`semantic_dimensions` 会透传到 SQL Prompt，用户总数等问题可进入检索和模型生成。标准 `metrics` 仅服务已定义口径、QuerySpec 和模型不可用时的确定性降级。验证：focused `20 passed`、后端全量 `211 passed, 1 warning`、标准评测 280 秒完成为 `13/20` 执行成功、`60.00%` 严格成功率。风险：未知指标缺少确认口径，质量仍依赖模型、schema 召回和 Guard。模块提交 `5a16460` 已推送至 `origin/main`。

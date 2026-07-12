@@ -300,19 +300,7 @@ export function ChatPage() {
                       </div>
                     )}
 
-                    {message.summary || message.sql ? (
-                      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                        {message.summary ? (
-                          <div className="sub-panel bg-white p-4">
-                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                              <Sparkles className="h-4 w-4 text-emerald-600" /> 自然语言分析
-                            </div>
-                            <p className="text-sm leading-7 text-slate-600">{message.summary}</p>
-                          </div>
-                        ) : null}
-                        {message.sql ? <SqlPanel sql={message.sql} compact title="生成 SQL" /> : null}
-                      </div>
-                    ) : null}
+                    {message.sql ? <SqlPanel sql={message.sql} compact title="生成 SQL" /> : null}
 
                     {message.rows ? (
                       <div className="sub-panel overflow-hidden bg-white">

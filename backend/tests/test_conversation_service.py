@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -7,9 +8,13 @@ from fastapi.testclient import TestClient
 from backend.app.api import conversations, routes
 from backend.app.core.config import settings
 from backend.app.schemas.analysis import AnalyzeResponse
+from backend.app.schemas.conversation import PendingClarification
+from backend.app.schemas.query_spec import QuerySpec
 from backend.app.services import agent_service
 from backend.app.services.agent_service import AgentService, AnalysisUnavailableError
 from backend.app.services.conversation_store import InMemoryConversationStore
+from backend.app.services import followup_resolver
+from backend.app.tools.question_intent_parser import ParsedQuestionIntent
 from backend.app.main import app
 
 
@@ -50,6 +55,68 @@ def test_followup_merges_pending_slots_before_graph_execution(monkeypatch) -> No
     assert calls[0][1].query_spec.metrics == ["sales_amount"]
     assert calls[0][1].query_spec.time_start == "2017-01-01"
     assert calls[0][1].query_spec.time_end == "2018-01-01"
+
+
+def test_rejecting_a_clarification_reparses_the_original_question(monkeypatch) -> None:
+    pending = PendingClarification(
+        original_question="当前用户总数是多少？",
+        parsed_intent={},
+        query_spec=QuerySpec(),
+        missing_slots=["metrics"],
+        clarification="你想重点分析哪项业务数据？",
+        created_at=datetime.now(timezone.utc),
+    )
+    calls = []
+
+    def fake_parse(question, **kwargs):
+        calls.append((question, kwargs.get("conversation_context", "")))
+        return ParsedQuestionIntent(
+            original_question=question,
+            normalized_question="查询当前用户总数",
+            semantic_metrics=["当前用户总数"],
+            confidence=0.4,
+            needs_clarification=False,
+            source="llm",
+        )
+
+    monkeypatch.setattr(followup_resolver, "parse_question_intent", fake_parse)
+
+    resolution = followup_resolver.resolve_followup("我不想查询这些", pending)
+
+    assert resolution.decision == "new_question"
+    assert resolution.intent is not None
+    assert resolution.intent.semantic_metrics == ["当前用户总数"]
+    assert calls[0][0] == "当前用户总数是多少？"
+    assert "拒绝了此前建议" in calls[0][1]
+
+
+def test_complete_semantic_candidate_enters_analysis_graph_without_clarification(monkeypatch) -> None:
+    graph_calls = []
+
+    def fake_parse(question, **_kwargs):
+        return ParsedQuestionIntent(
+            original_question=question,
+            normalized_question="查询当前用户总数",
+            semantic_metrics=["当前用户总数"],
+            confidence=0.35,
+            needs_clarification=False,
+            source="llm",
+        )
+
+    def fake_graph(question, **kwargs):
+        graph_calls.append((question, kwargs["parsed_intent"]))
+        return _graph_response(question)
+
+    monkeypatch.setattr(agent_service, "parse_question_intent", fake_parse)
+    monkeypatch.setattr(agent_service, "run_analysis_graph", fake_graph)
+    service = AgentService(conversation_store=InMemoryConversationStore())
+
+    response = service.analyze(type("Payload", (), {"question": "当前用户总数是多少？", "conversation_id": None})())
+
+    assert response.pending_clarification is False
+    assert response.sql == "SELECT 1"
+    assert len(graph_calls) == 1
+    assert graph_calls[0][1].semantic_metrics == ["当前用户总数"]
 
 
 def test_conversations_are_scoped_to_authenticated_owner(monkeypatch) -> None:

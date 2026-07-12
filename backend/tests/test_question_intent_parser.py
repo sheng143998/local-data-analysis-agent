@@ -167,6 +167,28 @@ def test_parse_question_intent_keeps_user_total_candidate_for_sql_generation() -
     assert intent.semantic_metrics == ["用户总数"]
 
 
+def test_parse_question_intent_keeps_complete_unknown_candidate_despite_low_confidence() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"查询当前用户总数",'
+                '"metrics":[],"metric_candidates":["当前用户总数"],'
+                '"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.31,"needs_clarification":false}'
+            ),
+            provider="local",
+            model="semantic-model",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("当前用户总数是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is False
+    assert intent.semantic_metrics == ["当前用户总数"]
+
+
 def test_parse_question_intent_heuristic_fallback_when_model_fails() -> None:
     adapter = FakeAdapter(
         ModelResponse(
