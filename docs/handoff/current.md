@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Semantic Intent Normalization。计划：`docs/plans/2026-07-12-semantic-intent-normalization.md`；完成记录：`docs/modules/2026-07-12-semantic-intent-normalization.md`。意图识别已调整为模型候选抽取、业务概念规范化、QuerySpec/检索上下文校验三层；预置别名只作为受控业务 ID 的规范化与模型不可用时的兜底，不再作为唯一理解入口。模型返回项目未定义指标时会澄清，不会直接进入 SQL 生成。已补充订单总数表达、自然语言模型候选与未知概念测试，以及云端 OpenAI-compatible 微调模型接入说明。验证：focused `9 passed`，后端全量 `205 passed, 1 warning`，标准评测 268 秒完成为 `13/20` 执行成功、`60.00%` 严格成功；模型输出有波动，单次结果不能视为稳定提升。风险：本地 3B 模型仍不稳定于复杂 SQL；新业务概念必须同步扩展指标定义与 QuerySpec，不可仅增加别名。提交和推送将在本模块交付时完成。
+
 - 已完成：Skill Git Delivery And Chinese Comments。计划：`docs/plans/2026-07-12-skill-git-delivery-and-chinese-comments.md`；完成记录：`docs/modules/2026-07-12-skill-git-delivery-and-chinese-comments.md`。Skill 已要求新增/修改注释默认使用中文并说明业务目的、规则、安全边界或取舍；每个通过验证的完整模块必须检查 git 状态、独立提交并推送，且不得混入无关用户变更。模块提交和 `origin/main` 推送随本轮交付完成，最终 hash 以 git log 为准。
 
 - 已完成：Agent Conversation Memory Architecture 的 Phase 1、L1、L2、L3 基础实现。计划：`docs/plans/2026-07-12-agent-conversation-memory-architecture-draft.md`；完成记录：`docs/modules/2026-07-12-conversation-memory-l1-l2-l3.md`。`/api/analyze` 现支持会话 ID、PendingClarification、确定性 Follow-up Resolver、会话恢复和跨主体隔离；“看看最近情况”后补“销售额，2017年”会合并 QuerySpec 后再进入原有 SQL Guard/Executor。L1 默认 8K token 预算、1K 输出预留、60%/80% 摘要水位；L2 Redis adapter 写穿 72 小时会话，`local-data-agent-redis` 已返回 `PONG` 且真实 Redis save/get 通过；L3 仅保存明确偏好并支持版本替换和删除。验证：migration 成功、focused `9 passed, 1 warning`、后端全量 `202 passed, 1 warning`、前端构建通过；标准评测进程 304 秒超时（exit `124`），但已刷新 20 case 报告为 `12/20` 执行成功、`11/20` 严格成功。未实现：并发、多线程、乐观锁、幂等重试、Redis 原子操作、后台归并、OAuth、MFA、组织/租户和邮件流程；生产 Redis 部署、持久化和健康检查仍需后续专项。

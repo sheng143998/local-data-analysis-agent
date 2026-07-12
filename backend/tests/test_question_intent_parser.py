@@ -90,6 +90,59 @@ def test_parse_question_intent_keeps_dimensions_from_intent_model() -> None:
     assert "date" in intent.dimensions
 
 
+def test_parse_question_intent_normalizes_natural_language_model_candidates() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"查询已支付订单总量",'
+                '"metrics":[],"metric_candidates":["已支付订单"],'
+                '"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.9,"needs_clarification":false}'
+            ),
+            provider="cloud",
+            model="fine-tuned-intent-model",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("当前订单总数是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is False
+    assert intent.metrics == ["order_count"]
+    assert intent.query_spec.required_tables == ["orders", "payments"]
+
+
+def test_parse_question_intent_heuristic_fallback_recognizes_order_total() -> None:
+    intent = parse_question_intent("当前订单总数是多少？", model_enabled=False)
+
+    assert intent.needs_clarification is False
+    assert intent.metrics == ["order_count"]
+
+
+def test_parse_question_intent_clarifies_unknown_model_metric_candidate() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"查询物流及时率",'
+                '"metrics":[],"metric_candidates":["物流及时率"],'
+                '"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.91,"needs_clarification":false}'
+            ),
+            provider="cloud",
+            model="fine-tuned-intent-model",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("物流及时率是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is True
+    assert "尚未定义" in intent.clarification
+    assert "未映射的指标候选：物流及时率" in intent.warnings
+
+
 def test_parse_question_intent_heuristic_fallback_when_model_fails() -> None:
     adapter = FakeAdapter(
         ModelResponse(

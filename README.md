@@ -213,6 +213,25 @@ npm run context:refresh
 - 普通用户前端不展示 prompt、模型原始输出、provider 或模型连接状态。
 - 普通用户前端也不展示 embedding provider、向量状态或数据库连接状态。
 
+## 云端微调模型接入
+
+本项目的 `ModelAdapter` 使用 OpenAI-compatible `POST /chat/completions` 协议。因此可以在云端完成 LoRA/QLoRA 微调后，将云端推理端点接入本地 Agent；训练位置与 Agent 的本地部署位置无关。
+
+- 意图模型优先使用 `INTENT_MODEL_PROVIDER`、`INTENT_MODEL_BASE_URL`、`INTENT_MODEL_NAME`、`INTENT_MODEL_API_KEY`；适合接入微调后的 QuerySpec/意图提取模型。
+- SQL 生成模型使用对应的 `MODEL_*` 配置；只有在通过项目 schema、指标口径和 SQL Guard 回归验证后才应切换。
+- `*_BASE_URL` 必须指向 OpenAI-compatible 服务的 `/v1` 前缀，例如 `https://your-inference.example.com/v1`；Adapter 会追加 `/chat/completions`。
+- 云端密钥只写入本机 `backend/.env` 或部署平台密钥管理，不得提交到仓库、日志、run trace 或前端。
+- 微调模型只产生意图或 SQL 候选，最终 SQL 仍必须经过 QuerySpec 校验、SQL Guard 和只读 Executor；云端模型不能绕过安全边界。
+
+示例（仅占位，不使用真实地址或密钥）：
+
+```env
+INTENT_MODEL_PROVIDER=cloud
+INTENT_MODEL_BASE_URL=https://your-inference.example.com/v1
+INTENT_MODEL_NAME=your-org/ecommerce-intent-qlora
+INTENT_MODEL_API_KEY=replace_in_local_env
+```
+
 ## 标准问题评估
 
 ```bash
