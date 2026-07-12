@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Current Aggregate SQL Repair。计划：`docs/plans/2026-07-12-current-aggregate-sql-repair.md`；完成记录：`docs/modules/2026-07-12-current-aggregate-sql-repair.md`。已补充当前快照、实体总量和支付口径的通用意图/SQL Prompt 约束，并为 `orders.status = 'paid'` Guard 错误加入明确 Repair 规则；没有增加固定用户数 SQL。截图 503 对应的无效支付谓词被 Guard 安全阻断；更新后真实只读重试生成 `COUNT(DISTINCT users.id)` 并返回 `99441`。验证：focused `57 passed`、后端全量 `219 passed, 1 warning`、前端构建通过。风险：本地 3B SQL 模型仍有输出波动，展示层仍将用户总量误称为销售趋势；标准评测缺鉴权测试会话。模块提交将在本次交付后记录。
+
 - 已完成：Cloud Dialogue Model Connectivity。计划：`docs/plans/2026-07-12-cloud-dialogue-model-connectivity.md`；完成记录：`docs/modules/2026-07-12-cloud-dialogue-model-connectivity.md`。已修复阿里云云端意图模型继承本机 SOCKS 代理而缺少 `socksio` 的问题，改为 provider 直连；本机意图调用预算为单次 45 秒。真实云端调用“当前用户总数”已返回 `source=llm`、`needs_clarification=false` 与用户总数语义候选；“我想修改”也返回模型生成的上下文追问。模型不可用时只会返回中性缺失信息提示，不再推荐固定经营指标。验证：focused `29 passed, 1 warning`、后端全量 `217 passed, 1 warning`、前端构建通过。风险：云端响应可能需要数十秒；鉴权环境中的标准评测仍缺测试会话。模块提交将在本次交付后记录。
 
 - 已完成：Model First Clarification Flow。计划：`docs/plans/2026-07-12-model-first-clarification-flow.md`；完成记录：`docs/modules/2026-07-12-model-first-clarification-flow.md`。模型语义候选不会再被低置信度或弱词表匹配覆盖，完整问题可直接进入 SQL 链路；澄清只由模型显式判定缺少关键业务信息时触发。用户拒绝上一轮建议时会重读原问题，不再重复旧话术；前端回复摘要只展示一次。`INTENT_MODEL_*` 可安全接入云端对话语义模型，`MODEL_*` 保持 SQL 模型并继续经过 QuerySpec/Guard/只读 Executor。验证：focused `52 passed, 1 warning`、后端全量 `214 passed, 1 warning`、前端构建通过。标准评测在本机 `AUTH_REQUIRED=true` 下全部 `401`，已恢复旧报告，不作为质量结论。风险：云端意图模型不可用时仍会保守澄清；评测脚本需补认证测试会话。模块提交将在本次交付后记录。

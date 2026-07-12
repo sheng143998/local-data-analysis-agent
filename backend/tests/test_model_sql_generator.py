@@ -119,6 +119,32 @@ def test_build_sql_generation_payload_includes_intent_and_metric_semantics() -> 
     assert any("重复累计" in requirement for requirement in payload["requirements"])
 
 
+def test_build_sql_generation_payload_preserves_current_entity_total_semantics() -> None:
+    payload = build_sql_generation_payload(
+        "当前用户总数是多少？",
+        _context(relationship_type="foreign_key"),
+        _plan(),
+        question_intent={
+            "original_question": "当前用户总数是多少？",
+            "normalized_question": "查询当前用户总数",
+            "metrics": [],
+            "dimensions": [],
+            "semantic_metrics": ["当前用户总数"],
+            "semantic_dimensions": [],
+            "time_range": "",
+            "confidence": 0.85,
+            "needs_clarification": False,
+            "source": "llm",
+            "query_spec": {},
+        },
+    )
+
+    assert payload["question_intent"]["semantic_metrics"] == ["当前用户总数"]
+    assert any("当前" in requirement and "时间范围" in requirement for requirement in payload["requirements"])
+    assert any("实体的总量" in requirement for requirement in payload["requirements"])
+    assert any("严禁生成 orders.status" in requirement for requirement in payload["requirements"])
+
+
 def test_build_sql_generation_payload_requires_explicit_time_predicate_and_repair_rules() -> None:
     payload = build_sql_generation_payload(
         "2017年卖了多少钱？",
@@ -143,6 +169,22 @@ def test_build_sql_generation_payload_requires_explicit_time_predicate_and_repai
     assert payload["time_constraint"]["required_predicate"].startswith("{time_field} >=")
     assert any("输出别名" in rule for rule in payload["repair_rules"])
     assert any("完整时间条件" in rule for rule in payload["repair_rules"])
+
+
+def test_build_sql_generation_payload_repairs_invalid_payment_status_filter() -> None:
+    payload = build_sql_generation_payload(
+        "当前用户总数是多少？",
+        _context(),
+        _plan(),
+        repair_context={
+            "intent_errors": [
+                "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。"
+            ],
+        },
+    )
+
+    assert any("不得使用 orders.status = 'paid'" in rule for rule in payload["repair_rules"])
+    assert any("删除支付状态过滤" in rule for rule in payload["repair_rules"])
 
 
 def test_parse_model_sql_response_extracts_json_sql() -> None:

@@ -164,7 +164,10 @@ def build_sql_generation_payload(
             "只能使用 allowed_tables 和 schema_fields 中出现的字段",
             "跨表查询优先使用 table_relationships 中的高置信关系",
             "不要编造表名、字段名或业务口径",
+            "“当前”“目前”“总数”“累计”本身不表示时间范围、已支付或成功状态；除非用户明确给出时间或支付条件，否则不要自行添加日期或支付状态过滤。",
+            "查询某个实体的总量时，应统计该实体表的主键去重数量；不要把用户、商品等实体总量改写为订单、支付或新增指标。",
             "Olist 订单状态 orders.status 没有 paid；已支付口径必须使用 payments.status = 'paid'，并通过 orders.id = payments.order_id 关联",
+            "严禁生成 orders.status = 'paid'。只有用户明确要求已支付、支付成功或成交口径时才使用 payments.status = 'paid'；否则不要添加支付状态条件。",
             "跨表条件必须使用显式 JOIN；如果使用 payments.status 或 payments.amount，SQL 必须包含 JOIN payments ON payments.order_id = orders.id",
             "同时查询总销售额和平均销售额时，必须分别输出 sales_amount 和 avg_order_value，不能把二者混为一个指标",
             "如果 JOIN payments 后汇总 orders.total_amount，必须先按 orders.id 去重或先按 payments.order_id 聚合，避免一单多支付导致订单金额重复累计",
@@ -287,6 +290,10 @@ def _repair_rules(repair_context: dict[str, Any]) -> list[str]:
             rules.append(
                 f"必须在 WHERE 中加入完整时间条件：{time_filter}；将 {{time_field}} 替换为相关的已允许时间字段。"
             )
+    if "错误支付口径" in text or "orders.status 没有 paid" in text:
+        rules.append(
+            "不得使用 orders.status = 'paid'。如果用户未明确要求已支付或支付成功，删除支付状态过滤；如果明确要求，使用 payments.status = 'paid' 并以 payments.order_id = orders.id 关联。"
+        )
     if not rules:
         rules.append("逐条修复 repair_context 中的错误后再输出完整 PostgreSQL SELECT 查询。")
     return rules
