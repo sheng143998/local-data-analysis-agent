@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-07-12T11:50:25.880026+00:00",
+  "generated_at": "2026-07-12T12:11:59.673010+00:00",
   "total": 20,
-  "success_count": 13,
+  "success_count": 12,
   "strict_success_count": 12,
-  "execution_success_rate": 0.65,
+  "execution_success_rate": 0.6,
   "strict_success_rate": 0.6,
-  "sql_generation_success_rate": 0.65,
-  "table_match_rate": 0.65,
+  "sql_generation_success_rate": 0.6,
+  "table_match_rate": 0.6,
   "keyword_match_rate": 0.6,
   "forbidden_match_rate": 1.0,
   "memory_hit_rate": 0.15,
   "reuse_success_rate": 0.15,
-  "average_latency_ms": 21699,
+  "average_latency_ms": 21714,
   "path_counts": {
-    "rewrite_path": 10,
+    "rewrite_path": 9,
     "fast_path": 3,
-    "": 7
+    "": 8
   },
   "failures": [
     {
@@ -43,8 +43,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "1c385380-ae15-41a4-99e6-a9763d7517c5",
-      "run_detail_path": "/api/runs/1c385380-ae15-41a4-99e6-a9763d7517c5",
+      "run_id": "b0945e9e-1aa4-4a91-a67b-3fb99e302be4",
+      "run_detail_path": "/api/runs/b0945e9e-1aa4-4a91-a67b-3fb99e302be4",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -97,21 +97,21 @@
         "memory_score": 0.7717,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2388,
+          "sql_repair": 3399,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 3990,
-          "context_retrieval": 5274,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 11,
-          "memory_retrieval_and_plan": 2505
+          "sql_generation": 4146,
+          "context_retrieval": 4581,
+          "sql_intent_validation": 5,
+          "memory_sql_verification": 10,
+          "memory_retrieval_and_plan": 2420
         },
-        "total_latency_ms": 14187,
+        "total_latency_ms": 14575,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5274
+          "latency_ms": 4581
         },
         "context_table_coverage": {
           "covered": true,
@@ -129,7 +129,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 22266,
+      "latency_ms": 20898,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -148,8 +148,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "65030182-4900-48c0-a75e-01c0a9a3b458",
-      "run_detail_path": "/api/runs/65030182-4900-48c0-a75e-01c0a9a3b458",
+      "run_id": "141e6bfa-3e92-415e-b4a8-28c85b49fc6a",
+      "run_detail_path": "/api/runs/141e6bfa-3e92-415e-b4a8-28c85b49fc6a",
       "run_trace_summary": {
         "context_tables": [
           "refunds",
@@ -213,21 +213,21 @@
         "memory_score": 0.7919,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2490,
+          "sql_repair": 2639,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 7978,
-          "context_retrieval": 5028,
+          "sql_generation": 7237,
+          "context_retrieval": 4692,
           "sql_intent_validation": 4,
-          "memory_sql_verification": 14,
-          "memory_retrieval_and_plan": 2477
+          "memory_sql_verification": 16,
+          "memory_retrieval_and_plan": 2452
         },
-        "total_latency_ms": 18004,
+        "total_latency_ms": 17055,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 7978
+          "latency_ms": 7237
         },
         "context_table_coverage": {
           "covered": true,
@@ -245,7 +245,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 20876,
+      "latency_ms": 21831,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -265,8 +265,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "0a336314-afe5-47b6-8b89-6f993f31eb2f",
-      "run_detail_path": "/api/runs/0a336314-afe5-47b6-8b89-6f993f31eb2f",
+      "run_id": "6faae2f2-c758-498d-886a-11a8919ff31f",
+      "run_detail_path": "/api/runs/6faae2f2-c758-498d-886a-11a8919ff31f",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -331,21 +331,135 @@
         "memory_score": 0.9833,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2424,
+          "sql_repair": 2678,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 6556,
-          "context_retrieval": 5204,
+          "sql_generation": 7630,
+          "context_retrieval": 5161,
           "sql_intent_validation": 4,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2500
+          "memory_sql_verification": 13,
+          "memory_retrieval_and_plan": 2342
         },
-        "total_latency_ms": 16713,
+        "total_latency_ms": 17839,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 6556
+          "latency_ms": 7630
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "user_014",
+      "category": "用户分析",
+      "question": "最近 90 天复购率是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 39509,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "orders",
+        "users",
+        "payments"
+      ],
+      "missing_keywords": [
+        "repeat_rate"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "run_id": "5fb52305-934e-4778-84bf-901d0817db88",
+      "run_detail_path": "/api/runs/5fb52305-934e-4778-84bf-901d0817db88",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "orders.created_at",
+          "users.created_at",
+          "refunds.created_at",
+          "payments.paid_at",
+          "payments.order_id",
+          "users.id",
+          "refunds.id",
+          "payments.id",
+          "orders.user_id",
+          "users.unique_id",
+          "users.city",
+          "users.state",
+          "refunds.reason",
+          "refunds.amount",
+          "payments.amount"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 29,
+        "relationship_count": 10,
+        "generation_path": "model_error",
+        "generation_warning_count": 5,
+        "generation_warnings": [
+          "模型 SQL 缺少当前问题需要的指标口径：repeat",
+          "模型响应未包含 sql 字段",
+          "Model did not return executable SQL; fixed template generation is no longer used on the main path.",
+          "模型 SQL 为空，无法执行。",
+          "模型 SQL 缺少当前问题需要的数据表：orders"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 1,
+        "guard_warnings": [
+          "候选 SQL 缺少当前问题需要的指标口径：refund_rate"
+        ],
+        "guard_error_count": 5,
+        "guard_errors": [
+          "模型 SQL 缺少当前问题需要的指标口径：repeat",
+          "模型响应未包含 sql 字段",
+          "Model did not return executable SQL; fixed template generation is no longer used on the main path.",
+          "模型 SQL 为空，无法执行。",
+          "模型 SQL 缺少当前问题需要的数据表：orders"
+        ],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.94,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 22395,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 5516,
+          "context_retrieval": 5102,
+          "sql_intent_validation": 0,
+          "memory_sql_verification": 16,
+          "memory_retrieval_and_plan": 2442
+        },
+        "total_latency_ms": 35487,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 22395
         },
         "context_table_coverage": {
           "covered": true,
@@ -363,7 +477,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 24457,
+      "latency_ms": 27451,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -382,8 +496,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "546b0fff-c17e-4b8c-b2e8-3c24d08f19ab",
-      "run_detail_path": "/api/runs/546b0fff-c17e-4b8c-b2e8-3c24d08f19ab",
+      "run_id": "d6336e1e-47d2-4eb9-94d0-d4f75c860efa",
+      "run_detail_path": "/api/runs/d6336e1e-47d2-4eb9-94d0-d4f75c860efa",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -423,7 +537,7 @@
           "SQL 未覆盖已召回的关键上下文表：traffic_events",
           "模型 SQL 缺少当前问题需要的数据表：traffic_events",
           "模型 SQL 缺少当前问题需要的指标口径：conversion_rate",
-          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "模型 SQL 可能在 JOIN payments 后直接汇总 orders.total_amount，一单多支付会导致订单金额重复累计；请先按 orders.id 去重或先按 payments.order_id 聚合。",
           "SQL 未覆盖已召回的关键上下文表：traffic_events"
         ],
         "guard_status": "blocked",
@@ -440,7 +554,7 @@
           "SQL 未覆盖已召回的关键上下文表：traffic_events",
           "模型 SQL 缺少当前问题需要的数据表：traffic_events",
           "模型 SQL 缺少当前问题需要的指标口径：conversion_rate",
-          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "模型 SQL 可能在 JOIN payments 后直接汇总 orders.total_amount，一单多支付会导致订单金额重复累计；请先按 orders.id 去重或先按 payments.order_id 聚合。",
           "SQL 未覆盖已召回的关键上下文表：traffic_events"
         ],
         "memory_path_type": "rewrite_path",
@@ -449,21 +563,21 @@
         "memory_score": 0.7732,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2416,
+          "sql_repair": 2691,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 10067,
-          "context_retrieval": 5180,
-          "sql_intent_validation": 6,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2543
+          "sql_generation": 13150,
+          "context_retrieval": 5003,
+          "sql_intent_validation": 5,
+          "memory_sql_verification": 14,
+          "memory_retrieval_and_plan": 2458
         },
-        "total_latency_ms": 20238,
+        "total_latency_ms": 23335,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 10067
+          "latency_ms": 13150
         },
         "context_table_coverage": {
           "covered": false,
@@ -485,7 +599,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 24650,
+      "latency_ms": 25866,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -504,8 +618,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "f90b5fbd-8001-4011-a73e-baff7852a601",
-      "run_detail_path": "/api/runs/f90b5fbd-8001-4011-a73e-baff7852a601",
+      "run_id": "c3a68d05-44f8-4974-a45f-655f710cd11a",
+      "run_detail_path": "/api/runs/c3a68d05-44f8-4974-a45f-655f710cd11a",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -569,21 +683,21 @@
         "memory_score": 0.7732,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2695,
+          "sql_repair": 2901,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 10049,
-          "context_retrieval": 5159,
+          "sql_generation": 11029,
+          "context_retrieval": 5185,
           "sql_intent_validation": 7,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2520
+          "memory_sql_verification": 10,
+          "memory_retrieval_and_plan": 2481
         },
-        "total_latency_ms": 20459,
+        "total_latency_ms": 21632,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 10049
+          "latency_ms": 11029
         },
         "context_table_coverage": {
           "covered": false,
@@ -605,7 +719,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 36122,
+      "latency_ms": 36685,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -624,8 +738,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "527fc28e-b351-4012-aaae-d8ef8102fd45",
-      "run_detail_path": "/api/runs/527fc28e-b351-4012-aaae-d8ef8102fd45",
+      "run_id": "977a2a3a-4593-4cf4-92e7-fb9afb1dc968",
+      "run_detail_path": "/api/runs/977a2a3a-4593-4cf4-92e7-fb9afb1dc968",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -692,21 +806,21 @@
         "memory_score": 0.7659,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 17501,
+          "sql_repair": 18373,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 6519,
-          "context_retrieval": 5267,
+          "sql_generation": 6768,
+          "context_retrieval": 4891,
           "sql_intent_validation": 4,
-          "memory_sql_verification": 5,
-          "memory_retrieval_and_plan": 2544
+          "memory_sql_verification": 8,
+          "memory_retrieval_and_plan": 2457
         },
-        "total_latency_ms": 31851,
+        "total_latency_ms": 32514,
         "slowest_node": {
           "name": "sql_repair",
-          "latency_ms": 17501
+          "latency_ms": 18373
         },
         "context_table_coverage": {
           "covered": false,
@@ -730,7 +844,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 22517,
+      "latency_ms": 22842,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -749,8 +863,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "ee75685a-b603-4592-a389-8ca6fa4bdadd",
-      "run_detail_path": "/api/runs/ee75685a-b603-4592-a389-8ca6fa4bdadd",
+      "run_id": "01a5cb01-767f-4d0d-a399-2898cf504b1a",
+      "run_detail_path": "/api/runs/01a5cb01-767f-4d0d-a399-2898cf504b1a",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -817,21 +931,21 @@
         "memory_score": 0.7862,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 3761,
+          "sql_repair": 3840,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 6597,
-          "context_retrieval": 5155,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 14,
-          "memory_retrieval_and_plan": 2661
+          "sql_generation": 7140,
+          "context_retrieval": 5316,
+          "sql_intent_validation": 5,
+          "memory_sql_verification": 13,
+          "memory_retrieval_and_plan": 2426
         },
-        "total_latency_ms": 18205,
+        "total_latency_ms": 18755,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 6597
+          "latency_ms": 7140
         },
         "context_table_coverage": {
           "covered": false,
@@ -849,137 +963,15 @@
       "error": ""
     }
   ],
-  "assertion_failures": [
-    {
-      "id": "user_014",
-      "category": "用户分析",
-      "question": "最近 90 天复购率是多少？",
-      "ok": true,
-      "path": "rewrite_path",
-      "status_code": 200,
-      "latency_ms": 33220,
-      "has_sql": true,
-      "guard_passed": true,
-      "memory_hit": false,
-      "expected_table_hits": [
-        "orders",
-        "users",
-        "payments"
-      ],
-      "expected_keyword_hits": [],
-      "missing_tables": [],
-      "missing_keywords": [
-        "repeat_rate"
-      ],
-      "forbidden_keyword_hits": [],
-      "table_match": true,
-      "keyword_match": false,
-      "forbidden_match": true,
-      "strict_ok": false,
-      "returned_rows": 0,
-      "run_id": "d7ad249b-d6c6-4224-9831-4ca197998ab2",
-      "run_detail_path": "/api/runs/d7ad249b-d6c6-4224-9831-4ca197998ab2",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "orders.total_amount",
-          "refunds.order_id",
-          "payments.status",
-          "orders.created_at",
-          "users.created_at",
-          "refunds.created_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "users.id",
-          "refunds.id",
-          "payments.id",
-          "orders.user_id",
-          "users.unique_id",
-          "users.city",
-          "users.state",
-          "refunds.reason",
-          "refunds.amount",
-          "payments.amount"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_repair",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "blocked",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 1,
-        "guard_errors": [
-          "字段不存在或未在 schema_metadata 中登记：user_order_counts.created_at, users.user_id"
-        ],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 123,
-          "sql_repair": 15291,
-          "intent_parse": 0,
-          "memory_update": 0,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 5789,
-          "context_retrieval": 5075,
-          "sql_intent_validation": 21,
-          "memory_sql_verification": 15,
-          "memory_retrieval_and_plan": 2484
-        },
-        "total_latency_ms": 29053,
-        "slowest_node": {
-          "name": "sql_repair",
-          "latency_ms": 15291
-        },
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "payments",
-            "repeat_purchase",
-            "user_order_counts",
-            "user_repeats",
-            "users"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
-      "error": ""
-    }
-  ],
+  "assertion_failures": [],
   "assertion_failure_summary": {
-    "total": 1,
+    "total": 0,
     "by_missing_table": [],
     "by_forbidden_keyword": [],
     "by_missing_table_context_status": [],
-    "by_category": [
-      {
-        "name": "用户分析",
-        "count": 1
-      }
-    ],
-    "by_path": [
-      {
-        "name": "rewrite_path",
-        "count": 1
-      }
-    ],
-    "case_ids": [
-      "user_014"
-    ]
+    "by_category": [],
+    "by_path": [],
+    "case_ids": []
   },
   "cases": [
     {
@@ -989,7 +981,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 21189,
+      "latency_ms": 19413,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1009,8 +1001,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 7,
-      "run_id": "8e1ba988-8f3a-4a90-ab39-6a4ab777c3c3",
-      "run_detail_path": "/api/runs/8e1ba988-8f3a-4a90-ab39-6a4ab777c3c3",
+      "run_id": "b404358d-ce9c-4e41-bd34-c41fb8d94a7d",
+      "run_detail_path": "/api/runs/b404358d-ce9c-4e41-bd34-c41fb8d94a7d",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1055,21 +1047,21 @@
         "memory_hit": false,
         "memory_score": 0.9667,
         "node_timings_ms": {
-          "sql_guard": 132,
+          "sql_guard": 102,
           "intent_parse": 0,
-          "memory_update": 2666,
-          "sql_execution": 202,
+          "memory_update": 1961,
+          "sql_execution": 173,
           "present_result": 0,
-          "sql_generation": 7511,
-          "context_retrieval": 4375,
-          "sql_intent_validation": 6,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2583
+          "sql_generation": 8826,
+          "context_retrieval": 3539,
+          "sql_intent_validation": 4,
+          "memory_sql_verification": 10,
+          "memory_retrieval_and_plan": 1785
         },
-        "total_latency_ms": 14842,
+        "total_latency_ms": 14457,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 7511
+          "latency_ms": 8826
         },
         "context_table_coverage": {
           "covered": true,
@@ -1090,7 +1082,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 20321,
+      "latency_ms": 18114,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1110,8 +1102,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "2bc6e4f7-8106-4621-a337-02f59c1aa541",
-      "run_detail_path": "/api/runs/2bc6e4f7-8106-4621-a337-02f59c1aa541",
+      "run_id": "c4049c78-7dc1-4e3f-be9a-af9a896305c9",
+      "run_detail_path": "/api/runs/c4049c78-7dc1-4e3f-be9a-af9a896305c9",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1156,21 +1148,21 @@
         "memory_hit": false,
         "memory_score": 0.9667,
         "node_timings_ms": {
-          "sql_guard": 147,
+          "sql_guard": 152,
           "intent_parse": 0,
-          "memory_update": 2723,
-          "sql_execution": 307,
+          "memory_update": 2603,
+          "sql_execution": 326,
           "present_result": 0,
-          "sql_generation": 5019,
-          "context_retrieval": 5239,
-          "sql_intent_validation": 9,
-          "memory_sql_verification": 13,
-          "memory_retrieval_and_plan": 2579
+          "sql_generation": 5753,
+          "context_retrieval": 3870,
+          "sql_intent_validation": 11,
+          "memory_sql_verification": 7,
+          "memory_retrieval_and_plan": 1967
         },
-        "total_latency_ms": 13321,
+        "total_latency_ms": 12093,
         "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 5239
+          "name": "sql_generation",
+          "latency_ms": 5753
         },
         "context_table_coverage": {
           "covered": true,
@@ -1191,7 +1183,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 19608,
+      "latency_ms": 17411,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1211,8 +1203,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 3,
-      "run_id": "bd99d8cf-c006-456c-92d7-6e268ad0fede",
-      "run_detail_path": "/api/runs/bd99d8cf-c006-456c-92d7-6e268ad0fede",
+      "run_id": "d3af9550-0e6d-4162-b8b8-286afb068e7c",
+      "run_detail_path": "/api/runs/d3af9550-0e6d-4162-b8b8-286afb068e7c",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1257,21 +1249,21 @@
         "memory_hit": false,
         "memory_score": 0.9667,
         "node_timings_ms": {
-          "sql_guard": 160,
+          "sql_guard": 117,
           "intent_parse": 0,
-          "memory_update": 2654,
-          "sql_execution": 389,
+          "memory_update": 2206,
+          "sql_execution": 343,
           "present_result": 0,
-          "sql_generation": 4518,
-          "context_retrieval": 5167,
-          "sql_intent_validation": 6,
-          "memory_sql_verification": 5,
-          "memory_retrieval_and_plan": 2525
+          "sql_generation": 4597,
+          "context_retrieval": 4219,
+          "sql_intent_validation": 7,
+          "memory_sql_verification": 3,
+          "memory_retrieval_and_plan": 2120
         },
-        "total_latency_ms": 12778,
+        "total_latency_ms": 11413,
         "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 5167
+          "name": "sql_generation",
+          "latency_ms": 4597
         },
         "context_table_coverage": {
           "covered": true,
@@ -1292,7 +1284,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 15409,
+      "latency_ms": 13198,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1313,8 +1305,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "422eddcd-05aa-4bd4-9ddc-05783e3bbc72",
-      "run_detail_path": "/api/runs/422eddcd-05aa-4bd4-9ddc-05783e3bbc72",
+      "run_id": "0052aeac-976c-45a5-bc8b-43dae6a27b39",
+      "run_detail_path": "/api/runs/0052aeac-976c-45a5-bc8b-43dae6a27b39",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1361,19 +1353,19 @@
         "memory_hit": true,
         "memory_score": 1.0,
         "node_timings_ms": {
-          "sql_guard": 162,
+          "sql_guard": 106,
           "intent_parse": 0,
-          "memory_update": 2647,
-          "sql_execution": 696,
+          "memory_update": 2156,
+          "sql_execution": 602,
           "present_result": 0,
-          "context_retrieval": 5195,
-          "memory_sql_verification": 13,
-          "memory_retrieval_and_plan": 2541
+          "context_retrieval": 4618,
+          "memory_sql_verification": 11,
+          "memory_retrieval_and_plan": 1924
         },
-        "total_latency_ms": 8613,
+        "total_latency_ms": 7265,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5195
+          "latency_ms": 4618
         },
         "context_table_coverage": {
           "covered": true,
@@ -1397,7 +1389,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 15450,
+      "latency_ms": 12724,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1417,8 +1409,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "8d70ac22-aea9-48d0-8ee9-9be90a3d7651",
-      "run_detail_path": "/api/runs/8d70ac22-aea9-48d0-8ee9-9be90a3d7651",
+      "run_id": "5b122acc-5afc-4e9f-8a9f-4f982093898a",
+      "run_detail_path": "/api/runs/5b122acc-5afc-4e9f-8a9f-4f982093898a",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1464,19 +1456,19 @@
         "memory_hit": true,
         "memory_score": 0.98,
         "node_timings_ms": {
-          "sql_guard": 163,
+          "sql_guard": 150,
           "intent_parse": 0,
-          "memory_update": 2662,
-          "sql_execution": 667,
+          "memory_update": 2194,
+          "sql_execution": 608,
           "present_result": 0,
-          "context_retrieval": 5272,
-          "memory_sql_verification": 13,
-          "memory_retrieval_and_plan": 2518
+          "context_retrieval": 4063,
+          "memory_sql_verification": 12,
+          "memory_retrieval_and_plan": 2155
         },
-        "total_latency_ms": 8638,
+        "total_latency_ms": 6992,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5272
+          "latency_ms": 4063
         },
         "context_table_coverage": {
           "covered": true,
@@ -1518,8 +1510,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "1c385380-ae15-41a4-99e6-a9763d7517c5",
-      "run_detail_path": "/api/runs/1c385380-ae15-41a4-99e6-a9763d7517c5",
+      "run_id": "b0945e9e-1aa4-4a91-a67b-3fb99e302be4",
+      "run_detail_path": "/api/runs/b0945e9e-1aa4-4a91-a67b-3fb99e302be4",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1572,21 +1564,21 @@
         "memory_score": 0.7717,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2388,
+          "sql_repair": 3399,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 3990,
-          "context_retrieval": 5274,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 11,
-          "memory_retrieval_and_plan": 2505
+          "sql_generation": 4146,
+          "context_retrieval": 4581,
+          "sql_intent_validation": 5,
+          "memory_sql_verification": 10,
+          "memory_retrieval_and_plan": 2420
         },
-        "total_latency_ms": 14187,
+        "total_latency_ms": 14575,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5274
+          "latency_ms": 4581
         },
         "context_table_coverage": {
           "covered": true,
@@ -1604,7 +1596,7 @@
       "ok": true,
       "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 15176,
+      "latency_ms": 14621,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": true,
@@ -1624,8 +1616,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "22e4e52a-c6c4-4a33-a7aa-3d66b1b88f31",
-      "run_detail_path": "/api/runs/22e4e52a-c6c4-4a33-a7aa-3d66b1b88f31",
+      "run_id": "fbf83cb1-5dc0-4e73-a7ed-503776efcffa",
+      "run_detail_path": "/api/runs/fbf83cb1-5dc0-4e73-a7ed-503776efcffa",
       "run_trace_summary": {
         "context_tables": [
           "refunds",
@@ -1672,19 +1664,19 @@
         "memory_hit": true,
         "memory_score": 1.0,
         "node_timings_ms": {
-          "sql_guard": 124,
+          "sql_guard": 114,
           "intent_parse": 0,
-          "memory_update": 2628,
-          "sql_execution": 655,
+          "memory_update": 2477,
+          "sql_execution": 568,
           "present_result": 0,
-          "context_retrieval": 5145,
+          "context_retrieval": 4961,
           "memory_sql_verification": 14,
-          "memory_retrieval_and_plan": 2538
+          "memory_retrieval_and_plan": 2361
         },
-        "total_latency_ms": 8482,
+        "total_latency_ms": 8023,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5145
+          "latency_ms": 4961
         },
         "context_table_coverage": {
           "covered": true,
@@ -1708,7 +1700,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 22266,
+      "latency_ms": 20898,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -1727,8 +1719,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "65030182-4900-48c0-a75e-01c0a9a3b458",
-      "run_detail_path": "/api/runs/65030182-4900-48c0-a75e-01c0a9a3b458",
+      "run_id": "141e6bfa-3e92-415e-b4a8-28c85b49fc6a",
+      "run_detail_path": "/api/runs/141e6bfa-3e92-415e-b4a8-28c85b49fc6a",
       "run_trace_summary": {
         "context_tables": [
           "refunds",
@@ -1792,21 +1784,21 @@
         "memory_score": 0.7919,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2490,
+          "sql_repair": 2639,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 7978,
-          "context_retrieval": 5028,
+          "sql_generation": 7237,
+          "context_retrieval": 4692,
           "sql_intent_validation": 4,
-          "memory_sql_verification": 14,
-          "memory_retrieval_and_plan": 2477
+          "memory_sql_verification": 16,
+          "memory_retrieval_and_plan": 2452
         },
-        "total_latency_ms": 18004,
+        "total_latency_ms": 17055,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 7978
+          "latency_ms": 7237
         },
         "context_table_coverage": {
           "covered": true,
@@ -1824,7 +1816,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 20876,
+      "latency_ms": 21831,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -1844,8 +1836,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "0a336314-afe5-47b6-8b89-6f993f31eb2f",
-      "run_detail_path": "/api/runs/0a336314-afe5-47b6-8b89-6f993f31eb2f",
+      "run_id": "6faae2f2-c758-498d-886a-11a8919ff31f",
+      "run_detail_path": "/api/runs/6faae2f2-c758-498d-886a-11a8919ff31f",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -1910,21 +1902,21 @@
         "memory_score": 0.9833,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2424,
+          "sql_repair": 2678,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 6556,
-          "context_retrieval": 5204,
+          "sql_generation": 7630,
+          "context_retrieval": 5161,
           "sql_intent_validation": 4,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2500
+          "memory_sql_verification": 13,
+          "memory_retrieval_and_plan": 2342
         },
-        "total_latency_ms": 16713,
+        "total_latency_ms": 17839,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 6556
+          "latency_ms": 7630
         },
         "context_table_coverage": {
           "covered": true,
@@ -1942,7 +1934,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 20424,
+      "latency_ms": 20146,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1960,8 +1952,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 5,
-      "run_id": "92015e7c-d638-4ee0-acee-412c2f231cb5",
-      "run_detail_path": "/api/runs/92015e7c-d638-4ee0-acee-412c2f231cb5",
+      "run_id": "bd7692a7-92bd-4083-bba8-a0ac2386983f",
+      "run_detail_path": "/api/runs/bd7692a7-92bd-4083-bba8-a0ac2386983f",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2006,21 +1998,21 @@
         "memory_hit": false,
         "memory_score": 0.9333,
         "node_timings_ms": {
-          "sql_guard": 150,
+          "sql_guard": 106,
           "intent_parse": 0,
-          "memory_update": 2660,
-          "sql_execution": 254,
+          "memory_update": 2437,
+          "sql_execution": 255,
           "present_result": 0,
-          "sql_generation": 5382,
-          "context_retrieval": 5210,
+          "sql_generation": 6093,
+          "context_retrieval": 4813,
           "sql_intent_validation": 8,
-          "memory_sql_verification": 7,
-          "memory_retrieval_and_plan": 2495
+          "memory_sql_verification": 5,
+          "memory_retrieval_and_plan": 2426
         },
-        "total_latency_ms": 13512,
+        "total_latency_ms": 13713,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 5382
+          "latency_ms": 6093
         },
         "context_table_coverage": {
           "covered": true,
@@ -2040,7 +2032,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 19460,
+      "latency_ms": 19110,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2058,8 +2050,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 1,
-      "run_id": "8c42a56c-5258-4039-aee5-5657a3cf1fc8",
-      "run_detail_path": "/api/runs/8c42a56c-5258-4039-aee5-5657a3cf1fc8",
+      "run_id": "3205e82c-ae8f-4fb9-bab1-19f68cb342c1",
+      "run_detail_path": "/api/runs/3205e82c-ae8f-4fb9-bab1-19f68cb342c1",
       "run_trace_summary": {
         "context_tables": [
           "refunds",
@@ -2105,21 +2097,21 @@
         "memory_hit": false,
         "memory_score": 0.925,
         "node_timings_ms": {
-          "sql_guard": 116,
+          "sql_guard": 157,
           "intent_parse": 0,
-          "memory_update": 2585,
-          "sql_execution": 571,
+          "memory_update": 2519,
+          "sql_execution": 477,
           "present_result": 0,
-          "sql_generation": 4483,
-          "context_retrieval": 5106,
+          "sql_generation": 4722,
+          "context_retrieval": 4946,
           "sql_intent_validation": 5,
-          "memory_sql_verification": 4,
-          "memory_retrieval_and_plan": 2449
+          "memory_sql_verification": 5,
+          "memory_retrieval_and_plan": 2209
         },
-        "total_latency_ms": 12741,
+        "total_latency_ms": 12529,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5106
+          "latency_ms": 4946
         },
         "context_table_coverage": {
           "covered": true,
@@ -2139,7 +2131,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 18499,
+      "latency_ms": 18602,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2158,8 +2150,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 1,
-      "run_id": "9e8a80dd-a47c-4180-8322-319819dadc6e",
-      "run_detail_path": "/api/runs/9e8a80dd-a47c-4180-8322-319819dadc6e",
+      "run_id": "8f41ddfc-d5b8-4851-beee-33503b194334",
+      "run_detail_path": "/api/runs/8f41ddfc-d5b8-4851-beee-33503b194334",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2205,21 +2197,21 @@
         "memory_hit": false,
         "memory_score": 0.95,
         "node_timings_ms": {
-          "sql_guard": 121,
+          "sql_guard": 110,
           "intent_parse": 0,
-          "memory_update": 2606,
-          "sql_execution": 122,
+          "memory_update": 2557,
+          "sql_execution": 116,
           "present_result": 0,
-          "sql_generation": 3913,
-          "context_retrieval": 5074,
-          "sql_intent_validation": 4,
+          "sql_generation": 4547,
+          "context_retrieval": 4941,
+          "sql_intent_validation": 2,
           "memory_sql_verification": 3,
-          "memory_retrieval_and_plan": 2473
+          "memory_retrieval_and_plan": 2379
         },
-        "total_latency_ms": 11717,
+        "total_latency_ms": 12107,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5074
+          "latency_ms": 4941
         },
         "context_table_coverage": {
           "covered": true,
@@ -2240,7 +2232,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 22738,
+      "latency_ms": 23067,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2259,8 +2251,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 10,
-      "run_id": "bbd59c2e-c7de-4651-a5bf-59f06172f544",
-      "run_detail_path": "/api/runs/bbd59c2e-c7de-4651-a5bf-59f06172f544",
+      "run_id": "b3b5070e-2908-4fef-b471-8cfb3e4471ab",
+      "run_detail_path": "/api/runs/b3b5070e-2908-4fef-b471-8cfb3e4471ab",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2308,22 +2300,22 @@
         "memory_hit": false,
         "memory_score": 0.975,
         "node_timings_ms": {
-          "sql_guard": 121,
-          "sql_repair": 3461,
+          "sql_guard": 105,
+          "sql_repair": 3849,
           "intent_parse": 0,
-          "memory_update": 2610,
-          "sql_execution": 518,
+          "memory_update": 2675,
+          "sql_execution": 650,
           "present_result": 0,
-          "sql_generation": 4365,
-          "context_retrieval": 5085,
+          "sql_generation": 4293,
+          "context_retrieval": 5028,
           "sql_intent_validation": 6,
-          "memory_sql_verification": 5,
-          "memory_retrieval_and_plan": 2506
+          "memory_sql_verification": 3,
+          "memory_retrieval_and_plan": 2266
         },
-        "total_latency_ms": 16081,
+        "total_latency_ms": 16212,
         "slowest_node": {
           "name": "context_retrieval",
-          "latency_ms": 5085
+          "latency_ms": 5028
         },
         "context_table_coverage": {
           "covered": true,
@@ -2342,31 +2334,31 @@
       "id": "user_014",
       "category": "用户分析",
       "question": "最近 90 天复购率是多少？",
-      "ok": true,
-      "path": "rewrite_path",
-      "status_code": 200,
-      "latency_ms": 33220,
-      "has_sql": true,
-      "guard_passed": true,
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 39509,
+      "has_sql": false,
+      "guard_passed": false,
       "memory_hit": false,
-      "expected_table_hits": [
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
         "orders",
         "users",
         "payments"
       ],
-      "expected_keyword_hits": [],
-      "missing_tables": [],
       "missing_keywords": [
         "repeat_rate"
       ],
       "forbidden_keyword_hits": [],
-      "table_match": true,
+      "table_match": false,
       "keyword_match": false,
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "d7ad249b-d6c6-4224-9831-4ca197998ab2",
-      "run_detail_path": "/api/runs/d7ad249b-d6c6-4224-9831-4ca197998ab2",
+      "run_id": "5fb52305-934e-4778-84bf-901d0817db88",
+      "run_detail_path": "/api/runs/5fb52305-934e-4778-84bf-901d0817db88",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2399,48 +2391,53 @@
         "metric_count": 4,
         "schema_column_count": 29,
         "relationship_count": 10,
-        "generation_path": "model_repair",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
+        "generation_path": "model_error",
+        "generation_warning_count": 5,
+        "generation_warnings": [
+          "模型 SQL 缺少当前问题需要的指标口径：repeat",
+          "模型响应未包含 sql 字段",
+          "Model did not return executable SQL; fixed template generation is no longer used on the main path.",
+          "模型 SQL 为空，无法执行。",
+          "模型 SQL 缺少当前问题需要的数据表：orders"
+        ],
         "guard_status": "blocked",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 1,
+        "guard_warning_count": 1,
+        "guard_warnings": [
+          "候选 SQL 缺少当前问题需要的指标口径：refund_rate"
+        ],
+        "guard_error_count": 5,
         "guard_errors": [
-          "字段不存在或未在 schema_metadata 中登记：user_order_counts.created_at, users.user_id"
+          "模型 SQL 缺少当前问题需要的指标口径：repeat",
+          "模型响应未包含 sql 字段",
+          "Model did not return executable SQL; fixed template generation is no longer used on the main path.",
+          "模型 SQL 为空，无法执行。",
+          "模型 SQL 缺少当前问题需要的数据表：orders"
         ],
         "memory_path_type": "rewrite_path",
         "memory_reuse_type": "regenerate",
         "memory_hit": false,
         "memory_score": 0.94,
         "node_timings_ms": {
-          "sql_guard": 123,
-          "sql_repair": 15291,
+          "sql_guard": 0,
+          "sql_repair": 22395,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 5789,
-          "context_retrieval": 5075,
-          "sql_intent_validation": 21,
-          "memory_sql_verification": 15,
-          "memory_retrieval_and_plan": 2484
+          "sql_generation": 5516,
+          "context_retrieval": 5102,
+          "sql_intent_validation": 0,
+          "memory_sql_verification": 16,
+          "memory_retrieval_and_plan": 2442
         },
-        "total_latency_ms": 29053,
+        "total_latency_ms": 35487,
         "slowest_node": {
           "name": "sql_repair",
-          "latency_ms": 15291
+          "latency_ms": 22395
         },
         "context_table_coverage": {
           "covered": true,
-          "sql_tables": [
-            "orders",
-            "payments",
-            "repeat_purchase",
-            "user_order_counts",
-            "user_repeats",
-            "users"
-          ],
+          "sql_tables": [],
           "missing_tables": [],
           "required_tables": []
         }
@@ -2454,7 +2451,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 21872,
+      "latency_ms": 22187,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2474,8 +2471,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 30,
-      "run_id": "dff51b00-c2bd-456a-8a7a-db8345d30661",
-      "run_detail_path": "/api/runs/dff51b00-c2bd-456a-8a7a-db8345d30661",
+      "run_id": "de70dbea-882f-4292-bab8-148ec8f712ac",
+      "run_detail_path": "/api/runs/de70dbea-882f-4292-bab8-148ec8f712ac",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2521,21 +2518,21 @@
         "memory_hit": false,
         "memory_score": 0.975,
         "node_timings_ms": {
-          "sql_guard": 127,
+          "sql_guard": 169,
           "intent_parse": 0,
-          "memory_update": 2637,
-          "sql_execution": 450,
+          "memory_update": 2620,
+          "sql_execution": 472,
           "present_result": 0,
-          "sql_generation": 6898,
-          "context_retrieval": 5101,
+          "sql_generation": 7639,
+          "context_retrieval": 4964,
           "sql_intent_validation": 9,
-          "memory_sql_verification": 9,
-          "memory_retrieval_and_plan": 2502
+          "memory_sql_verification": 8,
+          "memory_retrieval_and_plan": 2507
         },
-        "total_latency_ms": 15103,
+        "total_latency_ms": 15775,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 6898
+          "latency_ms": 7639
         },
         "context_table_coverage": {
           "covered": true,
@@ -2557,7 +2554,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 24457,
+      "latency_ms": 27451,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -2576,8 +2573,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "546b0fff-c17e-4b8c-b2e8-3c24d08f19ab",
-      "run_detail_path": "/api/runs/546b0fff-c17e-4b8c-b2e8-3c24d08f19ab",
+      "run_id": "d6336e1e-47d2-4eb9-94d0-d4f75c860efa",
+      "run_detail_path": "/api/runs/d6336e1e-47d2-4eb9-94d0-d4f75c860efa",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2617,7 +2614,7 @@
           "SQL 未覆盖已召回的关键上下文表：traffic_events",
           "模型 SQL 缺少当前问题需要的数据表：traffic_events",
           "模型 SQL 缺少当前问题需要的指标口径：conversion_rate",
-          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "模型 SQL 可能在 JOIN payments 后直接汇总 orders.total_amount，一单多支付会导致订单金额重复累计；请先按 orders.id 去重或先按 payments.order_id 聚合。",
           "SQL 未覆盖已召回的关键上下文表：traffic_events"
         ],
         "guard_status": "blocked",
@@ -2634,7 +2631,7 @@
           "SQL 未覆盖已召回的关键上下文表：traffic_events",
           "模型 SQL 缺少当前问题需要的数据表：traffic_events",
           "模型 SQL 缺少当前问题需要的指标口径：conversion_rate",
-          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "模型 SQL 可能在 JOIN payments 后直接汇总 orders.total_amount，一单多支付会导致订单金额重复累计；请先按 orders.id 去重或先按 payments.order_id 聚合。",
           "SQL 未覆盖已召回的关键上下文表：traffic_events"
         ],
         "memory_path_type": "rewrite_path",
@@ -2643,21 +2640,21 @@
         "memory_score": 0.7732,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2416,
+          "sql_repair": 2691,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 10067,
-          "context_retrieval": 5180,
-          "sql_intent_validation": 6,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2543
+          "sql_generation": 13150,
+          "context_retrieval": 5003,
+          "sql_intent_validation": 5,
+          "memory_sql_verification": 14,
+          "memory_retrieval_and_plan": 2458
         },
-        "total_latency_ms": 20238,
+        "total_latency_ms": 23335,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 10067
+          "latency_ms": 13150
         },
         "context_table_coverage": {
           "covered": false,
@@ -2679,7 +2676,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 24650,
+      "latency_ms": 25866,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -2698,8 +2695,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "f90b5fbd-8001-4011-a73e-baff7852a601",
-      "run_detail_path": "/api/runs/f90b5fbd-8001-4011-a73e-baff7852a601",
+      "run_id": "c3a68d05-44f8-4974-a45f-655f710cd11a",
+      "run_detail_path": "/api/runs/c3a68d05-44f8-4974-a45f-655f710cd11a",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2763,21 +2760,21 @@
         "memory_score": 0.7732,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 2695,
+          "sql_repair": 2901,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 10049,
-          "context_retrieval": 5159,
+          "sql_generation": 11029,
+          "context_retrieval": 5185,
           "sql_intent_validation": 7,
-          "memory_sql_verification": 12,
-          "memory_retrieval_and_plan": 2520
+          "memory_sql_verification": 10,
+          "memory_retrieval_and_plan": 2481
         },
-        "total_latency_ms": 20459,
+        "total_latency_ms": 21632,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 10049
+          "latency_ms": 11029
         },
         "context_table_coverage": {
           "covered": false,
@@ -2799,7 +2796,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 36122,
+      "latency_ms": 36685,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -2818,8 +2815,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "527fc28e-b351-4012-aaae-d8ef8102fd45",
-      "run_detail_path": "/api/runs/527fc28e-b351-4012-aaae-d8ef8102fd45",
+      "run_id": "977a2a3a-4593-4cf4-92e7-fb9afb1dc968",
+      "run_detail_path": "/api/runs/977a2a3a-4593-4cf4-92e7-fb9afb1dc968",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -2886,21 +2883,21 @@
         "memory_score": 0.7659,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 17501,
+          "sql_repair": 18373,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 6519,
-          "context_retrieval": 5267,
+          "sql_generation": 6768,
+          "context_retrieval": 4891,
           "sql_intent_validation": 4,
-          "memory_sql_verification": 5,
-          "memory_retrieval_and_plan": 2544
+          "memory_sql_verification": 8,
+          "memory_retrieval_and_plan": 2457
         },
-        "total_latency_ms": 31851,
+        "total_latency_ms": 32514,
         "slowest_node": {
           "name": "sql_repair",
-          "latency_ms": 17501
+          "latency_ms": 18373
         },
         "context_table_coverage": {
           "covered": false,
@@ -2924,7 +2921,7 @@
       "ok": false,
       "path": "",
       "status_code": 503,
-      "latency_ms": 22517,
+      "latency_ms": 22842,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -2943,8 +2940,8 @@
       "forbidden_match": true,
       "strict_ok": false,
       "returned_rows": 0,
-      "run_id": "ee75685a-b603-4592-a389-8ca6fa4bdadd",
-      "run_detail_path": "/api/runs/ee75685a-b603-4592-a389-8ca6fa4bdadd",
+      "run_id": "01a5cb01-767f-4d0d-a399-2898cf504b1a",
+      "run_detail_path": "/api/runs/01a5cb01-767f-4d0d-a399-2898cf504b1a",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -3011,21 +3008,21 @@
         "memory_score": 0.7862,
         "node_timings_ms": {
           "sql_guard": 0,
-          "sql_repair": 3761,
+          "sql_repair": 3840,
           "intent_parse": 0,
           "memory_update": 0,
           "sql_execution": 0,
           "present_result": 0,
-          "sql_generation": 6597,
-          "context_retrieval": 5155,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 14,
-          "memory_retrieval_and_plan": 2661
+          "sql_generation": 7140,
+          "context_retrieval": 5316,
+          "sql_intent_validation": 5,
+          "memory_sql_verification": 13,
+          "memory_retrieval_and_plan": 2426
         },
-        "total_latency_ms": 18205,
+        "total_latency_ms": 18755,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 6597
+          "latency_ms": 7140
         },
         "context_table_coverage": {
           "covered": false,
@@ -3049,7 +3046,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 21388,
+      "latency_ms": 22272,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -3068,8 +3065,8 @@
       "forbidden_match": true,
       "strict_ok": true,
       "returned_rows": 1,
-      "run_id": "672ca634-ee8d-4701-b58e-a519436848fe",
-      "run_detail_path": "/api/runs/672ca634-ee8d-4701-b58e-a519436848fe",
+      "run_id": "1215c047-75bd-4a8d-9e8b-c3d6cc587fb5",
+      "run_detail_path": "/api/runs/1215c047-75bd-4a8d-9e8b-c3d6cc587fb5",
       "run_trace_summary": {
         "context_tables": [
           "orders",
@@ -3116,21 +3113,21 @@
         "memory_hit": false,
         "memory_score": 0.96,
         "node_timings_ms": {
-          "sql_guard": 130,
+          "sql_guard": 124,
           "intent_parse": 0,
-          "memory_update": 2650,
-          "sql_execution": 940,
+          "memory_update": 2594,
+          "sql_execution": 818,
           "present_result": 0,
-          "sql_generation": 5684,
-          "context_retrieval": 5165,
-          "sql_intent_validation": 8,
-          "memory_sql_verification": 7,
-          "memory_retrieval_and_plan": 2526
+          "sql_generation": 6950,
+          "context_retrieval": 5129,
+          "sql_intent_validation": 9,
+          "memory_sql_verification": 8,
+          "memory_retrieval_and_plan": 2489
         },
-        "total_latency_ms": 14468,
+        "total_latency_ms": 15535,
         "slowest_node": {
           "name": "sql_generation",
-          "latency_ms": 5684
+          "latency_ms": 6950
         },
         "context_table_coverage": {
           "covered": true,

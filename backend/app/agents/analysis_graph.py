@@ -344,7 +344,26 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
         "generated_sql": generated_sql.model_copy(update={"warnings": warnings}),
         "node_timings": _add_node_timing(state, "sql_intent_validation", started),
     }
-    if verification["decision"] == "reject" and state.get("repair_attempts", 0) >= 1:
+    cannot_repair = not state.get("selected_sql", "").strip() or state.get("repair_attempts", 0) >= 1
+    if verification["decision"] == "reject" and cannot_repair:
+        fallback_sql = _single_order_count_fallback(state.get("question_intent"))
+        if fallback_sql:
+            fallback_verification = _verify_generated_sql_intent(
+                question=state["question"],
+                retrieval_context=state["retrieval_context"],
+                sql=fallback_sql,
+                question_intent=state.get("question_intent"),
+            )
+            if fallback_verification["decision"] == "accept":
+                fallback_warning = "模型生成与修复未满足 QuerySpec，已使用受控订单数 fallback。"
+                updates["sql_intent_verification"] = fallback_verification
+                updates["generated_sql"] = GeneratedSql(
+                    path="query_spec_fallback",
+                    sql=fallback_sql,
+                    warnings=[*warnings, fallback_warning],
+                )
+                updates["selected_sql"] = fallback_sql
+                return updates
         updates["generated_sql"] = generated_sql.model_copy(
             update={
                 "path": "model_error",
@@ -697,13 +716,6 @@ def _select_generated_sql(
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
 ) -> GeneratedSql:
-    fallback_sql = _single_order_count_fallback(question_intent)
-    if fallback_sql:
-        return GeneratedSql(
-            path="query_spec_fallback",
-            sql=fallback_sql,
-            warnings=["已使用 QuerySpec 验证的单指标订单数 SQL，仍将经过 SQL Guard 和只读 Executor。"],
-        )
     enabled = settings.model_sql_generator_enabled if model_enabled is None else model_enabled
     if not enabled:
         return GeneratedSql(
