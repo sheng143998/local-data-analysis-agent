@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Skill Git Delivery And Chinese Comments。计划：`docs/plans/2026-07-12-skill-git-delivery-and-chinese-comments.md`；完成记录：`docs/modules/2026-07-12-skill-git-delivery-and-chinese-comments.md`。Skill 已要求新增/修改注释默认使用中文并说明业务目的、规则、安全边界或取舍；每个通过验证的完整模块必须检查 git 状态、独立提交并推送，且不得混入无关用户变更。模块提交和 `origin/main` 推送随本轮交付完成，最终 hash 以 git log 为准。
+
 - 已完成：Agent Conversation Memory Architecture 的 Phase 1、L1、L2、L3 基础实现。计划：`docs/plans/2026-07-12-agent-conversation-memory-architecture-draft.md`；完成记录：`docs/modules/2026-07-12-conversation-memory-l1-l2-l3.md`。`/api/analyze` 现支持会话 ID、PendingClarification、确定性 Follow-up Resolver、会话恢复和跨主体隔离；“看看最近情况”后补“销售额，2017年”会合并 QuerySpec 后再进入原有 SQL Guard/Executor。L1 默认 8K token 预算、1K 输出预留、60%/80% 摘要水位；L2 Redis adapter 写穿 72 小时会话，`local-data-agent-redis` 已返回 `PONG` 且真实 Redis save/get 通过；L3 仅保存明确偏好并支持版本替换和删除。验证：migration 成功、focused `9 passed, 1 warning`、后端全量 `202 passed, 1 warning`、前端构建通过；标准评测进程 304 秒超时（exit `124`），但已刷新 20 case 报告为 `12/20` 执行成功、`11/20` 严格成功。未实现：并发、多线程、乐观锁、幂等重试、Redis 原子操作、后台归并、OAuth、MFA、组织/租户和邮件流程；生产 Redis 部署、持久化和健康检查仍需后续专项。
 
 - 已完成：Time Range Contract And Repair Rules。计划：`docs/plans/2026-07-12-time-range-contract-and-repair-rules.md`；完成记录：`docs/modules/2026-07-12-time-range-contract-and-repair-rules.md`。QuerySpec 已把明确日期、月、年、当天和本月转换为 `[start, end)` 时间契约，并贯通意图、Prompt 与 SQL 意图校验；Repair Prompt 已包含字段别名和完整时间谓词的可执行规则。验证：focused `51 passed`、后端全量 `188 passed`；标准评测在 244 秒超时，旧报告未被覆盖。下一步：缩短并稳定标准评测，再验证真实模型对 2017 年销售额问题的一次修复成功率。

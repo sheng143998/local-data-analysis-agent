@@ -25,6 +25,7 @@ Apply the repository workflow before making development changes. Treat the hando
 4. Preserve the SQL safety boundary: an LLM never executes SQL directly. Generated or reused SQL must pass intent validation, SQL Guard, and the read-only executor.
 5. Keep secrets, connection strings, user data, prompts, tool payloads, vector scores, and raw internal errors out of commits and ordinary user-facing pages.
 6. Read and write Chinese text files as UTF-8. Use `-Encoding utf8` for PowerShell reads. Do not rely on the shell's default encoding unless the file is known to require a different encoding.
+7. 新增或修改的代码注释默认使用中文。注释必须说明业务目的、业务规则、安全边界或非显而易见的取舍；不得只复述语法或变量赋值。修改既有英文注释时，除外部协议或引用内容必须保留英文外，应同步改为简洁的中文业务注释。
 
 ### Before Completion
 
@@ -32,6 +33,8 @@ Apply the repository workflow before making development changes. Treat the hando
 2. Create `docs/modules/YYYY-MM-DD-<task-name>.md`. Include completed behavior, key decisions, API/data-contract impact, validation commands and results, remaining risks, and follow-up work.
 3. Update `docs/handoff/current.md` with the completed state, concise summary, validation, risks, and next steps. Keep detailed implementation facts in the module document rather than duplicating them in the handoff.
 4. Update the plan checklist to match what actually happened before reporting completion.
+5. Treat every independently testable, completed module as one delivery unit. After its promised validation passes, inspect `git status`, stage only the files belonging to that module, create a concise commit, and push the current branch to its configured remote before starting the next module. Do not include unrelated user changes; if they cannot be separated safely, report the conflict instead of silently committing them.
+6. Record the commit hash and push result in the module record and handoff. A failed push means the module is not fully delivered; keep working to resolve it or report the exact blocker.
 
 ## Validation Baseline
 
@@ -59,3 +62,4 @@ Use these files for their intended purpose:
 - For read-only analysis, questions, or requests explicitly forbidding file changes, do not create plan or completion documents. Still read the handoff whenever project state is relevant.
 - For urgent fixes, create the smallest viable plan and handoff update before implementation. Do not retroactively represent a plan as pre-work.
 - If the user explicitly directs skipping documentation, record the exception and reason in the final response or task record. Do not fabricate validation or documentation.
+- If the user explicitly asks to defer a commit or push, record that decision in the handoff. Otherwise, the verified-module commit and push rule is mandatory.
