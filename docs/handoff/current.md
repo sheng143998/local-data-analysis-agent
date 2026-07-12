@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-- 已完成：Model First Order Count Fallback。计划：`docs/plans/2026-07-12-model-first-order-count-fallback.md`；完成记录：`docs/modules/2026-07-12-model-first-order-count-fallback.md`。订单数已从直接 fallback 改为模型生成、QuerySpec 校验、一次 Repair 优先；只有模型首次无 SQL 或 Repair 后仍不合规，才使用受控已支付订单数 SQL，并继续经过 Guard/只读 Executor。验证：focused `33 passed`，后端全量 `210 passed, 1 warning`；标准评测报告为 `12/20` 执行成功、`60.00%` 严格成功率，但进程 364 秒超时，未计为通过。提交和推送将在本模块交付时完成。
+- 已完成：Model First Order Count Fallback。计划：`docs/plans/2026-07-12-model-first-order-count-fallback.md`；完成记录：`docs/modules/2026-07-12-model-first-order-count-fallback.md`。订单数已从直接 fallback 改为模型生成、QuerySpec 校验、一次 Repair 优先；只有模型首次无 SQL 或 Repair 后仍不合规，才使用受控已支付订单数 SQL，并继续经过 Guard/只读 Executor。验证：focused `33 passed`，后端全量 `210 passed, 1 warning`；标准评测报告为 `12/20` 执行成功、`60.00%` 严格成功率，但进程 364 秒超时，未计为通过。模块提交 `66cb945` 已推送至 `origin/main`。
 
 - 已完成：Order Count And Conversation Recovery。计划：`docs/plans/2026-07-12-order-count-and-conversation-recovery.md`；完成记录：`docs/modules/2026-07-12-order-count-and-conversation-recovery.md`。单一无维度订单数已使用 QuerySpec 受控 fallback，真实数据库 smoke 为 `99440` 且通过 Guard/只读 Executor；模型 `503` 前会保存安全失败摘要。会话已同步写入三天 TTL 的 PostgreSQL 副本，Redis 不可用或重启时仍能恢复。管理员可在聊天侧栏显式“迁移本机历史”，将匿名开发会话归属到当前账号；普通登录不自动迁移。本机 `AUTH_REQUIRED=true`，新验证服务为前端 `http://127.0.0.1:3002`、后端 `http://127.0.0.1:8002`。验证：focused `55 passed, 1 warning`，后端全量 `209 passed, 1 warning`，前端构建通过，migration 已应用；标准评测报告为 `13/20` 执行成功、`60.00%` 严格成功率，但进程在 364 秒超时，未计为通过。风险：Redis 仍未运行，复杂 SQL 仍依赖本地模型。模块提交 `377b48e` 已推送至 `origin/main`。
 
