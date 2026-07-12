@@ -2,13 +2,13 @@
 
 ## 当前状态
 
+- 已完成：Local API Target Alignment。计划：`docs/plans/2026-07-12-local-api-target-alignment.md`；完成记录：`docs/modules/2026-07-12-local-api-target-alignment.md`。前端被忽略的本地环境 API 目标已由 `127.0.0.1:8002` 同步为用户实际启动的 `127.0.0.1:8000`，并已重启 Vite。验证：前端 HTTP 200、后端健康检查通过、`/api/auth/login` 从 `127.0.0.1:3000` 的 credentialed CORS 预检为 HTTP 200、前端构建通过且 bundle 使用 `8000`。风险：本机后端端口变更后，必须同步 `.env.local` 并重启 Vite；错误账号密码仍属于正常鉴权错误。模块提交将在本次文档交付后记录。
+
 - 已完成：Model Semantic Candidates。计划：`docs/plans/2026-07-12-model-semantic-candidates.md`；完成记录：`docs/modules/2026-07-12-model-semantic-candidates.md`。语义模型高置信的未知候选不再被 `metrics` 规范化阻断；`semantic_metrics`/`semantic_dimensions` 会透传到 SQL Prompt，用户总数等问题可进入检索和模型生成。标准 `metrics` 仅服务已定义口径、QuerySpec 和模型不可用时的确定性降级。验证：focused `20 passed`、后端全量 `211 passed, 1 warning`、标准评测 280 秒完成为 `13/20` 执行成功、`60.00%` 严格成功率。风险：未知指标缺少确认口径，质量仍依赖模型、schema 召回和 Guard。模块提交 `5a16460` 已推送至 `origin/main`。
 
 - 已完成：Model First Order Count Fallback。计划：`docs/plans/2026-07-12-model-first-order-count-fallback.md`；完成记录：`docs/modules/2026-07-12-model-first-order-count-fallback.md`。订单数已从直接 fallback 改为模型生成、QuerySpec 校验、一次 Repair 优先；只有模型首次无 SQL 或 Repair 后仍不合规，才使用受控已支付订单数 SQL，并继续经过 Guard/只读 Executor。验证：focused `33 passed`，后端全量 `210 passed, 1 warning`；标准评测报告为 `12/20` 执行成功、`60.00%` 严格成功率，但进程 364 秒超时，未计为通过。模块提交 `66cb945` 已推送至 `origin/main`。
 
 - 已完成：Order Count And Conversation Recovery。计划：`docs/plans/2026-07-12-order-count-and-conversation-recovery.md`；完成记录：`docs/modules/2026-07-12-order-count-and-conversation-recovery.md`。单一无维度订单数已使用 QuerySpec 受控 fallback，真实数据库 smoke 为 `99440` 且通过 Guard/只读 Executor；模型 `503` 前会保存安全失败摘要。会话已同步写入三天 TTL 的 PostgreSQL 副本，Redis 不可用或重启时仍能恢复。管理员可在聊天侧栏显式“迁移本机历史”，将匿名开发会话归属到当前账号；普通登录不自动迁移。本机 `AUTH_REQUIRED=true`，新验证服务为前端 `http://127.0.0.1:3002`、后端 `http://127.0.0.1:8002`。验证：focused `55 passed, 1 warning`，后端全量 `209 passed, 1 warning`，前端构建通过，migration 已应用；标准评测报告为 `13/20` 执行成功、`60.00%` 严格成功率，但进程在 364 秒超时，未计为通过。风险：Redis 仍未运行，复杂 SQL 仍依赖本地模型。模块提交 `377b48e` 已推送至 `origin/main`。
-
-- 进行中：Order Count And Conversation Recovery。计划：`docs/plans/2026-07-12-order-count-and-conversation-recovery.md`。截图问题已确认有两个根因：单指标 `order_count` 仍完全依赖本地 3B SQL 模型，生成不合规 SQL 后返回 `503`；Redis `127.0.0.1:6379` 当前不可达，存储静默降级为进程内内存，且失败分析在保存会话前抛出异常。范围：受控订单计数 fallback、会话 PostgreSQL 副本、失败会话保存、前端失败后刷新以及启用本机鉴权。不会恢复已丢失的内存会话，也不会自动把匿名会话分配给账号。验证将覆盖 migration、focused/backend/frontend/standard eval 和登录后恢复 smoke。
 
 - 已完成：Semantic Intent Normalization。计划：`docs/plans/2026-07-12-semantic-intent-normalization.md`；完成记录：`docs/modules/2026-07-12-semantic-intent-normalization.md`。意图识别已调整为模型候选抽取、业务概念规范化、QuerySpec/检索上下文校验三层；预置别名只作为受控业务 ID 的规范化与模型不可用时的兜底，不再作为唯一理解入口。模型返回项目未定义指标时会澄清，不会直接进入 SQL 生成。已补充订单总数表达、自然语言模型候选与未知概念测试，以及云端 OpenAI-compatible 微调模型接入说明。验证：focused `9 passed`，后端全量 `205 passed, 1 warning`，标准评测 268 秒完成为 `13/20` 执行成功、`60.00%` 严格成功；模型输出有波动，单次结果不能视为稳定提升。风险：本地 3B 模型仍不稳定于复杂 SQL；新业务概念必须同步扩展指标定义与 QuerySpec，不可仅增加别名。模块提交 `2dc7154` 已推送至 `origin/main`。
 
