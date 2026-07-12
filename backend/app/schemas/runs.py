@@ -19,6 +19,7 @@ class ToolCallRecord(BaseModel):
 
 class QueryRunRecord(BaseModel):
     id: UUID
+    app_user_id: UUID | None = None
     user_question: str
     rewritten_question: str | None = None
     memory_hit: bool = False
@@ -40,6 +41,7 @@ class QueryRunDetail(QueryRunRecord):
 
 class QueryRunCreate(BaseModel):
     id: UUID
+    app_user_id: UUID | None = None
     user_question: str
     rewritten_question: str | None = None
     memory_hit: bool = False

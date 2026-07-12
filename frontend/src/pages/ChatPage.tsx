@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AlertTriangle, Bot, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import { SqlPanel } from '../components/data-qa/SqlPanel';
-import { analyzeQuestion } from '../api/analysisClient';
+import { analyzeQuestion, getConversation, listConversations } from '../api/analysisClient';
 import { ApiError } from '../api/client';
-import type { AnalysisResponse, AnalysisRow, AnalysisValue } from '../types/analysis';
+import type { AnalysisResponse, AnalysisRow, AnalysisValue, ConversationDetail } from '../types/analysis';
 
 type ChatError = {
   message: string;
@@ -28,15 +28,9 @@ type ChatItem = {
 type Session = {
   id: string;
   title: string;
-  lastAt: string;
-  question: string;
+  updatedAt: string;
+  status: 'active' | 'waiting_for_clarification' | 'cancelled';
 };
-
-const sessions: Session[] = [
-  { id: 's1', title: '近 30 天销售趋势', lastAt: '刚刚', question: '最近 30 天销售额按天变化如何？' },
-  { id: 's2', title: '退款率分析', lastAt: '12 分钟前', question: '哪个商品品类退款率最高？' },
-  { id: 's3', title: '新增用户趋势', lastAt: '昨天', question: '按月查看新增用户趋势' },
-];
 
 const columnLabels: Record<string, string> = {
   order_date: '日期',
@@ -136,8 +130,9 @@ function ErrorCard({ error }: { error: ChatError }) {
 }
 
 export function ChatPage() {
-  const [activeSession, setActiveSession] = useState(sessions[0].id);
-  const [draft, setDraft] = useState('最近 30 天销售额按天变化如何？');
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeSession, setActiveSession] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatItem[]>([
     {
       id: 'a1',
@@ -149,8 +144,9 @@ export function ChatPage() {
   ]);
 
   const mutation = useMutation({
-    mutationFn: analyzeQuestion,
+    mutationFn: (question: string) => analyzeQuestion(question, activeSession),
     onSuccess: (data) => {
+      if (data.conversation_id) setActiveSession(data.conversation_id);
       setMessages((current) => [
         ...current.filter((item) => !item.streaming),
         {
@@ -163,6 +159,7 @@ export function ChatPage() {
           summary: data.summary,
         },
       ]);
+      void refreshSessions();
     },
     onError: (error) => {
       const friendlyError = toChatError(error);
@@ -179,13 +176,39 @@ export function ChatPage() {
     },
   });
 
-  const activeQuestion = useMemo(
-    () => sessions.find((session) => session.id === activeSession)?.question ?? draft,
-    [activeSession, draft],
-  );
+  const refreshSessions = async () => {
+    try {
+      const items = await listConversations();
+      setSessions(items.map((item) => ({ id: item.id, title: item.title, updatedAt: item.updated_at, status: item.status })));
+    } catch {
+      setSessions([]);
+    }
+  };
+
+  useEffect(() => { void refreshSessions(); }, []);
+
+  const openSession = async (sessionId: string) => {
+    try {
+      const detail: ConversationDetail = await getConversation(sessionId);
+      setActiveSession(sessionId);
+      setMessages(detail.messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        title: message.role === 'assistant' ? '助手' : undefined,
+        text: message.content,
+        summary: message.response?.summary,
+      })));
+    } catch (error) {
+      const friendlyError = toChatError(error);
+      setMessages([{ id: `e-${Date.now()}`, role: 'assistant', title: '读取会话失败', text: friendlyError.message, error: friendlyError }]);
+    }
+  };
+
+  const activeQuestion = useMemo(() => sessions.find((session) => session.id === activeSession)?.title ?? '新会话', [activeSession, sessions]);
 
   const run = () => {
-    const question = draft.trim() || activeQuestion;
+    const question = draft.trim();
+    if (!question) return;
     setMessages((current) => [
       ...current,
       { id: `u-${Date.now()}`, role: 'user', text: question },
@@ -206,14 +229,14 @@ export function ChatPage() {
             {sessions.map((session) => (
               <button
                 key={session.id}
-                onClick={() => setActiveSession(session.id)}
+                onClick={() => void openSession(session.id)}
                 className={[
                   'w-full rounded-md border px-3 py-3 text-left transition',
                   activeSession === session.id ? 'border-cyan-300 bg-cyan-50' : 'border-slate-200 bg-white hover:bg-slate-50',
                 ].join(' ')}
               >
                 <p className="text-sm font-semibold text-slate-900">{session.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{session.lastAt}</p>
+                <p className="mt-1 text-xs text-slate-500">{session.status === 'waiting_for_clarification' ? '等待补充信息' : new Date(session.updatedAt).toLocaleString()}</p>
               </button>
             ))}
           </div>

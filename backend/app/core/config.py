@@ -1,4 +1,5 @@
 import os
+from uuid import UUID, uuid5
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -97,6 +98,55 @@ class Settings(BaseModel):
     embedding_max_retries: int = Field(
         default_factory=lambda: int(os.getenv("EMBEDDING_MAX_RETRIES", os.getenv("MODEL_MAX_RETRIES", "1")))
     )
+    app_env: str = Field(default_factory=lambda: os.getenv("APP_ENV", "local").strip().lower())
+    auth_required: bool = Field(default_factory=lambda: _env_bool("AUTH_REQUIRED", default=False))
+    auth_allow_self_registration: bool = Field(default_factory=lambda: _env_bool("AUTH_ALLOW_SELF_REGISTRATION", default=False))
+    auth_session_idle_hours: int = Field(default_factory=lambda: int(os.getenv("AUTH_SESSION_IDLE_HOURS", "12")), ge=1, le=168)
+    auth_session_absolute_days: int = Field(default_factory=lambda: int(os.getenv("AUTH_SESSION_ABSOLUTE_DAYS", "7")), ge=1, le=90)
+    auth_cookie_name: str = Field(default_factory=lambda: os.getenv("AUTH_COOKIE_NAME", "local_data_agent_session"))
+    auth_csrf_cookie_name: str = Field(default_factory=lambda: os.getenv("AUTH_CSRF_COOKIE_NAME", "local_data_agent_csrf"))
+    auth_cookie_secure: bool = Field(default_factory=lambda: _env_bool("AUTH_COOKIE_SECURE", default=False))
+    auth_dev_user_email: str = Field(default_factory=lambda: os.getenv("AUTH_DEV_USER_EMAIL", "local-admin@localhost"))
+    redis_url: str = Field(default_factory=lambda: os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
+    conversation_retention_hours: int = Field(
+        default_factory=lambda: int(os.getenv("CONVERSATION_RETENTION_HOURS", "72")), ge=1, le=168
+    )
+    conversation_message_limit: int = Field(
+        default_factory=lambda: int(os.getenv("CONVERSATION_MESSAGE_LIMIT", "200")), ge=10, le=1000
+    )
+    conversation_context_token_budget: int = Field(
+        default_factory=lambda: int(os.getenv("CONVERSATION_CONTEXT_TOKEN_BUDGET", "8000")), ge=1000
+    )
+    conversation_output_token_reserve: int = Field(
+        default_factory=lambda: int(os.getenv("CONVERSATION_OUTPUT_TOKEN_RESERVE", "1000")), ge=0
+    )
+    conversation_compression_light_watermark: float = Field(
+        default_factory=lambda: float(os.getenv("CONVERSATION_COMPRESSION_LIGHT_WATERMARK", "0.6")), ge=0.1, le=1
+    )
+    conversation_compression_aggressive_watermark: float = Field(
+        default_factory=lambda: float(os.getenv("CONVERSATION_COMPRESSION_AGGRESSIVE_WATERMARK", "0.8")), ge=0.1, le=1
+    )
+    conversation_summary_char_limit: int = Field(
+        default_factory=lambda: int(os.getenv("CONVERSATION_SUMMARY_CHAR_LIMIT", "6000")), ge=256
+    )
+    auth_login_rate_limit_per_15_minutes: int = Field(
+        default_factory=lambda: int(os.getenv("AUTH_LOGIN_RATE_LIMIT_PER_15_MINUTES", "10")), ge=1
+    )
+    auth_register_rate_limit_per_hour: int = Field(
+        default_factory=lambda: int(os.getenv("AUTH_REGISTER_RATE_LIMIT_PER_HOUR", "5")), ge=1
+    )
+
+    def validate_security(self) -> None:
+        if self.app_env in {"production", "prod"} and not self.auth_required:
+            raise RuntimeError("Production requires AUTH_REQUIRED=true")
+        if self.app_env in {"production", "prod"} and not self.auth_cookie_secure:
+            raise RuntimeError("Production requires AUTH_COOKIE_SECURE=true")
+        if self.app_env in {"production", "prod"} and not self.redis_url:
+            raise RuntimeError("Production requires REDIS_URL for conversation memory")
+
+    @property
+    def development_principal_id(self) -> UUID:
+        return uuid5(UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8"), self.auth_dev_user_email.lower())
 
 
 settings = Settings()

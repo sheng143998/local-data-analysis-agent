@@ -26,6 +26,12 @@ function buildUrl(path: string) {
   return `${API_BASE_URL}${path}`;
 }
 
+function getCookie(name: string): string | undefined {
+  const prefix = `${encodeURIComponent(name)}=`;
+  const item = document.cookie.split('; ').find((value) => value.startsWith(prefix));
+  return item ? decodeURIComponent(item.slice(prefix.length)) : undefined;
+}
+
 async function readJsonSafely(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return undefined;
@@ -90,7 +96,13 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions): P
   const init: RequestInit = {
     method: options.method ?? 'GET',
     headers,
+    credentials: 'include',
   };
+
+  if (init.method !== 'GET') {
+    const csrfToken = getCookie('local_data_agent_csrf');
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  }
 
   if (options.body !== undefined) {
     headers['content-type'] = 'application/json';

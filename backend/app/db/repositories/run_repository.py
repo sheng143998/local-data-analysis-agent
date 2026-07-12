@@ -20,17 +20,18 @@ class RunRepository:
             cursor.execute(
                 """
                 INSERT INTO query_runs (
-                  id, user_question, rewritten_question, memory_hit, memory_id,
+                  id, app_user_id, user_question, rewritten_question, memory_hit, memory_id,
                   generated_sql, final_sql, guard_status, execution_status,
                   row_count, latency_ms, error_message
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, user_question, rewritten_question, memory_hit, memory_id,
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, app_user_id, user_question, rewritten_question, memory_hit, memory_id,
                           generated_sql, final_sql, guard_status, execution_status,
                           row_count, latency_ms, error_message, created_at
                 """,
                 (
                     str(payload.id),
+                    str(payload.app_user_id) if payload.app_user_id else None,
                     payload.user_question,
                     payload.rewritten_question,
                     payload.memory_hit,
@@ -77,7 +78,7 @@ class RunRepository:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, user_question, rewritten_question, memory_hit, memory_id,
+                SELECT id, app_user_id, user_question, rewritten_question, memory_hit, memory_id,
                        generated_sql, final_sql, guard_status, execution_status,
                        row_count, latency_ms, error_message, created_at
                 FROM query_runs
@@ -114,7 +115,7 @@ class RunRepository:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, user_question, rewritten_question, memory_hit, memory_id,
+                SELECT id, app_user_id, user_question, rewritten_question, memory_hit, memory_id,
                        generated_sql, final_sql, guard_status, execution_status,
                        row_count, latency_ms, error_message, created_at
                 FROM query_runs
@@ -129,18 +130,19 @@ class RunRepository:
 def _row_to_query_run(row) -> QueryRunRecord:
     return QueryRunRecord(
         id=row[0],
-        user_question=row[1],
-        rewritten_question=row[2],
-        memory_hit=row[3],
-        memory_id=row[4],
-        generated_sql=row[5],
-        final_sql=row[6],
-        guard_status=row[7],
-        execution_status=row[8],
-        row_count=row[9],
-        latency_ms=row[10],
-        error_message=row[11],
-        created_at=row[12],
+        app_user_id=row[1],
+        user_question=row[2],
+        rewritten_question=row[3],
+        memory_hit=row[4],
+        memory_id=row[5],
+        generated_sql=row[6],
+        final_sql=row[7],
+        guard_status=row[8],
+        execution_status=row[9],
+        row_count=row[10],
+        latency_ms=row[11],
+        error_message=row[12],
+        created_at=row[13],
     )
 
 

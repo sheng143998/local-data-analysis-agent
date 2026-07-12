@@ -7,22 +7,26 @@ import { DataSourcesPage } from './pages/DataSourcesPage';
 import { MetricsPage } from './pages/MetricsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProtectedRoute } from './auth/ProtectedRoute';
 
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/app/chat" replace /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   {
-    path: '/app',
-    element: <AppLayout />,
-    children: [
+    element: <ProtectedRoute />,
+    children: [{
+      path: '/app',
+      element: <AppLayout />,
+      children: [
       { index: true, element: <Navigate to="/app/chat" replace /> },
       { path: 'chat', element: <ChatPage /> },
       { path: 'data-sources', element: <DataSourcesPage /> },
       { path: 'metrics', element: <MetricsPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'settings', element: <SettingsPage /> },
-    ],
+      ],
+    }],
   },
 ]);
 

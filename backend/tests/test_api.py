@@ -15,7 +15,7 @@ def test_health() -> None:
 
 
 def test_analyze_returns_503_when_no_executable_sql_is_available(monkeypatch) -> None:
-    def unavailable(_payload):
+    def unavailable(_payload, app_user_id=None):
         raise AnalysisUnavailableError("分析服务暂时无法生成可执行查询，请稍后重试。")
 
     monkeypatch.setattr(routes.agent_service, "analyze", unavailable)

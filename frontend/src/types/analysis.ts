@@ -41,4 +41,24 @@ export type AnalysisResponse = {
   };
   trace: AnalysisTrace;
   steps: AgentStep[];
+  conversation_id?: string | null;
+  pending_clarification: boolean;
+  conversation_status: 'active' | 'waiting_for_clarification' | 'cancelled';
 };
+
+export type ConversationMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+  response?: { summary?: string } | null;
+};
+
+export type ConversationSummary = {
+  id: string;
+  title: string;
+  updated_at: string;
+  status: 'active' | 'waiting_for_clarification' | 'cancelled';
+};
+
+export type ConversationDetail = ConversationSummary & { messages: ConversationMessage[] };

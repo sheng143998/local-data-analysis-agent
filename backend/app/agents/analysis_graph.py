@@ -2,6 +2,7 @@ from functools import lru_cache
 import re
 from time import perf_counter
 from typing import Any, TypedDict
+from uuid import UUID
 
 from langgraph.graph import END, StateGraph
 from sqlglot import exp, parse_one
@@ -19,7 +20,7 @@ from backend.app.schemas.sql_validation import SqlGuardResult
 from backend.app.tools.analysis_presenter import present_clarification_response, present_sales_trend_result
 from backend.app.tools.context_builder import build_retrieval_context
 from backend.app.tools.model_sql_generator import generate_sql_with_model
-from backend.app.tools.question_intent_parser import parse_question_intent
+from backend.app.tools.question_intent_parser import ParsedQuestionIntent, parse_question_intent
 from backend.app.tools.run_logger import QueryRunLogger
 from backend.app.tools.sql_memory_tools import (
     plan_sql_reuse,
@@ -42,6 +43,7 @@ BASE_TRANSACTION_TABLES = {
 
 class AnalysisGraphState(TypedDict, total=False):
     question: str
+    app_user_id: UUID | None
     original_question: str
     question_intent: dict[str, Any]
     node_timings: dict[str, int]
@@ -108,10 +110,14 @@ def _build_analysis_graph():
     return graph.compile()
 
 
-def run_analysis_graph(question: str) -> AnalyzeResponse:
+def run_analysis_graph(
+    question: str,
+    app_user_id: UUID | None = None,
+    parsed_intent: ParsedQuestionIntent | None = None,
+) -> AnalyzeResponse:
     """正式 LangGraph 编排：召回、记忆复用、SQL 生成、Guard、执行、呈现和日志。"""
     started = perf_counter()
-    intent = parse_question_intent(question)
+    intent = parsed_intent or parse_question_intent(question)
     latency_ms = int((perf_counter() - started) * 1000)
     if intent.needs_clarification:
         return present_clarification_response(question, intent, latency_ms)
@@ -120,6 +126,7 @@ def run_analysis_graph(question: str) -> AnalyzeResponse:
     final_state = _analysis_graph().invoke(
         {
             "question": effective_question,
+            "app_user_id": app_user_id,
             "original_question": question,
             "question_intent": intent.model_dump(),
             "node_timings": {"intent_parse": latency_ms},
@@ -491,6 +498,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
     generated_sql = state["generated_sql"]
     selected_sql = state["selected_sql"]
     _log_analysis_run(
+        app_user_id=state.get("app_user_id"),
         question=state.get("original_question", state["question"]),
         rewritten_question=state["question"],
         final_sql=guard.final_sql or selected_sql,
@@ -524,6 +532,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
 
 def _log_analysis_run(
     *,
+    app_user_id: UUID | None,
     question: str,
     rewritten_question: str | None,
     final_sql: str,
@@ -554,6 +563,7 @@ def _log_analysis_run(
 ) -> None:
     logger = QueryRunLogger()
     run = logger.log_run(
+        app_user_id=app_user_id,
         user_question=question,
         rewritten_question=rewritten_question,
         generated_sql=generated_sql_text,

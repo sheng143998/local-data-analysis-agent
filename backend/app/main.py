@@ -5,6 +5,7 @@ from backend.app.api.routes import router
 from backend.app.core.config import settings
 
 
+settings.validate_security()
 app = FastAPI(title="本地数据分析 Agent API", version=settings.app_version)
 
 app.add_middleware(

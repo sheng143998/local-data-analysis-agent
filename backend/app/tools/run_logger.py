@@ -19,6 +19,7 @@ class QueryRunLogger:
         self,
         *,
         user_question: str,
+        app_user_id: UUID | None = None,
         rewritten_question: str | None = None,
         generated_sql: str | None,
         final_sql: str | None,
@@ -33,6 +34,7 @@ class QueryRunLogger:
         run = self.repository.create_run(
             QueryRunCreate(
                 id=uuid4(),
+                app_user_id=app_user_id,
                 user_question=user_question,
                 rewritten_question=rewritten_question,
                 memory_hit=memory_hit,
