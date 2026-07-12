@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-- 已完成：Semantic Intent Normalization。计划：`docs/plans/2026-07-12-semantic-intent-normalization.md`；完成记录：`docs/modules/2026-07-12-semantic-intent-normalization.md`。意图识别已调整为模型候选抽取、业务概念规范化、QuerySpec/检索上下文校验三层；预置别名只作为受控业务 ID 的规范化与模型不可用时的兜底，不再作为唯一理解入口。模型返回项目未定义指标时会澄清，不会直接进入 SQL 生成。已补充订单总数表达、自然语言模型候选与未知概念测试，以及云端 OpenAI-compatible 微调模型接入说明。验证：focused `9 passed`，后端全量 `205 passed, 1 warning`，标准评测 268 秒完成为 `13/20` 执行成功、`60.00%` 严格成功；模型输出有波动，单次结果不能视为稳定提升。风险：本地 3B 模型仍不稳定于复杂 SQL；新业务概念必须同步扩展指标定义与 QuerySpec，不可仅增加别名。提交和推送将在本模块交付时完成。
+- 已完成：Semantic Intent Normalization。计划：`docs/plans/2026-07-12-semantic-intent-normalization.md`；完成记录：`docs/modules/2026-07-12-semantic-intent-normalization.md`。意图识别已调整为模型候选抽取、业务概念规范化、QuerySpec/检索上下文校验三层；预置别名只作为受控业务 ID 的规范化与模型不可用时的兜底，不再作为唯一理解入口。模型返回项目未定义指标时会澄清，不会直接进入 SQL 生成。已补充订单总数表达、自然语言模型候选与未知概念测试，以及云端 OpenAI-compatible 微调模型接入说明。验证：focused `9 passed`，后端全量 `205 passed, 1 warning`，标准评测 268 秒完成为 `13/20` 执行成功、`60.00%` 严格成功；模型输出有波动，单次结果不能视为稳定提升。风险：本地 3B 模型仍不稳定于复杂 SQL；新业务概念必须同步扩展指标定义与 QuerySpec，不可仅增加别名。模块提交 `2dc7154` 已推送至 `origin/main`。
 
 - 已完成：Skill Git Delivery And Chinese Comments。计划：`docs/plans/2026-07-12-skill-git-delivery-and-chinese-comments.md`；完成记录：`docs/modules/2026-07-12-skill-git-delivery-and-chinese-comments.md`。Skill 已要求新增/修改注释默认使用中文并说明业务目的、规则、安全边界或取舍；每个通过验证的完整模块必须检查 git 状态、独立提交并推送，且不得混入无关用户变更。模块提交和 `origin/main` 推送随本轮交付完成，最终 hash 以 git log 为准。
 
