@@ -74,8 +74,18 @@ select {
   }
 
   .code-block {
-    @apply overflow-x-auto border border-slate-800 bg-slate-950 p-4 font-mono text-sm leading-6 text-cyan-100;
+    @apply overflow-auto border border-slate-800 bg-slate-950 p-4 font-mono text-sm leading-6 text-cyan-100;
     border-radius: 8px;
+  }
+
+  .sql-code-block {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    tab-size: 2;
+  }
+
+  .sql-code-block code {
+    min-width: max-content;
   }
 }
 

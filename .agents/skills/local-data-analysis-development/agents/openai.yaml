@@ -1,0 +1,4 @@
+interface:
+  display_name: "本地数据分析开发规范"
+  short_description: "规范本项目的计划、交接、实现、验证与文档管理闭环流程"
+  default_prompt: "Use $local-data-analysis-development to implement this local data analysis Agent task according to its project workflow."

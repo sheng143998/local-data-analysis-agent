@@ -15,6 +15,10 @@ METRIC_KEYWORDS = {
     "order_count": {"订单", "订单数", "下单", "交易数"},
     "refund_rate": {"退款", "退款率", "退货", "售后"},
     "avg_order_value": {"客单价", "平均订单", "平均金额"},
+    "repeat_purchase_rate": {"复购率", "复购", "回购", "重复购买", "repeat"},
+    "payment_success_rate": {"支付成功率", "支付成功", "成功率", "success"},
+    "payment_failure_rate": {"支付失败率", "支付失败", "失败率", "failure"},
+    "category_gross_margin": {"品类毛利", "毛利率", "毛利", "利润率", "gross margin"},
 }
 
 

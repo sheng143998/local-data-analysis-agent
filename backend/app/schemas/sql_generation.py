@@ -1,15 +1,14 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from backend.app.tools.sql_template_tools import SalesTrendParameters
-
 
 SqlGenerationPath = Literal[
-    "template_render",
-    "deterministic_rewrite",
+    "memory_reuse",
+    "memory_reuse_verified",
     "model_generate",
     "model_rewrite",
+    "model_repair",
     "model_error",
     "unsupported",
 ]
@@ -18,7 +17,7 @@ SqlGenerationPath = Literal[
 class GeneratedSql(BaseModel):
     path: SqlGenerationPath
     sql: str = ""
-    parameters: SalesTrendParameters | None = None
+    parameters: dict[str, Any] | None = None
     warnings: list[str] = Field(default_factory=list)
     model_provider: str = ""
     model_name: str = ""

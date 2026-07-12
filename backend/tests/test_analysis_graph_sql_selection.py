@@ -220,6 +220,54 @@ def test_verify_generated_sql_intent_rejects_metric_mismatch() -> None:
     assert any("order_count" in warning for warning in verification["warnings"])
 
 
+def test_query_spec_rejects_sql_missing_funnel_table_and_conversion_alias() -> None:
+    verification = _verify_generated_sql_intent(
+        question="最近 30 天访问到下单转化率是多少？",
+        retrieval_context=_context(),
+        sql="SELECT COUNT(*) AS order_count FROM orders LIMIT 1",
+        question_intent={
+            "query_spec": {
+                "metrics": ["visit_to_order_conversion_rate"],
+                "required_table_groups": [["traffic_events", "orders"]],
+                "required_metric_tokens": ["conversion_rate"],
+            }
+        },
+    )
+
+    assert verification["decision"] == "reject"
+    assert any("traffic_events" in warning for warning in verification["warnings"])
+    assert any("conversion_rate" in warning for warning in verification["warnings"])
+
+
+def test_query_spec_rejects_time_literals_without_half_open_predicate() -> None:
+    intent = {
+        "query_spec": {
+            "time_start": "2017-01-01",
+            "time_end": "2018-01-01",
+            "time_filter": "{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+        }
+    }
+    invalid = _verify_generated_sql_intent(
+        question="2017年卖了多少钱？",
+        retrieval_context=_context(),
+        sql="SELECT DATE '2017-01-01' AS start_marker FROM orders o LIMIT 1",
+        question_intent=intent,
+    )
+    valid = _verify_generated_sql_intent(
+        question="2017年卖了多少钱？",
+        retrieval_context=_context(),
+        sql=(
+            "SELECT o.id FROM orders o WHERE o.created_at >= DATE '2017-01-01' "
+            "AND o.created_at < DATE '2018-01-01' LIMIT 1"
+        ),
+        question_intent=intent,
+    )
+
+    assert invalid["decision"] == "reject"
+    assert any("明确时间范围" in warning for warning in invalid["warnings"])
+    assert valid["decision"] == "accept"
+
+
 def test_validate_generated_sql_intent_accepts_matching_model_sql() -> None:
     state = _validate_generated_sql_intent_node(
         {
@@ -387,6 +435,7 @@ def test_repair_model_sql_node_sends_guard_error_to_model() -> None:
     guard_error = user_payload["repair_context"]["guard_error"]
     assert guard_error["category"] == "guard_blocked"
     assert guard_error["guard_errors"]
+    assert any("输出别名" in rule for rule in user_payload["repair_rules"])
 
 
 def test_select_generated_sql_returns_error_when_model_disabled() -> None:
@@ -611,6 +660,25 @@ def test_verify_generated_sql_intent_rejects_duplicate_order_amount_after_paymen
 
     assert verification["decision"] == "reject"
     assert any("重复累计" in warning for warning in verification["warnings"])
+
+
+def test_verify_generated_sql_intent_accepts_order_amount_with_paid_exists_filter() -> None:
+    verification = _verify_generated_sql_intent(
+        question="2017年卖了多少钱，平均卖了多少钱",
+        retrieval_context=_context_with_payments(),
+        sql=(
+            "SELECT SUM(o.total_amount) AS sales_amount, "
+            "COUNT(DISTINCT o.id) AS order_count, "
+            "ROUND(SUM(o.total_amount) / NULLIF(COUNT(DISTINCT o.id), 0), 2) AS avg_order_value "
+            "FROM orders o WHERE EXISTS ("
+            "SELECT 1 FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'"
+            ") AND o.created_at >= DATE '2017-01-01' "
+            "AND o.created_at < DATE '2018-01-01' LIMIT 1"
+        ),
+    )
+
+    assert verification["decision"] == "accept"
+    assert verification["warnings"] == []
 
 
 def test_verify_generated_sql_intent_accepts_deduplicated_order_amount_with_payments_filter() -> None:

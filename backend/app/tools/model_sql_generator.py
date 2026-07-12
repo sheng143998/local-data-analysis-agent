@@ -171,12 +171,24 @@ def build_sql_generation_payload(
             "输出 SQL 后还会经过 Validator 和 Guard",
         ],
     }
+    time_filter = _intent_time_filter(question_intent)
+    if time_filter:
+        payload["time_constraint"] = {
+            "required_predicate": time_filter,
+            "rule": "必须使用完整半开区间；起点使用 >=，终点使用 <，不得只写 IS NOT NULL、EXTRACT 或单侧日期条件。",
+        }
+        payload["requirements"].append(
+            f"当前问题有明确时间范围，SQL WHERE 必须包含：{time_filter}；将 {{time_field}} 替换为相关的已允许时间字段，优先 orders.created_at。"
+        )
     if repair_context:
         payload["repair_context"] = repair_context
+        repair_rules = _repair_rules(repair_context)
+        payload["repair_rules"] = repair_rules
         payload["requirements"].extend(
             [
                 "这是一次 SQL 修复请求，必须优先修复 repair_context.intent_errors 中列出的问题",
                 "不要重复输出 repair_context.previous_sql 中已被判定不符合意图的错误写法",
+                *repair_rules,
             ]
         )
     return payload
@@ -243,8 +255,39 @@ def _compact_question_intent(question_intent: dict[str, Any] | None) -> dict[str
         "confidence",
         "needs_clarification",
         "source",
+        "query_spec",
     }
     return {key: question_intent[key] for key in allowed_keys if key in question_intent}
+
+
+def _intent_time_filter(question_intent: dict[str, Any] | None) -> str:
+    if not isinstance(question_intent, dict):
+        return ""
+    query_spec = question_intent.get("query_spec")
+    if not isinstance(query_spec, dict):
+        return ""
+    return str(query_spec.get("time_filter") or "").strip()
+
+
+def _repair_rules(repair_context: dict[str, Any]) -> list[str]:
+    rules: list[str] = []
+    guard_errors = repair_context.get("guard_error", {}).get("guard_errors", [])
+    all_errors = [*repair_context.get("intent_errors", []), *guard_errors]
+    text = " ".join(str(error) for error in all_errors)
+    if "字段不存在或未在 schema_metadata 中登记" in text:
+        rules.append(
+            "不得引用 schema_fields 未登记的字段。若 ORDER BY 使用输出别名，该别名必须在同一 SELECT 中以 `表达式 AS 别名` 明确定义；否则在 ORDER BY 中使用原表达式。"
+        )
+    if "时间范围" in text:
+        required = repair_context.get("required", {})
+        time_filter = str(required.get("time_filter") or "").strip()
+        if time_filter:
+            rules.append(
+                f"必须在 WHERE 中加入完整时间条件：{time_filter}；将 {{time_field}} 替换为相关的已允许时间字段。"
+            )
+    if not rules:
+        rules.append("逐条修复 repair_context 中的错误后再输出完整 PostgreSQL SELECT 查询。")
+    return rules
 
 
 def _loads_json_object(content: str) -> dict[str, Any]:

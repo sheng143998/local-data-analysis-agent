@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
+from backend.app.api import routes
 from backend.app.main import app
+from backend.app.services.agent_service import AnalysisUnavailableError
 
 
 client = TestClient(app)
@@ -10,6 +12,18 @@ def test_health() -> None:
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
+
+
+def test_analyze_returns_503_when_no_executable_sql_is_available(monkeypatch) -> None:
+    def unavailable(_payload):
+        raise AnalysisUnavailableError("分析服务暂时无法生成可执行查询，请稍后重试。")
+
+    monkeypatch.setattr(routes.agent_service, "analyze", unavailable)
+
+    response = client.post("/api/analyze", json={"question": "最近 30 天销售额是多少？"})
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "分析服务暂时无法生成可执行查询，请稍后重试。"}
 
 
 def test_analyze_minimal_loop() -> None:

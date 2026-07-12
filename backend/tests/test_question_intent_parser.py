@@ -132,3 +132,20 @@ def test_parse_question_intent_heuristic_fallback_maps_average_sold_phrase() -> 
     assert intent.needs_clarification is False
     assert intent.metrics == ["avg_order_value", "sales_amount"]
     assert intent.time_range == "2017年"
+    assert intent.query_spec.time_start == "2017-01-01"
+    assert intent.query_spec.time_end == "2018-01-01"
+
+
+def test_parse_question_intent_recognizes_user_funnel_and_coupon_metrics() -> None:
+    cases = [
+        ("过去 6 个月每月新增用户数是多少？", "new_user_count", "users"),
+        ("最近 30 天访问到下单转化率是多少？", "visit_to_order_conversion_rate", "traffic_events"),
+        ("哪些优惠券核销率最高？", "coupon_redemption_rate", "coupon_usages"),
+    ]
+
+    for question, metric, required_table in cases:
+        intent = parse_question_intent(question, model_enabled=False)
+
+        assert intent.needs_clarification is False
+        assert metric in intent.metrics
+        assert required_table in intent.query_spec.required_tables

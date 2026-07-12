@@ -112,3 +112,18 @@ def test_guard_injects_limit() -> None:
     assert result.allowed is True
     assert result.final_sql.endswith("LIMIT 100")
     assert "已自动添加 LIMIT 100" in result.warnings
+
+
+def test_guard_clamps_existing_limit() -> None:
+    result = guard_sql("SELECT id FROM orders LIMIT 1000000000", max_rows=30)
+
+    assert result.allowed is True
+    assert result.final_sql.endswith("LIMIT 30")
+    assert "已将 LIMIT 收紧为 30" in result.warnings
+
+
+def test_guard_blocks_unsafe_database_function() -> None:
+    result = guard_sql("SELECT pg_sleep(1) AS waited FROM orders LIMIT 1")
+
+    assert result.allowed is False
+    assert result.errors == ["禁止调用危险数据库函数：pg_sleep"]

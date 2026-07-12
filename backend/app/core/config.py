@@ -24,7 +24,12 @@ def _env_first(*names: str, default: str = "") -> str:
 
 class Settings(BaseModel):
     app_version: str = "0.1.0"
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
     model_provider: str = Field(default_factory=lambda: os.getenv("MODEL_PROVIDER", "local"))
     model_base_url: str = Field(
         default_factory=lambda: os.getenv(
@@ -40,6 +45,13 @@ class Settings(BaseModel):
     model_max_retries: int = Field(default_factory=lambda: int(os.getenv("MODEL_MAX_RETRIES", "1")))
     model_sql_generator_enabled: bool = Field(
         default_factory=lambda: _env_bool("MODEL_SQL_GENERATOR_ENABLED", default=False)
+    )
+    sql_max_rows: int = Field(default_factory=lambda: int(os.getenv("SQL_MAX_ROWS", "30")), ge=1)
+    sql_statement_timeout_ms: int = Field(
+        default_factory=lambda: int(os.getenv("SQL_STATEMENT_TIMEOUT_MS", "15000"))
+    )
+    sql_lock_timeout_ms: int = Field(
+        default_factory=lambda: int(os.getenv("SQL_LOCK_TIMEOUT_MS", "3000"))
     )
     intent_parser_enabled: bool = Field(default_factory=lambda: _env_bool("INTENT_PARSER_ENABLED", default=True))
     intent_model_provider: str = Field(

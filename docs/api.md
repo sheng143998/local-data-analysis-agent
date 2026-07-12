@@ -162,8 +162,9 @@
 
 注意：
 
-- 模型 SQL 生成默认由 `MODEL_SQL_GENERATOR_ENABLED=false` 关闭。
+- 模型 SQL 生成由 `MODEL_SQL_GENERATOR_ENABLED` 控制；当系统无法生成可执行 SQL 时，接口返回 `503`，不会返回带空 SQL 的 `200` 响应。
 - 即使开启模型路径，生成 SQL 也必须经过 SQL Guard 和只读 Executor。
+- Executor 在只读事务中执行，并设置查询与锁等待超时；Guard 会强制限制返回行数并拦截危险数据库函数。
 - 内部 SQL Memory 分数、prompt、模型原始输出和工具调用原始 payload 不属于普通用户接口展示内容。
 - `rows` 不再固定为销售趋势字段；前端应按返回行的 key 动态生成表头，避免换表或新增查询列后无法展示。
 

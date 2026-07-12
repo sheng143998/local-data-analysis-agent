@@ -68,6 +68,9 @@ class ChatTransport(Protocol):
 
 
 class HttpxChatTransport:
+    def __init__(self, *, trust_env: bool = True) -> None:
+        self.trust_env = trust_env
+
     def post(
         self,
         url: str,
@@ -76,7 +79,7 @@ class HttpxChatTransport:
         json: dict[str, Any],
         timeout: float,
     ) -> httpx.Response:
-        with httpx.Client(timeout=timeout) as client:
+        with httpx.Client(timeout=timeout, trust_env=self.trust_env) as client:
             return client.post(url, headers=headers, json=json)
 
 
@@ -89,7 +92,9 @@ class ModelAdapter:
         transport: ChatTransport | None = None,
     ) -> None:
         self.config = config or ModelAdapterConfig()
-        self.transport = transport or HttpxChatTransport()
+        self.transport = transport or HttpxChatTransport(
+            trust_env=self.config.provider not in {"local", "ollama"}
+        )
 
     def chat(self, request: ModelRequest) -> ModelResponse:
         started = perf_counter()

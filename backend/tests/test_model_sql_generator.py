@@ -98,16 +98,48 @@ def test_build_sql_generation_payload_includes_intent_and_metric_semantics() -> 
             "confidence": 0.9,
             "needs_clarification": False,
             "source": "llm",
+            "query_spec": {
+                "metrics": ["sales_amount", "avg_order_value"],
+                "required_table_groups": [["orders", "payments"]],
+                "required_metric_tokens": ["total_amount", "avg_order_value"],
+            },
             "clarification": "internal details should not be forwarded",
         },
     )
 
     assert payload["question_intent"]["metrics"] == ["sales_amount", "avg_order_value"]
     assert payload["question_intent"]["time_range"] == "2017年"
+    assert payload["question_intent"]["query_spec"]["required_metric_tokens"] == ["total_amount", "avg_order_value"]
     assert "clarification" not in payload["question_intent"]
     assert payload["metric_semantics"]["sales_amount"]["grain"] == "order"
     assert "COUNT(DISTINCT orders.id)" in payload["metric_semantics"]["avg_order_value"]["preferred_formula"]
     assert any("重复累计" in requirement for requirement in payload["requirements"])
+
+
+def test_build_sql_generation_payload_requires_explicit_time_predicate_and_repair_rules() -> None:
+    payload = build_sql_generation_payload(
+        "2017年卖了多少钱？",
+        _context(),
+        _plan(),
+        repair_context={
+            "intent_errors": ["模型 SQL 未满足明确时间范围"],
+            "required": {
+                "time_filter": "{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+            },
+            "guard_error": {
+                "guard_errors": ["字段不存在或未在 schema_metadata 中登记：order_date"],
+            },
+        },
+        question_intent={
+            "query_spec": {
+                "time_filter": "{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+            },
+        },
+    )
+
+    assert payload["time_constraint"]["required_predicate"].startswith("{time_field} >=")
+    assert any("输出别名" in rule for rule in payload["repair_rules"])
+    assert any("完整时间条件" in rule for rule in payload["repair_rules"])
 
 
 def test_parse_model_sql_response_extracts_json_sql() -> None:

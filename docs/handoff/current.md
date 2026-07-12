@@ -2,6 +2,17 @@
 
 ## 当前状态
 
+- 已完成：Time Range Contract And Repair Rules。计划：`docs/plans/2026-07-12-time-range-contract-and-repair-rules.md`；完成记录：`docs/modules/2026-07-12-time-range-contract-and-repair-rules.md`。QuerySpec 已把明确日期、月、年、当天和本月转换为 `[start, end)` 时间契约，并贯通意图、Prompt 与 SQL 意图校验；Repair Prompt 已包含字段别名和完整时间谓词的可执行规则。验证：focused `51 passed`、后端全量 `188 passed`；标准评测在 244 秒超时，旧报告未被覆盖。下一步：缩短并稳定标准评测，再验证真实模型对 2017 年销售额问题的一次修复成功率。
+
+- 已完成：Frontend Dev Server Port。计划：`docs/plans/2026-07-12-frontend-dev-server-port.md`；完成记录：`docs/modules/2026-07-12-frontend-dev-server-port.md`。Windows 排除 `5139-5238` 导致 Vite 绑定 `0.0.0.0:5173` 返回 `EACCES`；前端开发服务已改为 `127.0.0.1:3000` 并同步默认 CORS。验证：Vite 已监听 `127.0.0.1:3000`，HTTP 首页请求和前端构建均通过。
+
+- 已完成：SQL Runtime Safety And Model Baseline。计划：`docs/plans/2026-07-12-sql-runtime-safety-and-model-baseline.md`；完成记录：`docs/modules/2026-07-12-sql-runtime-safety-and-model-baseline.md`。SQL Guard 已强制 LIMIT 并阻断危险函数，Executor 已使用只读事务和超时，模型无可执行 SQL 时返回 `503`，本地模型不再继承系统代理。验证：后端全量 `180 passed`、focused `64 passed`、前端构建通过；当前标准评测基线为 `9/20` 执行成功、`8/20` 严格成功。下一步：QuerySpec 驱动的意图/生成/修复/评测优化，以及独立只读运行账号和测试数据库。
+
+- 已完成：QuerySpec Semantic Contract。计划：`docs/plans/2026-07-12-query-spec-semantic-contract.md`；完成记录：`docs/modules/2026-07-12-query-spec-semantic-contract.md`。用户、漏斗、优惠券和流量来源问题已进入统一 QuerySpec，并贯通意图、模型 prompt、SQL 校验和 SQL Memory；Memory 现在只记录最终 SQL 实际用表和语义维度。验证：后端 `184 passed`、前端构建通过；标准评测提升至 `11/20` 执行成功、`10/20` 严格成功。下一步：复杂指标公式/repair prompt 强化和 AST 语义评测，另行处理只读运行账号与测试数据库。
+
+- 已新增项目内开发规范 Skill：`.agents/skills/local-data-analysis-development/`。后续代码、接口、数据库、前端、评测、配置、文档和重构任务均应先读取本 Skill 和 `docs/handoff/current.md`，在编码前创建计划并更新 handoff，完成后补模块记录和 handoff。
+- Skill 规范草案：`docs/plans/2026-07-12-project-development-skill-draft.md`；完成记录：`docs/modules/2026-07-12-project-development-skill.md`。官方 Skill 校验器受本机 Python 缺少 `PyYAML` 阻塞，文件结构和 UTF-8 内容已人工复核。
+
 - 项目已连接 GitHub：`https://github.com/sheng143998/local-data-analysis-agent`
 - 当前分支：`main`
 - 前后端目录已拆分：

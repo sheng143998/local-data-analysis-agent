@@ -21,6 +21,7 @@ def retrieve_sql_memory(
     metrics: list[str],
     tables: list[str],
     limit: int = 5,
+    required_tables: list[str] | None = None,
     repository: SqlMemoryRepository | None = None,
     semantic_scores: dict[str, float] | None = None,
 ) -> list[SqlMemoryCandidate]:
@@ -35,7 +36,7 @@ def retrieve_sql_memory(
     normalized_question = normalize_question(question)
     metric_set = set(metrics)
     table_set = set(tables)
-    required_tables = _required_tables_for_question(question)
+    required_table_set = required_tables or _required_tables_for_question(question)
     candidates: list[SqlMemoryCandidate] = []
 
     for memory in repo.list(limit=100):
@@ -52,7 +53,7 @@ def retrieve_sql_memory(
         )
         if score <= 0:
             continue
-        required_table_match = _sql_contains_required_tables(memory.final_sql, required_tables)
+        required_table_match = _sql_contains_required_tables(memory.final_sql, required_table_set)
         candidates.append(
             SqlMemoryCandidate(
                 memory=memory,
@@ -62,7 +63,7 @@ def retrieve_sql_memory(
                 metric_table_match=round(metric_table_match, 4),
                 success_score=round(success_score, 4),
                 required_table_match=required_table_match,
-                required_tables=required_tables,
+                required_tables=required_table_set,
             )
         )
 
@@ -90,6 +91,7 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
             reuse_type="regenerate",
             memory_hit=False,
             selected_memory_id=selected.memory.id,
+            selected_sql=selected.memory.final_sql,
             candidate_count=len(candidates),
             score=selected.score,
         )
@@ -110,6 +112,7 @@ def upsert_successful_sql_memory(
     final_sql: str,
     tables: list[str],
     metrics: list[str],
+    dimensions: list[str] | None = None,
     result_columns: list[str],
     row_count: int,
     latency_ms: int,
@@ -133,7 +136,7 @@ def upsert_successful_sql_memory(
             parameters=parameters or {},
             tables=tables,
             metrics=metrics,
-            dimensions=["order_date"],
+            dimensions=dimensions or [],
             result_columns=result_columns,
             row_count=row_count,
             latency_ms=latency_ms,

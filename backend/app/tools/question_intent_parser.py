@@ -6,33 +6,12 @@ from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
 from backend.app.core.model_adapter import ModelAdapter, ModelAdapterConfig, ModelMessage, ModelRequest, ModelResponse
+from backend.app.schemas.query_spec import QuerySpec
+from backend.app.tools.query_spec import DIMENSION_LABELS, METRIC_LABELS, build_query_spec
 
 
 INTENT_JSON_RESPONSE_FORMAT = {"type": "json_object"}
 CONFIDENCE_THRESHOLD = 0.55
-
-METRIC_LABELS = {
-    "sales_amount": "销售额",
-    "order_count": "订单数",
-    "avg_order_value": "客单价",
-    "refund_rate": "退款率",
-    "gross_margin": "毛利率",
-    "repeat_rate": "复购率",
-    "payment_success_rate": "支付成功率",
-    "payment_failure_rate": "支付失败率",
-}
-
-DIMENSION_LABELS = {
-    "date": "按天",
-    "month": "按月",
-    "category": "按品类",
-    "product": "按商品",
-    "city": "按城市",
-    "state": "按州",
-    "payment_type": "按支付方式",
-    "source": "按流量来源",
-}
-
 
 class ParsedQuestionIntent(BaseModel):
     original_question: str
@@ -46,6 +25,7 @@ class ParsedQuestionIntent(BaseModel):
     clarification: str = ""
     source: str = "heuristic"
     warnings: list[str] = Field(default_factory=list)
+    query_spec: QuerySpec = Field(default_factory=QuerySpec)
 
 
 def parse_question_intent(
@@ -56,7 +36,7 @@ def parse_question_intent(
 ) -> ParsedQuestionIntent:
     enabled = settings.intent_parser_enabled if model_enabled is None else model_enabled
     if not enabled:
-        return _heuristic_intent(question, ["LLM intent parser disabled."])
+        return _finalize_intent(_heuristic_intent(question, ["LLM intent parser disabled."]))
 
     model_adapter = adapter or _intent_model_adapter()
     response = model_adapter.chat(
@@ -71,13 +51,13 @@ def parse_question_intent(
         )
     )
     if not response.ok:
-        return _heuristic_intent(question, [response.error_message or "LLM intent parser failed."])
+        return _finalize_intent(_heuristic_intent(question, [response.error_message or "LLM intent parser failed."]))
 
     parsed = _parse_model_intent(question, response)
     if not parsed.metrics and not parsed.dimensions:
         heuristic = _heuristic_intent(question, parsed.warnings)
         if heuristic.confidence > parsed.confidence:
-            return heuristic
+            return _finalize_intent(heuristic)
     return _finalize_intent(parsed)
 
 
@@ -119,6 +99,14 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
         ("repeat_rate", ["复购率", "复购", "回购"]),
         ("payment_success_rate", ["支付成功率", "成功率"]),
         ("payment_failure_rate", ["支付失败率", "失败率"]),
+        ("new_user_count", ["新增用户", "新用户"]),
+        ("ordering_user_count", ["下单用户", "购买用户"]),
+        ("user_purchase_count", ["购买次数最多", "购买次数", "用户是谁"]),
+        ("visit_to_order_conversion_rate", ["访问到下单", "访问转化率"]),
+        ("cart_to_payment_conversion_rate", ["加购到支付", "加购转化率"]),
+        ("coupon_redemption_rate", ["优惠券核销率", "核销率"]),
+        ("coupon_order_aov_comparison", ["使用优惠券的订单客单价", "优惠券订单客单价"]),
+        ("source_order_conversion_rate", ["流量来源", "来源带来的订单转化率"]),
     ]
     for metric, tokens in checks:
         if any(token.lower() in lowered for token in tokens):
@@ -133,6 +121,8 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
         ("state", ["州", "省"]),
         ("payment_type", ["支付方式"]),
         ("source", ["流量来源", "渠道", "来源"]),
+        ("user", ["用户是谁", "用户"]),
+        ("coupon", ["优惠券", "核销"]),
     ]
     for dimension, tokens in dimension_checks:
         if any(token.lower() in lowered for token in tokens):
@@ -163,21 +153,30 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
 
 
 def _finalize_intent(intent: ParsedQuestionIntent) -> ParsedQuestionIntent:
+    explicit_time_range = _heuristic_time_range(intent.original_question)
+    time_range = explicit_time_range or intent.time_range
     normalized_question = _build_normalized_question(
         intent.original_question,
         intent.metrics,
         intent.dimensions,
-        intent.time_range,
+        time_range,
         base=intent.normalized_question,
     )
     clarification = intent.clarification
     if intent.needs_clarification and not clarification:
-        clarification = _clarification(intent.original_question, intent.metrics, intent.dimensions, intent.time_range)
+        clarification = _clarification(intent.original_question, intent.metrics, intent.dimensions, time_range)
     return intent.model_copy(
         update={
             "normalized_question": normalized_question,
             "needs_clarification": intent.needs_clarification or intent.confidence < CONFIDENCE_THRESHOLD,
             "clarification": clarification,
+            "time_range": time_range,
+            "query_spec": build_query_spec(
+                intent.original_question,
+                intent.metrics,
+                intent.dimensions,
+                time_range,
+            ),
         }
     )
 
@@ -216,11 +215,19 @@ def _heuristic_time_range(question: str) -> str:
     match = re.search(r"最近\s*(\d+)\s*(天|日|个月|月|年)", question)
     if match:
         return f"最近 {match.group(1)} {match.group(2)}"
+    day_match = re.search(r"(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]?", question)
+    if day_match:
+        return f"{day_match.group(1)}年{day_match.group(2)}月{day_match.group(3)}日"
+    month_match = re.search(r"(20\d{2})\s*年\s*(\d{1,2})\s*月", question)
+    if month_match:
+        return f"{month_match.group(1)}年{month_match.group(2)}月"
     year_match = re.search(r"(20\d{2})\s*年", question)
     if year_match:
         return f"{year_match.group(1)}年"
-    if "本月" in question:
+    if any(token in question for token in ["本月", "这个月", "这一个月", "一个月"]):
         return "本月"
+    if any(token in question for token in ["今天", "当天", "这一天", "一天"]):
+        return "当天"
     if "上月" in question:
         return "上月"
     if "今年" in question:

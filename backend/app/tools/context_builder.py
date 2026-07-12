@@ -5,6 +5,7 @@ from backend.app.schemas.retrieval import (
     TableRelationshipContext,
 )
 from backend.app.db.connection import get_connection
+from backend.app.tools.context_reranker import rerank_context
 from backend.app.tools.metric_retriever import retrieve_metrics
 from backend.app.tools.schema_retriever import retrieve_schema
 
@@ -16,6 +17,7 @@ def build_retrieval_context(question: str) -> RetrievalContext:
     """组合指标口径和表结构上下文，供 Agent 后续节点使用。"""
     metrics = retrieve_metrics(question)
     schema_columns = retrieve_schema(question, metrics)
+    metrics, schema_columns, rerank_diagnostics = rerank_context(question, metrics, schema_columns)
     return RetrievalContext(
         metrics=metrics,
         schema_columns=schema_columns,
@@ -26,6 +28,7 @@ def build_retrieval_context(question: str) -> RetrievalContext:
         tables=_unique_tables(metrics, schema_columns),
         fields=_unique_fields(metrics, schema_columns),
         metric_summary=_metric_summary(metrics),
+        rerank_diagnostics=rerank_diagnostics.as_dict(),
     )
 
 
@@ -215,15 +218,6 @@ def _unique_fields(
     return fields
 
 
-def _metric_summary(metrics: list[MetricContext]) -> str:
-    if not metrics:
-        return "未召回明确指标口径"
-    return "；".join(
-        f"{metric.display_name} = {metric.description}"
-        for metric in metrics
-    )
-
-
 def _append_relationship(
     relationships: list[TableRelationshipContext],
     seen: set[tuple[str, str, str, str]],
@@ -274,3 +268,14 @@ def _singularize(table_name: str) -> str:
     if table_name.endswith("s"):
         return table_name[:-1]
     return table_name
+
+
+def _metric_summary(
+    metrics: list[MetricContext],
+) -> str:
+    if not metrics:
+        return "未召回明确指标口径"
+    return "；".join(
+        f"{metric.display_name} = {metric.description}"
+        for metric in metrics
+    )

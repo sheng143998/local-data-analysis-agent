@@ -24,6 +24,18 @@ WRITE_KEYWORDS = {
     "REVOKE",
 }
 
+BLOCKED_FUNCTIONS = {
+    "pg_sleep",
+    "pg_sleep_for",
+    "pg_sleep_until",
+    "pg_read_file",
+    "pg_read_binary_file",
+    "pg_ls_dir",
+    "pg_stat_file",
+    "dblink_connect",
+    "dblink_exec",
+}
+
 
 def validate_sql(request: SqlValidationRequest) -> SqlValidationResult:
     errors: list[str] = []
@@ -42,7 +54,8 @@ def validate_sql(request: SqlValidationRequest) -> SqlValidationResult:
         return SqlValidationResult(is_valid=False, errors=errors)
 
     expression = expressions[0]
-    tables = _extract_tables(expression)
+    cte_names = _cte_names(expression)
+    tables = _extract_tables(expression, exclude=cte_names)
 
     if not isinstance(expression, exp.Select):
         errors.append("只允许 SELECT 查询")
@@ -56,6 +69,10 @@ def validate_sql(request: SqlValidationRequest) -> SqlValidationResult:
 
     if _has_select_star(expression):
         errors.append("禁止使用 SELECT *，请显式选择字段")
+
+    blocked_functions = _blocked_functions(expression)
+    if blocked_functions:
+        errors.append(f"禁止调用危险数据库函数：{', '.join(blocked_functions)}")
 
     if not blocked_tables:
         _validate_field_references(expression, tables, request, errors, warnings)
@@ -94,11 +111,17 @@ def guard_sql(
 
     final_sql = validation.normalized_sql.rstrip(";")
     expression = parse_one(final_sql, dialect="postgres")
-    if isinstance(expression, exp.Select) and expression.args.get("limit") is None:
-        final_sql = f"{final_sql} LIMIT {max_rows}"
-        warnings = [*validation.warnings, f"已自动添加 LIMIT {max_rows}"]
-    else:
-        warnings = validation.warnings
+    warnings = [*validation.warnings]
+    if isinstance(expression, exp.Select):
+        limit = expression.args.get("limit")
+        limit_value = _limit_value(limit)
+        if limit is None:
+            expression.set("limit", exp.Limit(expression=exp.Literal.number(max_rows)))
+            warnings.append(f"已自动添加 LIMIT {max_rows}")
+        elif limit_value is None or limit_value > max_rows:
+            expression.set("limit", exp.Limit(expression=exp.Literal.number(max_rows)))
+            warnings.append(f"已将 LIMIT 收紧为 {max_rows}")
+        final_sql = expression.sql(dialect="postgres")
 
     return SqlGuardResult(
         allowed=True,
@@ -120,12 +143,41 @@ def _parse_all(sql: str, errors: list[str]) -> list[exp.Expression]:
         return []
 
 
-def _extract_tables(expression: exp.Expression) -> list[str]:
-    return sorted({table.name for table in expression.find_all(exp.Table) if table.name})
+def _extract_tables(expression: exp.Expression, *, exclude: set[str] | None = None) -> list[str]:
+    excluded = exclude or set()
+    return sorted(
+        {
+            table.name
+            for table in expression.find_all(exp.Table)
+            if table.name and table.name not in excluded
+        }
+    )
+
+
+def _cte_names(expression: exp.Expression) -> set[str]:
+    return {cte.alias for cte in expression.find_all(exp.CTE) if cte.alias}
 
 
 def _has_select_star(expression: exp.Expression) -> bool:
     return any(isinstance(item, exp.Star) for item in expression.find_all(exp.Star))
+
+
+def _blocked_functions(expression: exp.Expression) -> list[str]:
+    names = {
+        function.name.lower()
+        for function in expression.find_all(exp.Func)
+        if function.name and function.name.lower() in BLOCKED_FUNCTIONS
+    }
+    return sorted(names)
+
+
+def _limit_value(limit: exp.Expression | None) -> int | None:
+    if not isinstance(limit, exp.Limit) or limit.expression is None:
+        return None
+    try:
+        return int(limit.expression.name)
+    except (TypeError, ValueError):
+        return None
 
 
 def _starts_with_write_keyword(sql: str) -> bool:
@@ -211,6 +263,15 @@ def _merge_derived_table_columns(
     alias_to_table: dict[str, str],
     table_to_columns: dict[str, set[str]],
 ) -> None:
+    for cte in expression.find_all(exp.CTE):
+        if not cte.alias:
+            continue
+        cte_alias = cte.alias
+        alias_to_table[cte_alias] = cte_alias
+        cte_columns = _select_output_names(cte.this)
+        if cte_columns:
+            table_to_columns.setdefault(cte_alias, set()).update(cte_columns)
+
     for subquery in expression.find_all(exp.Subquery):
         if not subquery.alias:
             continue

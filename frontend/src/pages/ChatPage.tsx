@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Bot, Copy, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
+import { AlertTriangle, Bot, Loader2, MessageSquareText, Send, Sparkles, Table2 } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
+import { SqlPanel } from '../components/data-qa/SqlPanel';
 import { analyzeQuestion } from '../api/analysisClient';
+import { ApiError } from '../api/client';
 import type { AnalysisResponse, AnalysisRow, AnalysisValue } from '../types/analysis';
+
+type ChatError = {
+  message: string;
+  status?: number;
+  detail?: string;
+};
 
 type ChatItem = {
   id: string;
@@ -13,6 +21,7 @@ type ChatItem = {
   sql?: string;
   rows?: AnalysisResponse['rows'];
   summary?: string;
+  error?: ChatError;
   streaming?: boolean;
 };
 
@@ -81,6 +90,51 @@ function formatCellValue(column: string, value: AnalysisValue) {
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
+function toChatError(error: unknown): ChatError {
+  if (error instanceof ApiError) {
+    if (error.status === 0) {
+      return {
+        message: '暂时连不上本地分析服务，请确认后端服务已启动后再试。',
+        status: error.status,
+        detail: error.detail ?? error.message,
+      };
+    }
+
+    if (error.status >= 500) {
+      return {
+        message: '分析服务暂时没有完成这次查询，请稍后重试或换一个更具体的问题。',
+        status: error.status,
+        detail: error.detail ?? error.message,
+      };
+    }
+
+    return {
+      message: error.message || '这次问题没有通过校验，请调整问题后再试。',
+      status: error.status,
+      detail: error.detail,
+    };
+  }
+
+  return { message: '分析过程被中断了，请稍后重试。' };
+}
+
+function ErrorCard({ error }: { error: ChatError }) {
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-4" style={{ borderRadius: 8 }}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded bg-amber-100 p-1 text-amber-700">
+          <AlertTriangle className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-amber-950">本次分析未完成</div>
+          <p className="mt-1 text-sm leading-6 text-amber-900">{error.message}</p>
+          {error.status ? <p className="mt-2 text-xs text-amber-700">错误码：{error.status}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPage() {
   const [activeSession, setActiveSession] = useState(sessions[0].id);
   const [draft, setDraft] = useState('最近 30 天销售额按天变化如何？');
@@ -89,7 +143,7 @@ export function ChatPage() {
       id: 'a1',
       role: 'assistant',
       title: '本次分析',
-      text: '你好，我可以帮你直接问本地业务数据。你可以像聊天一样提问，比如“最近 30 天销售额按天变化如何？”',
+      text: '你好，我可以帮你直接询问本地业务数据。你可以像聊天一样提问，比如“最近 30 天销售额按天变化如何？”',
       streaming: false,
     },
   ]);
@@ -107,6 +161,19 @@ export function ChatPage() {
           sql: data.sql,
           rows: data.rows.slice(0, 5),
           summary: data.summary,
+        },
+      ]);
+    },
+    onError: (error) => {
+      const friendlyError = toChatError(error);
+      setMessages((current) => [
+        ...current.filter((item) => !item.streaming),
+        {
+          id: `e-${Date.now()}`,
+          role: 'assistant',
+          title: '分析遇到问题',
+          text: friendlyError.message,
+          error: friendlyError,
         },
       ]);
     },
@@ -170,7 +237,7 @@ export function ChatPage() {
             {messages.map((message) => (
               <article key={message.id} className="space-y-3">
                 {message.role === 'user' ? (
-                  <div className="ml-auto max-w-3xl rounded-md bg-slate-950 px-4 py-3 text-white" style={{ borderRadius: 8 }}>
+                  <div className="ml-auto max-w-3xl rounded-md bg-slate-950 px-4 py-3 text-sm leading-6 text-white" style={{ borderRadius: 8 }}>
                     {message.text}
                   </div>
                 ) : (
@@ -179,34 +246,36 @@ export function ChatPage() {
                       <Bot className="h-4 w-4 text-cyan-600" /> {message.title ?? '助手'}
                       {message.streaming ? <Loader2 className="h-4 w-4 animate-spin text-cyan-600" /> : null}
                     </div>
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-700" style={{ borderRadius: 8 }}>
-                      {message.text}
-                    </div>
-                    {message.summary ? (
-                      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-                        <div className="sub-panel p-4">
-                          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                            <Sparkles className="h-4 w-4 text-emerald-600" /> 自然语言分析
-                          </div>
-                          <p className="text-sm leading-7 text-slate-600">{message.summary}</p>
+
+                    {message.error ? (
+                      <ErrorCard error={message.error} />
+                    ) : (
+                      <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" style={{ borderRadius: 8 }}>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+                          <Sparkles className="h-4 w-4 text-emerald-600" /> 回答摘要
                         </div>
-                        <div className="sub-panel p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                              <Copy className="h-4 w-4 text-cyan-600" /> SQL
+                        <p className="mt-2 text-sm leading-7 text-slate-700">{message.text}</p>
+                      </div>
+                    )}
+
+                    {message.summary || message.sql ? (
+                      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                        {message.summary ? (
+                          <div className="sub-panel bg-white p-4">
+                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                              <Sparkles className="h-4 w-4 text-emerald-600" /> 自然语言分析
                             </div>
-                            <button className="text-xs font-semibold text-cyan-700">复制</button>
+                            <p className="text-sm leading-7 text-slate-600">{message.summary}</p>
                           </div>
-                          <pre className="max-h-48 overflow-auto rounded-md bg-slate-950 p-3 font-mono text-xs text-cyan-100">
-                            <code>{message.sql}</code>
-                          </pre>
-                        </div>
+                        ) : null}
+                        {message.sql ? <SqlPanel sql={message.sql} compact title="生成 SQL" /> : null}
                       </div>
                     ) : null}
+
                     {message.rows ? (
-                      <div className="sub-panel overflow-hidden">
+                      <div className="sub-panel overflow-hidden bg-white">
                         <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
-                          <Table2 className="h-4 w-4 text-cyan-600" /> 简单结果表
+                          <Table2 className="h-4 w-4 text-cyan-600" /> 简要结果表
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full min-w-[640px] text-sm">

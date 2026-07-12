@@ -161,6 +161,7 @@ def test_upsert_successful_sql_memory_passes_question_and_sql_embeddings() -> No
         final_sql="SELECT 1 LIMIT 30",
         tables=["orders"],
         metrics=["sales_amount"],
+        dimensions=["date"],
         result_columns=["daily_sales"],
         row_count=1,
         latency_ms=12,
@@ -171,6 +172,7 @@ def test_upsert_successful_sql_memory_passes_question_and_sql_embeddings() -> No
     assert repo.upsert_payload is not None
     assert repo.upsert_payload.question_embedding == [0.1, 0.2]
     assert repo.upsert_payload.sql_embedding == [0.3, 0.4]
+    assert repo.upsert_payload.dimensions == ["date"]
 
 
 def test_build_sql_memory_embeddings_returns_none_when_adapter_fails() -> None:

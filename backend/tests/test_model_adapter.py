@@ -3,6 +3,7 @@ from typing import Any
 import httpx
 
 from backend.app.core.model_adapter import (
+    HttpxChatTransport,
     ModelAdapter,
     ModelAdapterConfig,
     ModelMessage,
@@ -71,6 +72,32 @@ def test_model_adapter_sends_openai_compatible_chat_payload() -> None:
     assert transport.calls[0]["url"] == "http://localhost:8001/v1/chat/completions"
     assert transport.calls[0]["json"]["messages"] == [{"role": "user", "content": "生成 SQL"}]
     assert "Authorization" not in transport.calls[0]["headers"]
+
+
+def test_local_model_adapter_does_not_inherit_proxy_environment() -> None:
+    adapter = ModelAdapter(
+        config=ModelAdapterConfig(
+            provider="local",
+            base_url="http://127.0.0.1:11434/v1",
+            model="qwen-local",
+        )
+    )
+
+    assert isinstance(adapter.transport, HttpxChatTransport)
+    assert adapter.transport.trust_env is False
+
+
+def test_remote_model_adapter_keeps_environment_configuration() -> None:
+    adapter = ModelAdapter(
+        config=ModelAdapterConfig(
+            provider="openai-compatible",
+            base_url="https://example.test/v1",
+            model="remote-model",
+        )
+    )
+
+    assert isinstance(adapter.transport, HttpxChatTransport)
+    assert adapter.transport.trust_env is True
 
 
 def test_model_adapter_adds_authorization_for_real_api_key() -> None:

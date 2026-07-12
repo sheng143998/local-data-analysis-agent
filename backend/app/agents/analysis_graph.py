@@ -13,6 +13,7 @@ from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_generation import GeneratedSql
 from backend.app.schemas.memories import SqlReusePlan
+from backend.app.schemas.query_spec import QuerySpec
 from backend.app.schemas.sql_execution import SqlExecutionResult
 from backend.app.schemas.sql_validation import SqlGuardResult
 from backend.app.tools.analysis_presenter import present_clarification_response, present_sales_trend_result
@@ -166,10 +167,12 @@ def _plan_memory_reuse_node(state: AnalysisGraphState) -> AnalysisGraphState:
     question = state["question"]
     retrieval_context = state["retrieval_context"]
     metric_names = state["metric_names"]
+    query_spec = _query_spec_from_intent(state.get("question_intent"))
     memory_candidates = retrieve_sql_memory(
         question,
-        metrics=metric_names,
-        tables=retrieval_context.tables,
+        metrics=query_spec.metrics if query_spec else metric_names,
+        tables=sorted(set(retrieval_context.tables) | set(query_spec.required_tables if query_spec else [])),
+        required_tables=query_spec.required_tables if query_spec else None,
     )
     reuse_plan = plan_sql_reuse(memory_candidates)
     return {
@@ -222,6 +225,7 @@ def _verify_memory_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         retrieval_context=state["retrieval_context"],
         reuse_plan=reuse_plan,
         sql=selected_sql,
+        question_intent=state.get("question_intent"),
     )
     if verification["decision"] == "reuse":
         return {
@@ -256,6 +260,7 @@ def _verify_memory_sql(
     retrieval_context: RetrievalContext,
     reuse_plan: SqlReusePlan,
     sql: str,
+    question_intent: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     warnings = _sql_intent_warnings(
         question=question,
@@ -263,6 +268,7 @@ def _verify_memory_sql(
         sql=sql,
         subject="候选 SQL",
         include_context_metrics=True,
+        question_intent=question_intent,
     )
     if reuse_plan.path_type != "fast_path":
         warnings.append("候选 SQL 未达到 fast_path 置信阈值，仅作为模型改写参考。")
@@ -272,7 +278,12 @@ def _verify_memory_sql(
         "decision": decision,
         "confidence": reuse_plan.score,
         "warnings": warnings,
-        "required": _sql_intent_required(question, retrieval_context, include_context_metrics=True),
+        "required": _sql_intent_required(
+            question,
+            retrieval_context,
+            include_context_metrics=True,
+            question_intent=question_intent,
+        ),
         "observed": _sql_features(sql),
     }
 
@@ -314,6 +325,7 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
         question=state["question"],
         retrieval_context=state["retrieval_context"],
         sql=state.get("selected_sql", ""),
+        question_intent=state.get("question_intent"),
     )
     warnings = [*generated_sql.warnings]
     for warning in verification["warnings"]:
@@ -399,7 +411,7 @@ def _guard_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
             ),
             "node_timings": _add_node_timing(state, "sql_guard", started),
         }
-    guard = guard_sql(selected_sql, max_rows=30)
+    guard = guard_sql(selected_sql, max_rows=settings.sql_max_rows)
     return {"guard": guard, "node_timings": _add_node_timing(state, "sql_guard", started)}
 
 
@@ -422,6 +434,7 @@ def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
     selected_sql = state["selected_sql"]
     updated_memory_id = None
     if execution.status == "success" and guard.allowed:
+        query_spec = _query_spec_from_intent(state.get("question_intent"))
         updated_memory = upsert_successful_sql_memory(
             question=state["question"],
             sql_template=guard.final_sql or selected_sql,
@@ -431,8 +444,9 @@ def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
                 "model_provider": state["generated_sql"].model_provider,
                 "model_name": state["generated_sql"].model_name,
             },
-            tables=state["retrieval_context"].tables,
-            metrics=state["metric_names"],
+            tables=sorted(_extract_sql_tables(guard.final_sql or selected_sql)),
+            metrics=query_spec.metrics if query_spec else state["metric_names"],
+            dimensions=query_spec.dimensions if query_spec else [],
             result_columns=execution.columns,
             row_count=execution.row_count,
             latency_ms=execution.latency_ms,
@@ -719,18 +733,25 @@ def _verify_generated_sql_intent(
     question: str,
     retrieval_context: RetrievalContext,
     sql: str,
+    question_intent: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     warnings = _sql_intent_warnings(
         question=question,
         retrieval_context=retrieval_context,
         sql=sql,
         subject="模型 SQL",
+        question_intent=question_intent,
     )
     decision = "accept" if not warnings else "reject"
     return {
         "decision": decision,
         "warnings": warnings,
-        "required": _sql_intent_required(question, retrieval_context, include_context_metrics=False),
+        "required": _sql_intent_required(
+            question,
+            retrieval_context,
+            include_context_metrics=False,
+            question_intent=question_intent,
+        ),
         "observed": _sql_features(sql),
     }
 
@@ -742,12 +763,14 @@ def _sql_intent_warnings(
     sql: str,
     subject: str,
     include_context_metrics: bool = False,
+    question_intent: dict[str, Any] | None = None,
 ) -> list[str]:
     warnings: list[str] = []
     required = _sql_intent_required(
         question,
         retrieval_context,
         include_context_metrics=include_context_metrics,
+        question_intent=question_intent,
     )
     observed = _sql_features(sql)
     coverage = _context_table_coverage(sql, retrieval_context.tables)
@@ -774,6 +797,14 @@ def _sql_intent_warnings(
         warnings.append(
             f"{subject} 时间粒度不匹配：需要 {required['granularity']}，实际 {observed['granularity'] or 'unknown'}"
         )
+    if required.get("time_start") and not _sql_has_time_bounds(
+        sql,
+        required["time_start"],
+        required["time_end"],
+    ):
+        warnings.append(
+            f"{subject} 未满足明确时间范围：必须使用 {required['time_filter']}。"
+        )
     if required["top_n"] and not observed["has_order_by"]:
         warnings.append(f"当前问题需要 Top/排行语义，但{subject}缺少 ORDER BY。")
     if required["limit"] and observed["limit"] and observed["limit"] > required["limit"]:
@@ -795,14 +826,41 @@ def _sql_intent_required(
     retrieval_context: RetrievalContext,
     *,
     include_context_metrics: bool = False,
+    question_intent: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    required = _question_sql_requirements(question)
+    query_spec = _query_spec_from_intent(question_intent)
+    if query_spec:
+        required = {
+            "required_tables": query_spec.required_tables,
+            "required_metric_tokens": query_spec.required_metric_tokens,
+            "required_dimension_tokens": query_spec.required_dimension_tokens,
+            "granularity": query_spec.granularity,
+            "top_n": query_spec.requires_order_by,
+            "limit": query_spec.top_n,
+            "time_start": query_spec.time_start,
+            "time_end": query_spec.time_end,
+            "time_filter": query_spec.time_filter,
+        }
+    else:
+        required = _question_sql_requirements(question)
     if include_context_metrics:
         required["required_metric_tokens"] = sorted(
             set(required["required_metric_tokens"])
             | set(_context_metric_tokens(retrieval_context))
         )
     return required
+
+
+def _query_spec_from_intent(question_intent: dict[str, Any] | None) -> QuerySpec | None:
+    if not isinstance(question_intent, dict):
+        return None
+    payload = question_intent.get("query_spec")
+    if not isinstance(payload, dict):
+        return None
+    try:
+        return QuerySpec.model_validate(payload)
+    except ValueError:
+        return None
 
 
 def _json_safe(value: Any) -> Any:
@@ -824,6 +882,14 @@ def _token_present(token: str, lowered_sql: str) -> bool:
         "date": ["date", "order_date", "created_at", "date_trunc('day'"],
         "month": ["month", "order_month", "date_trunc('month'"],
         "total_amount": ["total_amount", "sales_amount", "daily_sales", "gmv"],
+        "new_user_count": ["new_user_count", "new_users", "count(distinct u.id"],
+        "ordering_user_count": ["ordering_user_count", "order_user_count", "count(distinct o.user_id"],
+        "purchase_count": ["purchase_count", "order_count", "count(distinct o.id"],
+        "conversion_rate": ["conversion_rate", "conversion", "convert_rate"],
+        "coupon_redemption_rate": ["coupon_redemption_rate", "redemption_rate", "redeem_rate"],
+        "source": ["source", "traffic_source", "channel"],
+        "user": ["user", "user_id", "user_label"],
+        "coupon": ["coupon", "coupon_id", "coupon_code"],
     }
     return any(alias in lowered_sql for alias in aliases.get(token, [token]))
 
@@ -887,6 +953,9 @@ def _question_sql_requirements(question: str) -> dict[str, Any]:
         "granularity": _required_granularity(question),
         "top_n": _requires_top_n(question),
         "limit": _required_limit(question),
+        "time_start": "",
+        "time_end": "",
+        "time_filter": "",
     }
 
 
@@ -964,27 +1033,32 @@ def _duplicates_order_amount_through_payments_join(sql: str) -> bool:
     except ParseError:
         return False
 
-    tables = [table for table in expression.find_all(exp.Table) if table.name]
-    table_names = {table.name for table in tables}
-    if "orders" not in table_names or "payments" not in table_names:
-        return False
-
-    alias_to_table = {
-        table.alias_or_name: table.name
-        for table in tables
-        if table.name
-    }
-    alias_to_table.update({table.name: table.name for table in tables if table.name})
-
-    for aggregate in expression.find_all(exp.Sum):
-        if _sum_uses_distinct(aggregate):
+    for select in expression.find_all(exp.Select):
+        joins = select.args.get("joins") or []
+        joined_tables = {
+            join.this.name
+            for join in joins
+            if isinstance(join.this, exp.Table) and join.this.name
+        }
+        if "payments" not in joined_tables:
             continue
-        for column in aggregate.find_all(exp.Column):
-            if column.name != "total_amount":
+
+        alias_to_table = {
+            table.alias_or_name: table.name
+            for table in select.find_all(exp.Table)
+            if table.name and table.find_ancestor(exp.Select) is select
+        }
+        alias_to_table.update({table: table for table in alias_to_table.values()})
+
+        for aggregate in select.find_all(exp.Sum):
+            if aggregate.find_ancestor(exp.Select) is not select or _sum_uses_distinct(aggregate):
                 continue
-            table_name = alias_to_table.get(column.table or "")
-            if table_name == "orders":
-                return True
+            for column in aggregate.find_all(exp.Column):
+                if column.name != "total_amount":
+                    continue
+                table_name = alias_to_table.get(column.table or "")
+                if table_name == "orders":
+                    return True
     return False
 
 
@@ -1070,6 +1144,17 @@ def _required_limit(question: str) -> int | None:
     if match:
         return int(match.group(1))
     return None
+
+
+def _sql_has_time_bounds(sql: str, start: str, end: str) -> bool:
+    """Require both endpoints; the generator receives the exact half-open predicate."""
+    if not sql.strip() or not start or not end:
+        return False
+    lowered = sql.lower()
+    date_literal = r"(?:date\s+)?['\"]{}['\"]"
+    has_start = re.search(r">=\s*" + date_literal.format(re.escape(start)), lowered)
+    has_end = re.search(r"<\s*" + date_literal.format(re.escape(end)), lowered)
+    return bool(has_start and has_end)
 
 
 def _sql_granularity(lowered_sql: str) -> str | None:

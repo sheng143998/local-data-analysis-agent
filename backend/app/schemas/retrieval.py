@@ -39,3 +39,4 @@ class RetrievalContext(BaseModel):
     tables: list[str] = Field(default_factory=list)
     fields: list[str] = Field(default_factory=list)
     metric_summary: str = ""
+    rerank_diagnostics: dict = Field(default_factory=dict)

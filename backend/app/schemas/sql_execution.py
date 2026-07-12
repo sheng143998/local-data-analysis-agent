@@ -13,3 +13,5 @@ class SqlExecutionResult(BaseModel):
     row_count: int = 0
     latency_ms: int = 0
     error_message: str | None = None
+    error_category: str | None = None
+    user_error_message: str | None = None
