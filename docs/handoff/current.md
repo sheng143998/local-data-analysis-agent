@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-- 已完成：Model Semantic Candidates。计划：`docs/plans/2026-07-12-model-semantic-candidates.md`；完成记录：`docs/modules/2026-07-12-model-semantic-candidates.md`。语义模型高置信的未知候选不再被 `metrics` 规范化阻断；`semantic_metrics`/`semantic_dimensions` 会透传到 SQL Prompt，用户总数等问题可进入检索和模型生成。标准 `metrics` 仅服务已定义口径、QuerySpec 和模型不可用时的确定性降级。验证：focused `20 passed`、后端全量 `211 passed, 1 warning`、标准评测 280 秒完成为 `13/20` 执行成功、`60.00%` 严格成功率。风险：未知指标缺少确认口径，质量仍依赖模型、schema 召回和 Guard。提交和推送将在本模块交付时完成。
+- 已完成：Model Semantic Candidates。计划：`docs/plans/2026-07-12-model-semantic-candidates.md`；完成记录：`docs/modules/2026-07-12-model-semantic-candidates.md`。语义模型高置信的未知候选不再被 `metrics` 规范化阻断；`semantic_metrics`/`semantic_dimensions` 会透传到 SQL Prompt，用户总数等问题可进入检索和模型生成。标准 `metrics` 仅服务已定义口径、QuerySpec 和模型不可用时的确定性降级。验证：focused `20 passed`、后端全量 `211 passed, 1 warning`、标准评测 280 秒完成为 `13/20` 执行成功、`60.00%` 严格成功率。风险：未知指标缺少确认口径，质量仍依赖模型、schema 召回和 Guard。模块提交 `5a16460` 已推送至 `origin/main`。
 
 - 已完成：Model First Order Count Fallback。计划：`docs/plans/2026-07-12-model-first-order-count-fallback.md`；完成记录：`docs/modules/2026-07-12-model-first-order-count-fallback.md`。订单数已从直接 fallback 改为模型生成、QuerySpec 校验、一次 Repair 优先；只有模型首次无 SQL 或 Repair 后仍不合规，才使用受控已支付订单数 SQL，并继续经过 Guard/只读 Executor。验证：focused `33 passed`，后端全量 `210 passed, 1 warning`；标准评测报告为 `12/20` 执行成功、`60.00%` 严格成功率，但进程 364 秒超时，未计为通过。模块提交 `66cb945` 已推送至 `origin/main`。
 
