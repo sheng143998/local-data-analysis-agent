@@ -77,6 +77,7 @@ export type AnalysisResponse = {
   };
   trace: AnalysisTrace;
   steps: AgentStep[];
+  visualization: VisualizationSpec;
 };
 ```
 
@@ -93,6 +94,7 @@ export type AnalysisResponse = {
 | `source` | 是 | 展示数据来源、字段、口径、耗时和安全说明。 |
 | `trace` | 是 | 前端类型已声明，普通用户页面不展示内部追踪细节。 |
 | `steps` | 是 | 前端类型已声明，普通用户页面不展示内部执行步骤。 |
+| `visualization` | 是 | `ResultChart` 只用该确定性规格与真实 `rows` 渲染折线、柱状或环形图；`none` 时只保留结果表。 |
 
 注意：
 
@@ -135,6 +137,21 @@ export type AnalysisRow = Record<string, AnalysisValue>;
 ```
 
 后端 `rows` 字段直接来自 SQL Executor 的真实结果列，例如 `order_date`、`daily_sales`、`order_count`、`avg_order_value`、`city_label`、`success_rate`。`frontend/src/pages/ChatPage.tsx` 会根据返回行动态生成最多 6 列表头，并对常见列名做中文展示。
+
+### `visualization` 当前结构
+
+```ts
+export type VisualizationSpec = {
+  kind: 'none' | 'line' | 'bar' | 'pie';
+  title: string;
+  x_field: string | null;
+  y_fields: string[];
+  unit: 'number' | 'currency' | 'percent';
+  reason: string;
+};
+```
+
+`ChatPage` 只在当前分析响应同时包含真实 rows 和可用规格时调用 `ResultChart`。图表类型由后端 Result Contract 的确定性规则选择，前端不根据 Mock 数据或模型文本推测字段、数值和图表配置；历史消息当前只恢复摘要，因此不会伪造历史图表。
 
 ## 指标口径字段映射
 

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { SqlPanel } from '../components/data-qa/SqlPanel';
+import { ResultChart } from '../components/data-qa/ResultChart';
 import { analyzeQuestion, claimDevelopmentConversations, getConversation, listConversations } from '../api/analysisClient';
 import { ApiError } from '../api/client';
 import type { AnalysisResponse, AnalysisRow, AnalysisValue, ConversationDetail, ConversationMessage } from '../types/analysis';
@@ -32,6 +33,7 @@ type ChatItem = {
   text: string;
   sql?: string;
   rows?: AnalysisResponse['rows'];
+  visualization?: AnalysisResponse['visualization'];
   error?: ChatError;
   streaming?: boolean;
 };
@@ -253,7 +255,7 @@ export function ChatPage() {
       if (data.conversation_id) setActiveSession(data.conversation_id);
       setMessages((current) => [
         ...current.filter((item) => !item.streaming),
-        { id: `a-${Date.now()}`, role: 'assistant', text: data.summary, sql: data.sql || undefined, rows: data.rows },
+        { id: `a-${Date.now()}`, role: 'assistant', text: data.summary, sql: data.sql || undefined, rows: data.rows, visualization: data.visualization },
       ]);
       setHasMoreMessages(false);
       setNextBefore(null);
@@ -403,6 +405,7 @@ export function ChatPage() {
                             </div>
                           )}
                           {message.sql ? <SqlPanel sql={message.sql} compact title="已执行 SQL" /> : null}
+                          {message.rows?.length && message.visualization ? <ResultChart rows={message.rows} visualization={message.visualization} /> : null}
                           {message.rows?.length ? <ResultTable rows={message.rows.slice(0, 30)} /> : null}
                         </div>
                       </div>

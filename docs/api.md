@@ -145,7 +145,15 @@
       "status": "已完成",
       "time": "10ms"
     }
-  ]
+  ],
+  "visualization": {
+    "kind": "line",
+    "title": "趋势",
+    "x_field": "order_date",
+    "y_fields": ["daily_sales"],
+    "unit": "currency",
+    "reason": "时间维度使用趋势图"
+  }
 }
 ```
 
@@ -162,6 +170,18 @@
 | `source` | object | 数据来源、表字段、指标口径、返回行数、耗时和安全说明。 |
 | `trace` | object | 简化追踪信息。普通用户界面可选择弱化展示，不展示原始工具 payload。 |
 | `steps` | array | Agent 执行步骤摘要。 |
+| `visualization` | object | 仅由已确认的结果列、行和 Result Contract 派生的展示规格；前端按它选择真实图表或保留表格。 |
+
+`visualization` 字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `kind` | string | `none`、`line`、`bar` 或 `pie`。`none` 表示不适合图表，前端保留结果表。 |
+| `title` | string | 图表标题。 |
+| `x_field` | string/null | 真实 `rows` 中用于维度轴或环形图标签的字段。 |
+| `y_fields` | string[] | 真实 `rows` 中的数值字段，最多由当前展示组件使用前两个。 |
+| `unit` | string | `number`、`currency` 或 `percent`，用于坐标轴和提示格式化。 |
+| `reason` | string | 后端确定性选择该展示形式或放弃图表的业务原因。 |
 
 `path` 取值说明：
 
@@ -178,6 +198,7 @@
 - Executor 在只读事务中执行，并设置查询与锁等待超时；Guard 会强制限制返回行数并拦截危险数据库函数。
 - 内部 SQL Memory 分数、prompt、模型原始输出和工具调用原始 payload 不属于普通用户接口展示内容。
 - `rows` 不再固定为销售趋势字段；前端应按返回行的 key 动态生成表头，避免换表或新增查询列后无法展示。
+- 后端不接受模型生成的 ECharts option、颜色或图表类型。`visualization` 只从已确认的 Result Contract 和真实查询结果派生，不会影响 SQL、数值或自然语言结论。
 
 ## 指标口径
 

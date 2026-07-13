@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 PathType = Literal["fast_path", "rewrite_path", "cold_path"]
+VisualizationKind = Literal["none", "line", "bar", "pie"]
 
 
 class AnalyzeRequest(BaseModel):
@@ -50,6 +51,15 @@ class AgentStep(BaseModel):
     time: str
 
 
+class VisualizationSpec(BaseModel):
+    kind: VisualizationKind = "none"
+    title: str = ""
+    x_field: str | None = None
+    y_fields: list[str] = Field(default_factory=list)
+    unit: Literal["number", "currency", "percent"] = "number"
+    reason: str = "当前结果不适合图表展示"
+
+
 class AnalyzeResponse(BaseModel):
     question: str
     path: PathType
@@ -60,6 +70,7 @@ class AnalyzeResponse(BaseModel):
     source: AnalysisSource
     trace: AnalysisTrace
     steps: list[AgentStep]
+    visualization: VisualizationSpec = Field(default_factory=VisualizationSpec)
     conversation_id: UUID | None = None
     pending_clarification: bool = False
     conversation_status: Literal["active", "waiting_for_clarification", "cancelled"] = "active"

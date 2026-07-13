@@ -22,6 +22,15 @@ export type AgentStep = {
   time: string;
 };
 
+export type VisualizationSpec = {
+  kind: 'none' | 'line' | 'bar' | 'pie';
+  title: string;
+  x_field: string | null;
+  y_fields: string[];
+  unit: 'number' | 'currency' | 'percent';
+  reason: string;
+};
+
 export type AnalysisResponse = {
   question: string;
   path: 'fast_path' | 'rewrite_path' | 'cold_path';
@@ -36,11 +45,13 @@ export type AnalysisResponse = {
     metricDefinition: string;
     range: string;
     returnedRows: number;
+    resultState: 'success' | 'empty' | 'error' | 'blocked';
     queryTime: string;
     security: string;
   };
   trace: AnalysisTrace;
   steps: AgentStep[];
+  visualization: VisualizationSpec;
   conversation_id?: string | null;
   pending_clarification: boolean;
   conversation_status: 'active' | 'waiting_for_clarification' | 'cancelled';

@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from typing import Any
 
-from backend.app.schemas.analysis import AnalyzeResponse
+from backend.app.schemas.analysis import AnalyzeResponse, VisualizationSpec
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent
 from backend.app.schemas.result_contract import ResultContract
+from backend.app.tools.result_contract_builder import build_visualization_spec
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ def present_sales_trend_result(
             {"name": "执行查询", "status": "已完成", "time": f"{execution.latency_ms}ms"},
             {"name": "整理结论", "status": "已完成", "time": "1ms"},
         ],
+        visualization=build_visualization_spec(result_contract.model_copy(update={"rows": rows})) if result_contract else VisualizationSpec(),
     )
 
 

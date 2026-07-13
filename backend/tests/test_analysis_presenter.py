@@ -68,3 +68,22 @@ def test_presenter_reports_successful_empty_result_without_treating_zero_as_empt
 
     assert response.source.resultState == "empty"
     assert "筛选条件下没有匹配记录" in response.summary
+
+
+def test_presenter_exposes_deterministic_visualization_from_result_contract() -> None:
+    execution = SqlExecutionResult(
+        status="success",
+        columns=["order_date", "sales_amount"],
+        rows=[{"order_date": "2017-01-02", "sales_amount": 20}, {"order_date": "2017-01-01", "sales_amount": 10}],
+        row_count=2,
+        latency_ms=1,
+    )
+    contract = build_result_contract(
+        "销售趋势", execution, {"dimensions": ["order_date"], "measures": [{"name": "sales_amount"}]}, []
+    )
+
+    response = present_sales_trend_result("销售趋势", "SELECT order_date, sales_amount FROM orders", execution, [], 1, result_contract=contract)
+
+    assert response.visualization.kind == "line"
+    assert response.visualization.x_field == "order_date"
+    assert response.rows[0]["order_date"] == "2017-01-01"
