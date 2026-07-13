@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-07-13T14:06:27.618121+00:00",
+  "source_text": "C:\\Users\\admin\\Desktop\\新建 文本文档.txt",
+  "dataset_path": "C:\\Users\\admin\\Desktop\\本地数据分析agent\\eval\\datasets\\database_ground_truth_questions.jsonl",
+  "text_dataset_alignment": {
+    "text_case_count": 50,
+    "dataset_case_count": 50,
+    "count_match": true,
+    "expected_case_count": 50,
+    "coverage_match": true,
+    "question_mismatch_count": 0,
+    "question_mismatches": [],
+    "answer_mismatch_count": 0,
+    "answer_mismatches": [],
+    "special_result_cases": [
+      {
+        "index": 47,
+        "id": "database_047",
+        "dataset_mode": "empty",
+        "text_answer": "无数据，返回空结果集"
+      },
+      {
+        "index": 48,
+        "id": "database_048",
+        "dataset_mode": "empty",
+        "text_answer": "无数据，返回空结果集"
+      },
+      {
+        "index": 49,
+        "id": "database_049",
+        "dataset_mode": "skip",
+        "text_answer": "不可计算，访问用户数为 0"
+      },
+      {
+        "index": 50,
+        "id": "database_050",
+        "dataset_mode": "skip",
+        "text_answer": "不可计算，加购用户数为 0"
+      }
+    ],
+    "special_result_case_count": 4
+  },
+  "evaluation_report": {
+    "path": "eval/reports/ground_truth_current_batch_001.json",
+    "available": true,
+    "generated_at": "2026-07-13T14:06:19.089574+00:00",
+    "dataset": {
+      "path": "eval/datasets/database_ground_truth_questions.jsonl",
+      "total_case_count": 50,
+      "selected_start": 0,
+      "selected_limit": 10,
+      "selected_case_count": 10,
+      "selected_case_ids": [
+        "database_001",
+        "database_002",
+        "database_003",
+        "database_004",
+        "database_005",
+        "database_006",
+        "database_007",
+        "database_008",
+        "database_009",
+        "database_010"
+      ],
+      "is_complete_dataset": false
+    },
+    "summary": {
+      "total": 10,
+      "success_count": 7,
+      "strict_success_count": 3,
+      "execution_success_rate": 0.7,
+      "strict_success_rate": 0.3,
+      "answer_checked_count": 10,
+      "answer_match_count": 3,
+      "answer_match_rate": 0.3,
+      "average_latency_ms": 32071
+    },
+    "case_count": 10,
+    "failure_classification": {
+      "answer_mismatch": {
+        "count": 2,
+        "case_ids": [
+          "database_001",
+          "database_005"
+        ]
+      },
+      "http_or_application_error": {
+        "count": 3,
+        "case_ids": [
+          "database_003",
+          "database_009",
+          "database_010"
+        ]
+      },
+      "missing_table": {
+        "count": 2,
+        "case_ids": [
+          "database_004",
+          "database_006"
+        ]
+      },
+      "ok": {
+        "count": 3,
+        "case_ids": [
+          "database_002",
+          "database_007",
+          "database_008"
+        ]
+      }
+    },
+    "failure_classification_counts": {
+      "answer_mismatch": 2,
+      "http_or_application_error": 3,
+      "missing_table": 2,
+      "ok": 3
+    }
+  },
+  "security": {
+    "credentials_read": false,
+    "sql_executed": false,
+    "model_called": false,
+    "raw_sql_or_prompt_recorded": false
+  }
+}
