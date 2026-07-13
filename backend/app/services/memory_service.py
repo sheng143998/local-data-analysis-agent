@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from backend.app.db.repositories.memory_repository import SqlMemoryRepository
-from backend.app.schemas.memories import SqlMemoryRecord
+from backend.app.schemas.memories import SqlMemoryRecord, SqlTrustStatus
 
 
 class MemoryService:
@@ -16,6 +16,12 @@ class MemoryService:
 
     def get_memory(self, memory_id: UUID) -> SqlMemoryRecord:
         memory = self.repository.get(memory_id)
+        if memory is None:
+            raise HTTPException(status_code=404, detail="SQL Memory 不存在")
+        return memory
+
+    def update_trust_status(self, memory_id: UUID, trust_status: SqlTrustStatus) -> SqlMemoryRecord:
+        memory = self.repository.update_trust_status(memory_id, trust_status)
         if memory is None:
             raise HTTPException(status_code=404, detail="SQL Memory 不存在")
         return memory

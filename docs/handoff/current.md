@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已增强：Trusted SQL Repository 管理。管理员可通过 `PATCH /api/memories/{memory_id}/trust` 显式审核并提升 SQL Memory 状态，只有 `verified` 可 fast path；仍经过 QuerySpec、Inspector、Guard 和 Executor。验证：Memory/API/reuse `21 passed, 1 warning`。schema/契约 fingerprint 待后续自动化。
+
 - 已完成：Model Routing Foundation（Phase 7 起始）。计划：`docs/plans/2026-07-13-model-routing-observability.md`；记录：`docs/modules/2026-07-13-model-routing-foundation.md`。任务角色到 provider/model/base URL 的集中路由已建立，意图解析已接入；不记录密钥或完整 prompt。验证：focused `22 passed`。待完成：SQL adapter/run trace 路由摘要和 benchmark 驱动模型比较。
 
 - 进行中：Model Routing And Observability（Phase 7）。计划：`docs/plans/2026-07-13-model-routing-observability.md`。将意图、SQL、展示任务与现有 provider/model 配置显式关联，并记录安全摘要；不更改 endpoint、不向未批准云端发送 SQL/schema。

@@ -52,6 +52,26 @@ class SqlMemoryRepository:
             return self._create_success(payload, normalized_question)
         return self._update_success(existing, payload)
 
+    def update_trust_status(self, memory_id: UUID, trust_status: str) -> SqlMemoryRecord | None:
+        """仅更新审核状态，保留 SQL、成功次数和历史参数以便审计。"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE sql_memories
+                SET filters = jsonb_set(COALESCE(filters, '{}'::jsonb), '{trust_status}', to_jsonb(%s::text), true)
+                WHERE id = %s
+                RETURNING id, canonical_question, normalized_question, question_pattern,
+                          intent, sql_template, final_sql, param_schema, parameters,
+                          tables, metrics, dimensions, filters, dialect, schema_version,
+                          success_count, failure_count, avg_latency_ms, last_result_columns,
+                          last_row_count, last_used_at, created_at
+                """,
+                (trust_status, str(memory_id)),
+            )
+            row = cursor.fetchone()
+            return _row_to_memory(row) if row else None
+
     def _get_by_normalized_question(self, normalized_question: str) -> SqlMemoryRecord | None:
         with get_connection() as conn:
             cursor = conn.cursor()

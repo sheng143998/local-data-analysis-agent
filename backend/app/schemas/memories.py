@@ -80,3 +80,7 @@ class SqlMemoryUpsert(BaseModel):
     row_count: int = 0
     latency_ms: int = 0
     trust_status: SqlTrustStatus = "executed"
+
+
+class SqlMemoryTrustUpdate(BaseModel):
+    trust_status: SqlTrustStatus

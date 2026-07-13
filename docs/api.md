@@ -377,6 +377,14 @@
 
 ## SQL Memory 调试接口
 
+### 更新 SQL Memory 可信状态
+
+| Method | Path | 权限 | 用途 |
+| --- | --- | --- | --- |
+| `PATCH` | `/memories/{memory_id}/trust` | admin | 人工审核 SQL Memory 生命周期状态；仅 `verified` 可进入 fast path。 |
+
+请求体：`{"trust_status":"candidate|executed|reviewed|verified|deprecated|rejected"}`。
+
 SQL Memory 接口用于开发者查看历史成功 SQL 记忆，不进入普通用户主导航。
 
 ### SqlMemoryRecord 字段
