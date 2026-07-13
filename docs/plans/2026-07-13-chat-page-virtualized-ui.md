@@ -24,7 +24,7 @@
 - [x] 实现会话分页加载、搜索与新会话切换。
 - [x] 重构 ChatPage 布局和交互状态，保留真实分析响应、错误和 SQL/结果表展示。
 - [x] 移除 `SqlPanel` Mock 默认值，补充前端类型安全。
-- [ ] 运行前端 build，启动开发服务并做浏览器 smoke；更新文档、handoff、commit/push。
+- [x] 运行前端 build，启动开发服务并做浏览器 smoke；更新文档、handoff、commit/push。
 
 ## Validation plan
 
