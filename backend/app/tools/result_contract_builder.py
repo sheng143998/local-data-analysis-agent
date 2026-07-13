@@ -12,6 +12,8 @@ def build_result_contract(question: str, execution: SqlExecutionResult, query_pl
         columns=[ResultColumn(name=column, semantic_role="metric" if column in measures else "dimension" if column in dimensions else "unknown") for column in execution.columns],
         rows=execution.rows,
         row_count=execution.row_count,
+        # 业务上 0 值聚合仍有一行结果，只有成功且零行才是空结果。
+        result_state="empty" if execution.status == "success" and execution.row_count == 0 else execution.status,
         time_range=str(plan.get("time_filter") or ""),
         warnings=warnings,
     )

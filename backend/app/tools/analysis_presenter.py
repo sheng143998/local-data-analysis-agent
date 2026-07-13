@@ -45,6 +45,7 @@ def present_sales_trend_result(
         period_label=period_label,
         main_metric_label=main_metric_label,
     )
+    result_state = result_contract.result_state if result_contract else ("empty" if execution.row_count == 0 else "success")
 
     return AnalyzeResponse(
         question=question,
@@ -64,6 +65,7 @@ def present_sales_trend_result(
             "metricDefinition": _metric_definition(retrieval_context),
             "range": profile.range_label,
             "returnedRows": execution.row_count,
+            "resultState": result_state,
             "queryTime": f"{execution.latency_ms}ms",
             "security": "只读 SELECT，已通过 SQL Guard",
         },
@@ -107,6 +109,7 @@ def present_clarification_response(
             "metricDefinition": intent.normalized_question,
             "range": "等待用户确认",
             "returnedRows": 0,
+            "resultState": "blocked",
             "queryTime": "0ms",
             "security": "未生成 SQL，等待用户确认",
         },
@@ -258,7 +261,7 @@ def _generic_summary_text(
     main_metric_label: str,
 ) -> str:
     if profile.row_count <= 0:
-        return f"已基于真实 PostgreSQL 数据执行{main_metric_label}查询，但当前没有返回数据。"
+        return f"已基于真实 PostgreSQL 数据执行{main_metric_label}查询；当前筛选条件下没有匹配记录。"
     return (
         f"已基于真实 PostgreSQL 数据查询{main_metric_label}，"
         f"按{period_label}返回 {profile.row_count} 行结果。"
@@ -380,6 +383,7 @@ def _error_payload(
             "metricDefinition": _metric_definition(retrieval_context),
             "range": "无数据",
             "returnedRows": 0,
+            "resultState": execution.status,
             "queryTime": f"{execution.latency_ms}ms",
             "security": "SQL Guard / Executor",
         },

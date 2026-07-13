@@ -14,5 +14,6 @@ class ResultContract(BaseModel):
     columns: list[ResultColumn] = Field(default_factory=list)
     rows: list[dict[str, Any]] = Field(default_factory=list)
     row_count: int = 0
+    result_state: str = "success"
     time_range: str = ""
     warnings: list[str] = Field(default_factory=list)

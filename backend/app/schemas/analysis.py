@@ -31,6 +31,8 @@ class AnalysisSource(BaseModel):
     metricDefinition: str
     range: str
     returnedRows: int
+    # 业务展示区分成功空集、正常结果和失败，0 值聚合仍属于 success。
+    resultState: Literal["success", "empty", "error", "blocked"] = "success"
     queryTime: str
     security: str
 

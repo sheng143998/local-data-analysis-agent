@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：空结果语义展示。计划：`docs/plans/2026-07-13-empty-result-presentation.md`；记录：`docs/modules/2026-07-13-empty-result-presentation.md`。成功空集、零值聚合与错误状态已被内部 Contract/response source 区分，空集不再被泛化为业务零。验证：Presenter/Contract `5 passed`；API 组合测试在 120 秒上限未完成。待提交/推送。
+
+- 进行中：空结果语义展示。计划：`docs/plans/2026-07-13-empty-result-presentation.md`。将成功空结果、成功零值和执行失败区分为内部 Result Contract 状态，并向既有 response source 增加可选状态字段；不修改 SQL 生成或安全执行边界。验证：Presenter/Result Contract 聚焦测试。
+
 - 已完成：Trusted SQL Context Fingerprint。计划：`docs/plans/2026-07-13-trusted-sql-context-fingerprint.md`；记录：`docs/modules/2026-07-13-trusted-sql-context-fingerprint.md`。schema 与已解析契约指纹已保存在 SQL Memory 的既有 JSONB，缺失或失配的 verified 记录只能走 rewrite path。验证：Memory/Graph focused `47 passed`；全量测试与标准评测未重复运行，原因及相邻模块结果已记录。待提交/推送。
 
 - 进行中：Trusted SQL Context Fingerprint。计划：`docs/plans/2026-07-13-trusted-sql-context-fingerprint.md`。将使用既有 `sql_memories.filters` JSONB 持久化 schema 与 semantic-contract 指纹，避免无 migration 的重复字段；指纹缺失或失配的 verified SQL 必须降级为 rewrite path，仍经过 Inspector/Guard/Executor。验证：Memory/Graph 聚焦测试、后端全量与标准评测。

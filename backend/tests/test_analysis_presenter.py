@@ -1,5 +1,6 @@
 from backend.app.schemas.sql_execution import SqlExecutionResult
 from backend.app.tools.analysis_presenter import present_sales_trend_result
+from backend.app.tools.result_contract_builder import build_result_contract
 
 
 def test_presenter_builds_summary_and_metrics_from_generic_rows() -> None:
@@ -56,3 +57,14 @@ def test_presenter_keeps_known_business_labels_for_existing_columns() -> None:
     assert "城市" in response.summary
     assert "客单价" in response.summary
     assert response.metrics[1].label == "客单价"
+
+
+def test_presenter_reports_successful_empty_result_without_treating_zero_as_empty() -> None:
+    empty = SqlExecutionResult(status="success", row_count=0)
+    response = present_sales_trend_result(
+        question="各流量来源的事件数", sql="SELECT source FROM traffic_events", execution=empty,
+        guard_warnings=[], latency_ms=1, result_contract=build_result_contract("各流量来源的事件数", empty, {"time_filter": ""}, []),
+    )
+
+    assert response.source.resultState == "empty"
+    assert "筛选条件下没有匹配记录" in response.summary
