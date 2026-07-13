@@ -1,11 +1,14 @@
 import { CheckCircle2, CircleDashed, Loader2 } from 'lucide-react';
-import { pipelineSteps } from '../../data/mock';
+import type { AgentStep } from '../../types/analysis';
 
 type AgentPipelineProps = {
   running: boolean;
+  steps: AgentStep[];
 };
 
-export function AgentPipeline({ running }: AgentPipelineProps) {
+export function AgentPipeline({ running, steps }: AgentPipelineProps) {
+  if (!steps.length) return null;
+
   return (
     <section className="panel p-5">
       <div className="mb-4 flex items-center justify-between">
@@ -16,9 +19,9 @@ export function AgentPipeline({ running }: AgentPipelineProps) {
         <span className="rounded-md bg-slate-950 px-3 py-1.5 text-xs font-semibold text-cyan-100">LangGraph</span>
       </div>
       <div className="grid gap-3 md:grid-cols-7">
-        {pipelineSteps.map((step, index) => {
-          const active = running ? index <= 5 : step.status !== '已跳过';
-          const isRunning = running && index === 5;
+        {steps.map((step, index) => {
+          const active = step.status !== '已跳过';
+          const isRunning = running && step.status === '运行中';
           return (
             <div key={step.name} className="relative">
               <div
@@ -41,7 +44,7 @@ export function AgentPipeline({ running }: AgentPipelineProps) {
                 <p className="font-semibold text-slate-900">{step.name}</p>
                 <p className="mt-2 text-xs text-slate-500">{isRunning ? '运行中' : step.status}</p>
               </div>
-              {index < pipelineSteps.length - 1 ? (
+              {index < steps.length - 1 ? (
                 <div className="absolute right-[-14px] top-1/2 hidden h-px w-7 bg-cyan-300 md:block" />
               ) : null}
             </div>

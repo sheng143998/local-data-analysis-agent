@@ -1,0 +1,42 @@
+export type QueryRunRecord = {
+  id: string;
+  app_user_id: string | null;
+  user_question: string;
+  rewritten_question: string | null;
+  memory_hit: boolean;
+  memory_id: string | null;
+  generated_sql: string | null;
+  final_sql: string | null;
+  guard_status: string;
+  execution_status: string;
+  row_count: number;
+  latency_ms: number;
+  error_message: string | null;
+  created_at: string;
+};
+
+export type SqlMemoryRecord = {
+  id: string;
+  canonical_question: string;
+  normalized_question: string;
+  question_pattern: string;
+  intent: string;
+  sql_template: string;
+  final_sql: string;
+  param_schema: Record<string, unknown>;
+  parameters: Record<string, unknown>;
+  tables: string[];
+  metrics: string[];
+  dimensions: string[];
+  filters: Record<string, unknown>;
+  dialect: string;
+  schema_version: string;
+  trust_status: 'candidate' | 'executed' | 'reviewed' | 'verified' | 'deprecated' | 'rejected';
+  success_count: number;
+  failure_count: number;
+  avg_latency_ms: number;
+  last_result_columns: string[];
+  last_row_count: number;
+  last_used_at: string | null;
+  created_at: string;
+};

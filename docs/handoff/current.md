@@ -11,6 +11,7 @@
 - 已完成模块：安全 Dialogue Router 与通用聊天。计划：`docs/plans/2026-07-14-dialogue-router.md`；记录：`docs/modules/2026-07-14-dialogue-router.md`。通用聊天、结果解释和拒绝默认不进入 Graph/数据库；明确数据问题保留 SQL 链路，待澄清会话优先续接。dialogue 模型独立配置且仅得到受限历史文本，不传 SQL/schema/rows。验证：Router/SSE focused `6 passed, 1 warning`、前端构建、diff 检查通过。交付：`9071a1d` 已推送至 `origin/main`。
 - 安全边界：只有 `data_analysis` 可进入 Semantic Contract、Query Plan、Inspector、Guard 和只读 Executor；通用聊天默认不读取数据库、不发送完整 schema/SQL 到云端。
 - 验证：分页 focused pytest、后续前端 build/e2e、SSE contract/router eval 和 authenticated 50-case 对照。每个模块通过后独立提交推送。
+- 已完成子模块：前端业务 Mock 清理。计划：`docs/plans/2026-07-14-frontend-mock-removal.md`；记录：`docs/modules/2026-07-14-frontend-mock-removal.md`。`frontend/src/data/mock.ts` 已删除；查询历史、SQL Memory 与实时运行评估页改为只读真实管理员 API，数据源页面保持受限空态，遗留问答组件仅消费调用方传入的真实数据。验证：`npm.cmd run frontend:build` 通过、`data/mock` 源码扫描无匹配、`git diff --check` 通过。模块提交待生成；`eval/reports/latest_eval_report.json` 和 `eval/reports/semantic_contract_v2_batch_002.json` 是用户/评测工件，不提交也不改动。
 
 ## README 与展示文档刷新（已完成，已提交并推送）
 

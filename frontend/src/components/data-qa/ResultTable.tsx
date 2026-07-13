@@ -1,24 +1,23 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '../common/DataTable';
-import { salesTrend } from '../../data/mock';
+import type { AnalysisRow } from '../../types/analysis';
 
-type ResultRow = (typeof salesTrend)[number];
+type ResultTableProps = {
+  rows: AnalysisRow[];
+};
 
-const columns: ColumnDef<ResultRow>[] = [
-  { accessorKey: 'date', header: '日期' },
-  { accessorKey: 'amount', header: '日销售额', cell: ({ getValue }) => <span className="block text-right font-mono">¥{Number(getValue()).toLocaleString()}</span> },
-  { accessorKey: 'orders', header: '订单数', cell: ({ getValue }) => <span className="block text-right font-mono">{Number(getValue()).toLocaleString()}</span> },
-  { accessorKey: 'avg', header: '平均客单价', cell: ({ getValue }) => <span className="block text-right font-mono">¥{Number(getValue()).toLocaleString()}</span> },
-  { accessorKey: 'refundRate', header: '退款率', cell: ({ getValue }) => <span className="block text-right font-mono">{String(getValue())}</span> },
-];
-
-export function ResultTable() {
+export function ResultTable({ rows }: ResultTableProps) {
+  const columns: ColumnDef<AnalysisRow>[] = Object.keys(rows[0] ?? {}).map((key) => ({
+    accessorKey: key,
+    header: key,
+    cell: ({ getValue }) => <span className="block font-mono">{String(getValue() ?? '')}</span>,
+  }));
   return (
     <section className="panel overflow-hidden">
       <div className="border-b border-slate-200 p-5">
         <h3 className="text-lg font-bold text-slate-950">查询结果明细</h3>
       </div>
-      <DataTable data={salesTrend.slice(-12)} columns={columns} />
+      {rows.length ? <DataTable data={rows} columns={columns} /> : <p className="p-5 text-sm text-slate-500">暂无查询结果。</p>}
     </section>
   );
 }
