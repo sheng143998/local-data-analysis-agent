@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 from backend.app.schemas.sql_validation import SqlGuardResult
 from backend.app.tools import sql_execution_tools
-from backend.app.tools.sql_execution_tools import classify_sql_execution_error, execute_guarded_sql
+from backend.app.tools.sql_execution_tools import classify_sql_execution_error, execute_guarded_sql, explain_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 
 
@@ -21,6 +21,13 @@ def test_executor_rejects_blocked_guard_result() -> None:
 
     assert result.status == "blocked"
     assert result.error_message == "SQL Guard 未放行，Executor 拒绝执行"
+
+
+def test_explain_rejects_blocked_guard_result() -> None:
+    result = explain_guarded_sql(SqlGuardResult(allowed=False, errors=["blocked"]))
+
+    assert result.status == "blocked"
+    assert "没有执行预检或主查询" in result.user_error_message
 
 
 def test_execute_guarded_sql_returns_error_for_runtime_issue() -> None:
@@ -85,4 +92,48 @@ def test_executor_uses_read_only_transaction_and_timeouts(monkeypatch) -> None:
         ("SET LOCAL statement_timeout = '2500ms'", None),
         ("SET LOCAL lock_timeout = '500ms'", None),
         ("SELECT id FROM orders LIMIT 1", None),
+    ]
+
+
+def test_explain_uses_read_only_transaction_and_short_timeout(monkeypatch) -> None:
+    class FakeCursor:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, tuple[str, ...] | None]] = []
+
+        def execute(self, sql: str, params=None) -> None:
+            self.calls.append((sql, params))
+
+        def fetchall(self):
+            return [([],)]
+
+    class FakeConnection:
+        def __init__(self) -> None:
+            self.cursor_instance = FakeCursor()
+            self.rolled_back = False
+
+        def cursor(self) -> FakeCursor:
+            return self.cursor_instance
+
+        def rollback(self) -> None:
+            self.rolled_back = True
+
+    connection = FakeConnection()
+
+    @contextmanager
+    def fake_get_connection():
+        yield connection
+
+    monkeypatch.setattr(sql_execution_tools, "get_connection", fake_get_connection)
+    monkeypatch.setattr(sql_execution_tools.settings, "sql_explain_timeout_ms", 600)
+    monkeypatch.setattr(sql_execution_tools.settings, "sql_lock_timeout_ms", 500)
+
+    result = explain_guarded_sql(SqlGuardResult(allowed=True, final_sql="SELECT id FROM orders LIMIT 1"))
+
+    assert result.status == "success"
+    assert connection.rolled_back is True
+    assert connection.cursor_instance.calls == [
+        ("BEGIN TRANSACTION READ ONLY", None),
+        ("SET LOCAL statement_timeout = '600ms'", None),
+        ("SET LOCAL lock_timeout = '500ms'", None),
+        ("EXPLAIN (FORMAT JSON) SELECT id FROM orders LIMIT 1", None),
     ]

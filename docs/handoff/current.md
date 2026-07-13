@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：SQL EXPLAIN 执行前预检。计划：`docs/plans/2026-07-13-sql-explain-preflight.md`；记录：`docs/modules/2026-07-13-sql-explain-preflight.md`。Graph 已固定为 Guard 后预检成功才执行主查询；预检使用独立只读事务与超时，失败只允许有限修复，不得执行主查询。验证：focused `44 passed, 1 warning`；`eval:standard` 为 `8/20` 执行、`6/20` 严格，失败均发生在预检前的模型/意图路径。后端全量测试本轮未运行，上一模块在 120 秒上限未完成。待提交/推送。
+
 - 已完成：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`；记录：`docs/modules/2026-07-13-semantic-contract-coverage-v2.md`；评测：`eval/reports/semantic_contract_v2_batch_002.json`。`012` migration 为稳定复杂业务概念新增版本化定义，Query Plan 已继承已解析契约的度量、维度、排序、限制和结果形态，不保存固定 SQL。验证：migration 已应用、focused `24 passed`；认证第 11-20 题执行 `10/10`、严格/答案 `7/10`。后端全量测试在 120 秒上限未完成，尚未视为通过。待提交/推送前会隔离并行模块文件。
 
 - 进行中：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`。依据 authenticated 50-case 评测，为稳定的复杂业务概念补充版本化定义，并让 Query Plan 继承契约形态约束；不保存固定 SQL、不改变 Guard/只读执行边界。验证：Resolver/Planner/payload 聚焦测试、后端全量测试和已配置管理员账号的 authenticated 抽样评测。

@@ -54,6 +54,9 @@ class Settings(BaseModel):
     sql_statement_timeout_ms: int = Field(
         default_factory=lambda: int(os.getenv("SQL_STATEMENT_TIMEOUT_MS", "15000"))
     )
+    sql_explain_timeout_ms: int = Field(
+        default_factory=lambda: int(os.getenv("SQL_EXPLAIN_TIMEOUT_MS", "5000")), ge=1
+    )
     sql_lock_timeout_ms: int = Field(
         default_factory=lambda: int(os.getenv("SQL_LOCK_TIMEOUT_MS", "3000"))
     )

@@ -5,7 +5,7 @@ from typing import Any
 
 from backend.app.db.connection import get_connection
 from backend.app.core.config import settings
-from backend.app.schemas.sql_execution import SqlExecutionResult
+from backend.app.schemas.sql_execution import SqlExecutionResult, SqlExplainResult
 from backend.app.schemas.sql_validation import SqlGuardResult
 
 
@@ -62,6 +62,39 @@ def execute_guarded_sql(guard_result: SqlGuardResult) -> SqlExecutionResult:
         )
 
 
+def explain_guarded_sql(guard_result: SqlGuardResult) -> SqlExplainResult:
+    """只对 Guard 放行的 SQL 做规划预检，失败时主查询不得执行。"""
+    if not guard_result.allowed or not guard_result.final_sql:
+        return SqlExplainResult(
+            status="blocked",
+            error_message="SQL Guard 未放行，EXPLAIN 预检拒绝执行",
+            error_category="guard_blocked",
+            user_error_message="这条查询没有通过只读安全校验，因此没有执行预检或主查询。",
+        )
+
+    start = perf_counter()
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            # 预检与主查询使用独立只读事务和更短超时，避免规划异常后仍执行主查询。
+            cursor.execute("BEGIN TRANSACTION READ ONLY")
+            cursor.execute(f"SET LOCAL statement_timeout = '{settings.sql_explain_timeout_ms}ms'")
+            cursor.execute(f"SET LOCAL lock_timeout = '{settings.sql_lock_timeout_ms}ms'")
+            cursor.execute(f"EXPLAIN (FORMAT JSON) {guard_result.final_sql}")
+            cursor.fetchall()
+            conn.rollback()
+        return SqlExplainResult(status="success", latency_ms=int((perf_counter() - start) * 1000))
+    except Exception as exc:
+        error_message = str(exc)
+        return SqlExplainResult(
+            status="error",
+            latency_ms=int((perf_counter() - start) * 1000),
+            error_message=error_message,
+            error_category=_classify_explain_error(error_message),
+            user_error_message="查询在执行前的数据库预检失败，因此未执行主查询。",
+        )
+
+
 def _to_jsonable(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
@@ -107,3 +140,9 @@ def classify_sql_execution_error(error_message: str) -> str:
     if "syntax error" in lowered or "parse" in lowered:
         return "syntax"
     return "runtime"
+
+
+def _classify_explain_error(error_message: str) -> str:
+    if "statement timeout" in error_message.lower() or "57014" in error_message:
+        return "explain_timeout"
+    return classify_sql_execution_error(error_message)

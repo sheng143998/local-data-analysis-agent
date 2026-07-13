@@ -15,7 +15,7 @@ from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_generation import GeneratedSql
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.query_spec import QuerySpec
-from backend.app.schemas.sql_execution import SqlExecutionResult
+from backend.app.schemas.sql_execution import SqlExecutionResult, SqlExplainResult
 from backend.app.schemas.sql_validation import SqlGuardResult
 from backend.app.tools.analysis_presenter import present_clarification_response, present_sales_trend_result
 from backend.app.tools.context_builder import build_retrieval_context
@@ -27,7 +27,7 @@ from backend.app.tools.sql_memory_tools import (
     retrieve_sql_memory,
     upsert_successful_sql_memory,
 )
-from backend.app.tools.sql_execution_tools import execute_guarded_sql
+from backend.app.tools.sql_execution_tools import execute_guarded_sql, explain_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 from backend.app.tools.sql_inspector import inspect_query_plan
 from backend.app.tools.result_contract_builder import build_result_contract
@@ -61,6 +61,7 @@ class AnalysisGraphState(TypedDict, total=False):
     generated_sql: GeneratedSql
     selected_sql: str
     guard: SqlGuardResult
+    explain: SqlExplainResult
     execution: SqlExecutionResult
     latency_ms: int
     updated_memory_id: Any
@@ -76,6 +77,7 @@ def _build_analysis_graph():
     graph.add_node("validate_generated_sql_intent", _validate_generated_sql_intent_node)
     graph.add_node("repair_model_sql", _repair_model_sql_node)
     graph.add_node("guard_sql", _guard_sql_node)
+    graph.add_node("explain_sql", _explain_sql_node)
     graph.add_node("execute_sql", _execute_sql_node)
     graph.add_node("update_memory", _update_memory_node)
     graph.add_node("present_result", _present_result_node)
@@ -100,7 +102,12 @@ def _build_analysis_graph():
         {"guard_sql": "guard_sql", "repair_model_sql": "repair_model_sql"},
     )
     graph.add_edge("repair_model_sql", "validate_generated_sql_intent")
-    graph.add_edge("guard_sql", "execute_sql")
+    graph.add_edge("guard_sql", "explain_sql")
+    graph.add_conditional_edges(
+        "explain_sql",
+        _route_explain_result,
+        {"execute_sql": "execute_sql", "repair_model_sql": "repair_model_sql", "update_memory": "update_memory"},
+    )
     graph.add_conditional_edges(
         "execute_sql",
         _route_execution_result,
@@ -227,6 +234,16 @@ def _route_execution_result(state: AnalysisGraphState) -> str:
     if not state.get("selected_sql", "").strip():
         return "update_memory"
     return "repair_model_sql"
+
+
+def _route_explain_result(state: AnalysisGraphState) -> str:
+    """预检失败只允许有限修复，绝不直接进入主查询。"""
+    explain = state.get("explain")
+    if explain and explain.status == "success":
+        return "execute_sql"
+    if state.get("execution_repair_attempts", 0) < 1 and state.get("selected_sql", "").strip():
+        return "repair_model_sql"
+    return "update_memory"
 
 
 def _verify_memory_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
@@ -468,6 +485,26 @@ def _execute_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     }
 
 
+def _explain_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    """Guard 之后先做受限 EXPLAIN，失败时以执行错误状态进入有限修复而非主查询。"""
+    started = perf_counter()
+    explain = explain_guarded_sql(state["guard"])
+    updates: AnalysisGraphState = {
+        "explain": explain,
+        "node_timings": _add_node_timing(state, "sql_explain", started),
+    }
+    if explain.status != "success":
+        updates["execution"] = SqlExecutionResult(
+            status="error",
+            latency_ms=explain.latency_ms,
+            error_message=explain.error_message,
+            error_category=explain.error_category or "explain_failed",
+            user_error_message=explain.user_error_message,
+        )
+        updates["latency_ms"] = int((perf_counter() - state["started"]) * 1000)
+    return updates
+
+
 def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
     execution = state["execution"]
@@ -569,6 +606,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
         repair_attempts=state.get("repair_attempts", 0),
         guard_warnings=guard.warnings,
         guard_errors=guard.errors,
+        explain=state.get("explain"),
         node_timings=state.get("node_timings", {}),
     )
     return {}
@@ -606,6 +644,7 @@ def _log_analysis_run(
     repair_attempts: int,
     guard_warnings: list[str],
     guard_errors: list[str],
+    explain: SqlExplainResult | None,
     node_timings: dict[str, int],
 ) -> None:
     logger = QueryRunLogger()
@@ -700,6 +739,17 @@ def _log_analysis_run(
         },
         status="success" if guard_status == "allowed" else "blocked",
         latency_ms=node_timings.get("sql_guard", 0),
+    )
+    logger.log_tool_call(
+        query_run_id=run.id,
+        tool_name="sql_execution_tools.explain_guarded_sql",
+        input_payload={"guard_status": guard_status},
+        output_payload={
+            "explain_status": explain.status if explain else "skipped",
+            "error_category": explain.error_category if explain else None,
+        },
+        status=explain.status if explain else "skipped",
+        latency_ms=node_timings.get("sql_explain", 0),
     )
     logger.log_tool_call(
         query_run_id=run.id,

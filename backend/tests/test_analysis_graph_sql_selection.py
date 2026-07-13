@@ -5,6 +5,7 @@ from backend.app.agents.analysis_graph import (
     _repair_model_sql_node,
     _route_memory_candidate,
     _route_execution_result,
+    _route_explain_result,
     _route_generated_sql_intent,
     _route_verified_memory_sql,
     _select_generated_sql,
@@ -18,6 +19,7 @@ from backend.app.tools.question_intent_parser import ParsedQuestionIntent
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import MetricContext, RetrievalContext, SchemaColumnContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
+from backend.app.schemas.sql_execution import SqlExplainResult
 from backend.app.schemas.sql_generation import GeneratedSql
 from backend.app.schemas.sql_validation import SqlGuardResult
 
@@ -140,6 +142,20 @@ def test_route_execution_result_repairs_runtime_error_once() -> None:
         == "update_memory"
     )
     assert _route_execution_result({"execution": SqlExecutionResult(status="success")}) == "update_memory"
+
+
+def test_route_explain_result_never_allows_failed_preflight_to_execute() -> None:
+    assert _route_explain_result({"explain": SqlExplainResult(status="success")}) == "execute_sql"
+    assert _route_explain_result({
+        "explain": SqlExplainResult(status="error", error_category="syntax"),
+        "selected_sql": "SELECT missing FROM orders",
+        "execution_repair_attempts": 0,
+    }) == "repair_model_sql"
+    assert _route_explain_result({
+        "explain": SqlExplainResult(status="error", error_category="syntax"),
+        "selected_sql": "SELECT missing FROM orders",
+        "execution_repair_attempts": 1,
+    }) == "update_memory"
 
 
 def test_route_execution_result_repairs_guard_block_once() -> None:
