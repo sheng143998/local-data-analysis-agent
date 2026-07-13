@@ -11,7 +11,9 @@ from backend.app.schemas.conversation import ConversationState
 class ConversationStore(Protocol):
     def get(self, conversation_id: UUID) -> ConversationState | None: ...
     def save(self, state: ConversationState) -> None: ...
-    def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]: ...
+    def list_for_owner(
+        self, owner_id: UUID | None, limit: int, cursor: tuple[datetime, UUID] | None = None
+    ) -> list[ConversationState]: ...
     def claim_development_conversations(self, owner_id: UUID) -> int: ...
 
 
@@ -29,13 +31,23 @@ class InMemoryConversationStore:
     def save(self, state: ConversationState) -> None:
         self._items[state.id] = (state, self._expires_at())
 
-    def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]:
+    def list_for_owner(
+        self, owner_id: UUID | None, limit: int, cursor: tuple[datetime, UUID] | None = None
+    ) -> list[ConversationState]:
         self._purge()
-        return sorted(
+        states = sorted(
             (state for state, _ in self._items.values() if state.owner_id == owner_id),
-            key=lambda item: item.updated_at,
+            key=lambda item: (item.updated_at, str(item.id)),
             reverse=True,
-        )[:limit]
+        )
+        if cursor is not None:
+            updated_at, conversation_id = cursor
+            states = [
+                state
+                for state in states
+                if (state.updated_at, str(state.id)) < (updated_at, str(conversation_id))
+            ]
+        return states[:limit]
 
     def claim_development_conversations(self, owner_id: UUID) -> int:
         claimed = 0
@@ -89,9 +101,11 @@ class RedisConversationStore:
             # Redis 不可用时数据库副本已保存，会话请求不能因此丢失。
             return
 
-    def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]:
+    def list_for_owner(
+        self, owner_id: UUID | None, limit: int, cursor: tuple[datetime, UUID] | None = None
+    ) -> list[ConversationState]:
         # 列表以数据库副本为准，避免 Redis 失效后历史列表突然变空。
-        return self._repository.list_for_owner(owner_id, limit)
+        return self._repository.list_for_owner(owner_id, limit, cursor)
 
     def claim_development_conversations(self, owner_id: UUID) -> int:
         return self._repository.claim_development_conversations(owner_id)
@@ -149,8 +163,10 @@ class PostgresConversationStore:
     def save(self, state: ConversationState) -> None:
         self._repository.save(state)
 
-    def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]:
-        return self._repository.list_for_owner(owner_id, limit)
+    def list_for_owner(
+        self, owner_id: UUID | None, limit: int, cursor: tuple[datetime, UUID] | None = None
+    ) -> list[ConversationState]:
+        return self._repository.list_for_owner(owner_id, limit, cursor)
 
     def claim_development_conversations(self, owner_id: UUID) -> int:
         return self._repository.claim_development_conversations(owner_id)

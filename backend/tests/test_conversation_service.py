@@ -156,8 +156,8 @@ def test_conversations_are_scoped_to_authenticated_owner(monkeypatch) -> None:
     other_owner = uuid4()
     response = service.analyze(type("Payload", (), {"question": "销售额是多少", "conversation_id": None})(), app_user_id=owner)
 
-    assert len(service.list_conversations(owner)) == 1
-    assert service.list_conversations(other_owner) == []
+    assert len(service.list_conversations(owner).items) == 1
+    assert service.list_conversations(other_owner).items == []
     with pytest.raises(HTTPException) as error:
         service.get_conversation(response.conversation_id, other_owner)
         assert error.value.status_code == 404
@@ -185,8 +185,8 @@ def test_failed_analysis_is_saved_to_conversation_history(monkeypatch) -> None:
         service.analyze(type("Payload", (), {"question": "当前订单总数是多少？", "conversation_id": None})())
 
     history = service.list_conversations(None)
-    assert len(history) == 1
-    detail = service.get_conversation(history[0].id, None)
+    assert len(history.items) == 1
+    detail = service.get_conversation(history.items[0].id, None)
     assert [message.role for message in detail.messages] == ["user", "assistant"]
     assert detail.messages[-1].response["failure"] is True
 
@@ -199,8 +199,54 @@ def test_explicit_claim_moves_development_history_to_authenticated_owner(monkeyp
     owner = uuid4()
 
     assert service.claim_development_conversations(owner) == 1
-    assert service.list_conversations(None) == []
-    assert len(service.list_conversations(owner)) == 1
+    assert service.list_conversations(None).items == []
+    assert len(service.list_conversations(owner).items) == 1
+
+
+def test_conversation_list_cursor_is_stable_and_has_no_duplicates(monkeypatch) -> None:
+    monkeypatch.setattr(agent_service, "run_analysis_graph", _graph_response)
+    store = InMemoryConversationStore()
+    service = AgentService(conversation_store=store)
+
+    for question in ("第一个会话", "第二个会话", "第三个会话"):
+        service.analyze(type("Payload", (), {"question": question, "conversation_id": None})())
+
+    first_page = service.list_conversations(None, limit=2)
+    assert len(first_page.items) == 2
+    assert first_page.next_cursor
+
+    second_page = service.list_conversations(None, limit=2, cursor=first_page.next_cursor)
+    assert len(second_page.items) == 1
+    assert second_page.next_cursor is None
+    assert {item.id for item in first_page.items}.isdisjoint({item.id for item in second_page.items})
+
+    with pytest.raises(HTTPException) as error:
+        service.list_conversations(None, cursor="not-a-valid-cursor")
+    assert error.value.status_code == 422
+
+
+def test_conversation_message_window_loads_older_messages_without_overlap(monkeypatch) -> None:
+    monkeypatch.setattr(agent_service, "run_analysis_graph", _graph_response)
+    store = InMemoryConversationStore()
+    service = AgentService(conversation_store=store)
+
+    first = service.analyze(type("Payload", (), {"question": "第一轮", "conversation_id": None})())
+    for question in ("第二轮", "第三轮"):
+        service.analyze(type("Payload", (), {"question": question, "conversation_id": first.conversation_id})())
+
+    latest = service.get_conversation(first.conversation_id, None, limit=3)
+    assert len(latest.messages) == 3
+    assert latest.has_more is True
+    assert latest.next_before == latest.messages[0].id
+
+    older = service.get_conversation(first.conversation_id, None, limit=3, before=latest.next_before)
+    assert len(older.messages) == 3
+    assert older.has_more is False
+    assert {message.id for message in latest.messages}.isdisjoint({message.id for message in older.messages})
+
+    with pytest.raises(HTTPException) as error:
+        service.get_conversation(first.conversation_id, None, before=uuid4())
+    assert error.value.status_code == 422
 
 
 def test_conversation_api_continues_clarification_and_exposes_history(monkeypatch) -> None:
@@ -222,6 +268,40 @@ def test_conversation_api_continues_clarification_and_exposes_history(monkeypatc
     history = client.get(f"/api/conversations/{conversation_id}")
     assert history.status_code == 200
     assert [item["role"] for item in history.json()["messages"]] == ["user", "assistant", "user", "assistant"]
+
+
+def test_conversation_api_returns_page_and_message_window_contract(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "intent_parser_enabled", False)
+    store = InMemoryConversationStore()
+    monkeypatch.setattr(routes.agent_service, "conversation_store", store)
+    monkeypatch.setattr(conversations.conversation_service, "conversation_store", store)
+    client = TestClient(app)
+
+    first = client.post("/api/analyze", json={"question": "看看最近情况"})
+    second = client.post("/api/analyze", json={"question": "另一个问题"})
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    page = client.get("/api/conversations?limit=1")
+    assert page.status_code == 200
+    assert len(page.json()["items"]) == 1
+    assert page.json()["next_cursor"]
+
+    older_page = client.get(f"/api/conversations?limit=1&cursor={page.json()['next_cursor']}")
+    assert older_page.status_code == 200
+    assert older_page.json()["items"][0]["id"] != page.json()["items"][0]["id"]
+
+    detail = client.get(f"/api/conversations/{first.json()['conversation_id']}?limit=1")
+    assert detail.status_code == 200
+    assert len(detail.json()["messages"]) == 1
+    assert detail.json()["has_more"] is True
+    assert detail.json()["next_before"]
+
+    older_messages = client.get(
+        f"/api/conversations/{first.json()['conversation_id']}?limit=1&before={detail.json()['next_before']}"
+    )
+    assert older_messages.status_code == 200
+    assert older_messages.json()["messages"][0]["id"] != detail.json()["messages"][0]["id"]
 
 
 def test_authenticated_users_cannot_read_each_others_conversations(monkeypatch) -> None:

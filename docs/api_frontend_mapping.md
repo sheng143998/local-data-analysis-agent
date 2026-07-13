@@ -13,7 +13,7 @@
 | `frontend/src/api/client.ts` | 统一请求入口、base URL、JSON 解析和 FastAPI 错误解析 | 所有前端业务 client 复用 |
 | `frontend/src/api/analysisClient.ts` | 数据问答 | `POST /api/analyze` |
 | `frontend/src/api/authClient.ts` | 登录态 | `POST /api/auth/login`、`POST /api/auth/register`、`POST /api/auth/logout`、`GET /api/auth/me`；后端还提供自身 session 的查看与撤销 |
-| `frontend/src/api/analysisClient.ts` | 会话恢复 | `GET /api/conversations`、`GET /api/conversations/{conversation_id}` |
+| `frontend/src/api/analysisClient.ts` | 会话恢复 | `GET /api/conversations` cursor 分页、`GET /api/conversations/{conversation_id}` 消息窗口分页 |
 | `frontend/src/api/userMemoryClient.ts` | 长期偏好 | `GET/DELETE /api/user-memories` |
 | `frontend/src/api/metricClient.ts` | 指标口径 CRUD | `GET/POST/PUT/DELETE /api/metrics` |
 
@@ -231,5 +231,5 @@ export type MetricPayload = Omit<MetricDefinition, 'id' | 'created_at' | 'update
 - `/api/analyze` 的 `rows` 已改为通用表格结构；后续风险转为自然语言总结仍主要面向 V1 已覆盖指标。
 - `AuthProvider` 在应用启动时调用 `getCurrentUser()`；`ProtectedRoute` 在未登录时将 `/app/*` 跳转到 `/login`，并保留原始路径用于登录后恢复。
 - `apiRequest()` 使用 `credentials: 'include'`，并从 CSRF Cookie 读取 token 后为非 `GET` 请求设置 `X-CSRF-Token`。
-- `ChatPage` 保存分析响应返回的 `conversation_id`，后续提问复用该 ID，并从真实会话 API 恢复消息列表。
+- `ChatPage` 保存分析响应返回的 `conversation_id`，后续提问复用该 ID；会话栏消费 `items/next_cursor`，消息区消费 `messages/has_more/next_before`，为后续虚拟列表和向上加载保留稳定契约。
 - `ProfilePanel` 展示 active 长期偏好，并允许用户撤销偏好；偏好写入仍通过聊天中的明确“记住”指令完成。

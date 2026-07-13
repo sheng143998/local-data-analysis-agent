@@ -1,4 +1,4 @@
-import type { AnalysisResponse, ConversationDetail, ConversationSummary } from '../types/analysis';
+import type { AnalysisResponse, ConversationDetail, ConversationListPage } from '../types/analysis';
 import { apiRequest } from './client';
 
 export async function analyzeQuestion(question: string, conversationId?: string | null): Promise<AnalysisResponse> {
@@ -9,12 +9,14 @@ export async function analyzeQuestion(question: string, conversationId?: string 
   });
 }
 
-export function listConversations() {
-  return apiRequest<ConversationSummary[]>('/api/conversations', { fallbackMessage: '读取会话历史失败' });
+export function listConversations(cursor?: string | null) {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  return apiRequest<ConversationListPage>(`/api/conversations${query}`, { fallbackMessage: '读取会话历史失败' });
 }
 
-export function getConversation(conversationId: string) {
-  return apiRequest<ConversationDetail>(`/api/conversations/${conversationId}`, { fallbackMessage: '读取会话内容失败' });
+export function getConversation(conversationId: string, before?: string | null) {
+  const query = before ? `?before=${encodeURIComponent(before)}` : '';
+  return apiRequest<ConversationDetail>(`/api/conversations/${conversationId}${query}`, { fallbackMessage: '读取会话内容失败' });
 }
 
 export function claimDevelopmentConversations() {

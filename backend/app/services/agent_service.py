@@ -1,3 +1,5 @@
+import base64
+import json
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -5,7 +7,14 @@ from fastapi import HTTPException
 
 from backend.app.agents.analysis_graph import run_analysis_graph
 from backend.app.core.config import settings
-from backend.app.schemas.analysis import AnalyzeRequest, AnalyzeResponse, ConversationDetail, ConversationMessage, ConversationSummary
+from backend.app.schemas.analysis import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    ConversationDetail,
+    ConversationListPage,
+    ConversationMessage,
+    ConversationSummary,
+)
 from backend.app.schemas.conversation import ConversationState, CurrentAnalysis
 from backend.app.services.conversation_store import ConversationStore, get_conversation_store
 from backend.app.services.followup_resolver import pending_from_intent, resolve_followup
@@ -98,14 +107,32 @@ class AgentService:
         state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
         return self._finish(state, response)
 
-    def list_conversations(self, app_user_id: UUID | None, limit: int = 20) -> list[ConversationSummary]:
-        return [state.summary() for state in self.conversation_store.list_for_owner(app_user_id, min(max(limit, 1), 100))]
+    def list_conversations(
+        self, app_user_id: UUID | None, limit: int = 20, cursor: str | None = None
+    ) -> ConversationListPage:
+        page_size = min(max(limit, 1), 100)
+        states = self.conversation_store.list_for_owner(
+            app_user_id,
+            page_size + 1,
+            _decode_conversation_cursor(cursor),
+        )
+        has_more = len(states) > page_size
+        items = [state.summary() for state in states[:page_size]]
+        return ConversationListPage(
+            items=items,
+            next_cursor=_encode_conversation_cursor(items[-1]) if has_more and items else None,
+        )
 
-    def get_conversation(self, conversation_id: UUID, app_user_id: UUID | None) -> ConversationDetail:
+    def get_conversation(
+        self, conversation_id: UUID, app_user_id: UUID | None, limit: int = 50, before: UUID | None = None
+    ) -> ConversationDetail:
         state = self.conversation_store.get(conversation_id)
         if state is None or state.owner_id != app_user_id:
             raise HTTPException(status_code=404, detail="会话不存在")
-        return state.detail()
+        try:
+            return state.detail(limit=min(max(limit, 1), 100), before=before)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     def claim_development_conversations(self, app_user_id: UUID) -> int:
         return self.conversation_store.claim_development_conversations(app_user_id)
@@ -186,3 +213,20 @@ def _analysis_failure_response(question: str) -> AnalyzeResponse:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _encode_conversation_cursor(summary: ConversationSummary) -> str:
+    """游标只编码排序键，不包含会话内容或用户身份。"""
+    payload = json.dumps({"updated_at": summary.updated_at.isoformat(), "id": str(summary.id)}).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_conversation_cursor(value: str | None) -> tuple[datetime, UUID] | None:
+    if not value:
+        return None
+    try:
+        padded = value + "=" * (-len(value) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")))
+        return datetime.fromisoformat(str(payload["updated_at"])), UUID(str(payload["id"]))
+    except (KeyError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="会话分页游标无效") from exc

@@ -55,10 +55,19 @@ export type ConversationMessage = {
 };
 
 export type ConversationSummary = {
-  id: string;
-  title: string;
-  updated_at: string;
-  status: 'active' | 'waiting_for_clarification' | 'cancelled';
+    id: string;
+    title: string;
+    updated_at: string;
+    status: 'active' | 'waiting_for_clarification' | 'cancelled';
 };
 
-export type ConversationDetail = ConversationSummary & { messages: ConversationMessage[] };
+export type ConversationListPage = {
+  items: ConversationSummary[];
+  next_cursor: string | null;
+};
+
+export type ConversationDetail = ConversationSummary & {
+  messages: ConversationMessage[];
+  has_more: boolean;
+  next_before: string | null;
+};

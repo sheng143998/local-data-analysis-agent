@@ -41,5 +41,21 @@ class ConversationState(BaseModel):
     def summary(self) -> ConversationSummary:
         return ConversationSummary(id=self.id, title=self.title, updated_at=self.updated_at, status=self.status)
 
-    def detail(self) -> ConversationDetail:
-        return ConversationDetail(**self.summary().model_dump(), messages=self.messages)
+    def detail(self, *, limit: int, before: UUID | None = None) -> ConversationDetail:
+        """按时间正序返回消息窗口，供前端向上加载更早会话内容。"""
+        end = len(self.messages)
+        if before is not None:
+            for index, message in enumerate(self.messages):
+                if message.id == before:
+                    end = index
+                    break
+            else:
+                raise ValueError("消息分页游标不属于当前会话")
+        start = max(0, end - limit)
+        has_more = start > 0
+        return ConversationDetail(
+            **self.summary().model_dump(),
+            messages=self.messages[start:end],
+            has_more=has_more,
+            next_before=self.messages[start].id if has_more else None,
+        )

@@ -50,18 +50,30 @@ class ConversationRepository:
                 ),
             )
 
-    def list_for_owner(self, owner_id: UUID | None, limit: int) -> list[ConversationState]:
+    def list_for_owner(
+        self, owner_id: UUID | None, limit: int, cursor: tuple[datetime, UUID] | None = None
+    ) -> list[ConversationState]:
+        cursor_clause = ""
+        cursor_params: tuple = ()
+        if cursor is not None:
+            updated_at, conversation_id = cursor
+            cursor_clause = " AND (updated_at < %s OR (updated_at = %s AND id < %s))"
+            cursor_params = (updated_at, updated_at, str(conversation_id))
         with get_connection() as conn:
             cursor = conn.cursor()
             if owner_id is None:
                 cursor.execute(
-                    "SELECT state FROM conversation_states WHERE owner_id IS NULL AND expires_at > now() ORDER BY updated_at DESC LIMIT %s",
-                    (limit,),
+                    "SELECT state FROM conversation_states WHERE owner_id IS NULL AND expires_at > now()"
+                    + cursor_clause
+                    + " ORDER BY updated_at DESC, id DESC LIMIT %s",
+                    (*cursor_params, limit),
                 )
             else:
                 cursor.execute(
-                    "SELECT state FROM conversation_states WHERE owner_id = %s AND expires_at > now() ORDER BY updated_at DESC LIMIT %s",
-                    (str(owner_id), limit),
+                    "SELECT state FROM conversation_states WHERE owner_id = %s AND expires_at > now()"
+                    + cursor_clause
+                    + " ORDER BY updated_at DESC, id DESC LIMIT %s",
+                    (str(owner_id), *cursor_params, limit),
                 )
             rows = cursor.fetchall()
         return [_state(row[0]) for row in rows]

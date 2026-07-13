@@ -80,5 +80,12 @@ class ConversationSummary(BaseModel):
     status: Literal["active", "waiting_for_clarification", "cancelled"]
 
 
+class ConversationListPage(BaseModel):
+    items: list[ConversationSummary] = Field(default_factory=list)
+    next_cursor: str | None = None
+
+
 class ConversationDetail(ConversationSummary):
     messages: list[ConversationMessage] = Field(default_factory=list)
+    has_more: bool = False
+    next_before: UUID | None = None

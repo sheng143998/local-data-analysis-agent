@@ -182,7 +182,7 @@ export function ChatPage() {
   const refreshSessions = async () => {
     try {
       const items = await listConversations();
-      setSessions(items.map((item) => ({ id: item.id, title: item.title, updatedAt: item.updated_at, status: item.status })));
+      setSessions(items.items.map((item) => ({ id: item.id, title: item.title, updatedAt: item.updated_at, status: item.status })));
     } catch {
       setSessions([]);
     }

@@ -43,8 +43,19 @@ class FakeConversationRepository:
     def save(self, state) -> None:
         self.states[state.id] = state
 
-    def list_for_owner(self, owner_id, limit):
-        return [state for state in self.states.values() if state.owner_id == owner_id][:limit]
+    def list_for_owner(self, owner_id, limit, cursor=None):
+        states = sorted(
+            (state for state in self.states.values() if state.owner_id == owner_id),
+            key=lambda state: (state.updated_at, str(state.id)),
+            reverse=True,
+        )
+        if cursor is not None:
+            states = [
+                state
+                for state in states
+                if (state.updated_at, str(state.id)) < (cursor[0], str(cursor[1]))
+            ]
+        return states[:limit]
 
     def claim_development_conversations(self, owner_id):
         claimed = 0
