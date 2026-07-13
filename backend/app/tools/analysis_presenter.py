@@ -6,6 +6,7 @@ from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_execution import SqlExecutionResult
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent
+from backend.app.schemas.result_contract import ResultContract
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ def present_sales_trend_result(
     latency_ms: int,
     retrieval_context: RetrievalContext | None = None,
     reuse_plan: SqlReusePlan | None = None,
+    result_contract: ResultContract | None = None,
 ) -> AnalyzeResponse:
     if execution.status != "success":
         return AnalyzeResponse(
@@ -36,7 +38,7 @@ def present_sales_trend_result(
     rows = list(reversed(execution.rows))
 
     period_label = _period_label(sql)
-    main_metric_label = _main_metric_label(question)
+    main_metric_label = _contract_metric_label(result_contract) or _main_metric_label(question)
     profile = _build_result_profile(
         rows=rows,
         columns=execution.columns,
@@ -285,6 +287,8 @@ def _column_label(column: str | None) -> str:
         "failure_rate": "支付失败率",
         "gross_margin": "毛利率",
         "repeat_rate": "复购率",
+        "payment_success_rate": "支付成功率",
+        "payment_failure_rate": "支付失败率",
         "category_label": "品类",
         "product_label": "商品",
         "city_label": "城市",
@@ -465,5 +469,15 @@ def _main_metric_label(question: str) -> str:
     if any(keyword in question for keyword in ["订单数", "订单量", "下单数", "下单量"]):
         return "订单数趋势"
     return "销售趋势"
+
+
+def _contract_metric_label(contract: ResultContract | None) -> str:
+    if not contract:
+        return ""
+    measures = contract.query_plan.get("measures", [])
+    if not measures:
+        return ""
+    name = measures[0].get("name", "") if isinstance(measures[0], dict) else ""
+    return _column_label(str(name))
 
 

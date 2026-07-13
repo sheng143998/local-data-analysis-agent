@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Result Contract And Presenter（Phase 6）。计划：`docs/plans/2026-07-13-result-contract-presenter.md`；记录：`docs/modules/2026-07-13-result-contract-presenter.md`。内部 Contract 已把 Query Plan、真实列角色、行、范围和告警交给 Presenter；展示优先使用已确认度量标签，对外 API 不变。验证：focused `36 passed`、API/Presenter `4 passed`、后端全量 `241 passed, 1 warning`。风险：前端尚未消费列角色，图表/结构化来源展示待 UI 专项。
+
+- 进行中：Result Contract And Presenter（Phase 6）。计划：`docs/plans/2026-07-13-result-contract-presenter.md`。将 Query Plan、执行列/行、范围和告警变为内部 Result Contract，Presenter 以真实形态生成摘要，不改公开 API。
+
 - 已完成：SQL Inspector And Categorized Repair（Phase 5）。计划：`docs/plans/2026-07-13-sql-inspector-repair.md`；记录：`docs/modules/2026-07-13-sql-inspector-repair.md`。Inspector 已在 Guard 前依据 Query Plan 检查实体、排行排序、Top N、时间过滤并输出分类 issue 给有限 repair；Guard/Executor 未放宽。验证：focused `35 passed`、后端全量 `240 passed, 1 warning`。风险：EXPLAIN/探针查询与复杂 CTE 语义检查待后续增强。
 
 - 进行中：SQL Inspector And Categorized Repair（Phase 5）。计划：`docs/plans/2026-07-13-sql-inspector-repair.md`。新增 AST+Query Plan 对齐检查并将分类失败交给现有有限 repair；Guard/Executor 保持最终安全边界。

@@ -30,6 +30,7 @@ from backend.app.tools.sql_memory_tools import (
 from backend.app.tools.sql_execution_tools import execute_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
 from backend.app.tools.sql_inspector import inspect_query_plan
+from backend.app.tools.result_contract_builder import build_result_contract
 
 BASE_TRANSACTION_TABLES = {
     "orders",
@@ -508,6 +509,12 @@ def _present_result_node(state: AnalysisGraphState) -> AnalysisGraphState:
         else execution
     )
     selected_sql = state["selected_sql"]
+    result_contract = build_result_contract(
+        state.get("original_question", state["question"]),
+        presented_execution,
+        state.get("question_intent", {}).get("query_plan", {}),
+        guard.warnings,
+    )
     response = present_sales_trend_result(
         question=state["question"],
         sql=guard.final_sql or selected_sql,
@@ -516,6 +523,7 @@ def _present_result_node(state: AnalysisGraphState) -> AnalysisGraphState:
         latency_ms=state["latency_ms"],
         retrieval_context=state["retrieval_context"],
         reuse_plan=state["reuse_plan"],
+        result_contract=result_contract,
     )
     return {
         "response": response,
