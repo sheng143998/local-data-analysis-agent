@@ -1,7 +1,11 @@
 from backend.app.services import agent_service
 from backend.app.core.config import settings
+from backend.app.schemas.conversation import ConversationState
 from backend.app.services.agent_service import AgentService
 from backend.app.services.conversation_store import InMemoryConversationStore
+from backend.app.tools.dialogue_router import route_dialogue
+from datetime import datetime, timezone
+from uuid import uuid4
 
 
 def test_general_chat_does_not_call_analysis_graph(monkeypatch) -> None:
@@ -16,6 +20,14 @@ def test_general_chat_does_not_call_analysis_graph(monkeypatch) -> None:
     assert response.sql == ""
     assert response.source.security == "未访问数据库，未生成 SQL"
     assert response.conversation_id is not None
+
+
+def test_ambiguous_business_overview_enters_analysis_for_clarification() -> None:
+    state = ConversationState(id=uuid4(), title="测试", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+
+    decision = route_dialogue("看看最近情况", state)
+
+    assert decision.role == "data_analysis"
 
 
 def test_explicit_data_question_enters_existing_analysis_graph(monkeypatch) -> None:
