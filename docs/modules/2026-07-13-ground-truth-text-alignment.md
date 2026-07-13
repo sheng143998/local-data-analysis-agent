@@ -75,4 +75,4 @@ npm.cmd run eval:database-baseline -- --start 0 --limit 10 --report eval/reports
 ## Delivery
 
 - 本模块文件：本计划、对照脚本、对照报告、认证批次报告及本记录。
-- Commit/push：待 focused 验证和仅本模块文件提交后补录。
+- Commit/push：`ef14aa0`（`完善数据库真值文本对照评测`），已推送至 `origin/main`。共享 handoff 的完成状态已更新到工作树，但因同时包含其他 agent 未提交改动，未在本模块提交中暂存。
