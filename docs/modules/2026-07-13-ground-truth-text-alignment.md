@@ -4,6 +4,7 @@
 
 - 新增 `eval/scripts/compare_ground_truth_text.py`，使用 UTF-8（含 BOM 兼容）读取外部问答文本和项目 JSONL 真值集。
 - 解析可选人工编号、章节标题和 `问题？答案` 行，比较 50 条问题顺序、问题文本和答案内容；仅对空白、中文/英文分隔符做格式归一化。
+- 同时报告 JSONL 的 `expected_tables`/`expected_keywords` 元数据完整性；外部 txt 没有这些字段，不进行伪比较。
 - 生成 `eval/reports/ground_truth_text_alignment.json`，同时引用已完成的全量升级报告并给出主失败类别；报告不包含密码、完整 prompt、SQL 或原始内部错误。
 - 认证检查成功：`AUTH_REQUIRED=true` 时专用评测账号登录成功；密码只由项目配置加载，未输出、未写入报告。
 - 认证第 1 批已运行并生成 `eval/reports/ground_truth_current_batch_001.json` 与对照摘要 `eval/reports/ground_truth_current_batch_001_alignment.json`。
@@ -75,4 +76,4 @@ npm.cmd run eval:database-baseline -- --start 0 --limit 10 --report eval/reports
 ## Delivery
 
 - 本模块文件：本计划、对照脚本、对照报告、认证批次报告及本记录。
-- Commit/push：`ef14aa0`（`完善数据库真值文本对照评测`），已推送至 `origin/main`。共享 handoff 的完成状态已更新到工作树，但因同时包含其他 agent 未提交改动，未在本模块提交中暂存。
+- Commit/push：`ef14aa0`（`完善数据库真值文本对照评测`）、`5a65b26`（补录交付记录）、`d8ba195`（补充 JSONL 元数据完整性校验），均已推送至 `origin/main`。共享 handoff 的完成状态已更新到工作树，但因同时包含其他 agent 未提交改动，未在本模块提交中暂存。
