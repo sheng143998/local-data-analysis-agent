@@ -21,7 +21,7 @@
 - [x] 创建计划并更新 handoff。
 - [x] 更新五份展示文档，统一当前架构、命令、评估和安全边界。
 - [x] 校验 Markdown 链接、命令路径、UTF-8 和 `git diff --check`。
-- [ ] 编写模块完成记录，更新 handoff，提交并推送。
+- [x] 编写模块完成记录，更新 handoff，提交并推送。
 
 ## Validation plan
 
