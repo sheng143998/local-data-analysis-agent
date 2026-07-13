@@ -31,4 +31,4 @@
 
 - 配置具备管理员权限的专用评测账号后，执行 `npm.cmd run eval:database-baseline` 才能获得首份真实 50 case 质量基线和 run trace。
 - 复杂多行和不可计算结果的严格语义校验应在后续 Result Contract 模块中升级为列名、类型和结构化值断言。
-- 本模块提交和推送完成后，将 commit hash 补充到本记录与 handoff。
+- 交付提交：`f0dd341 新增鉴权真实数据评测基线`，已推送至 `origin/main`。
