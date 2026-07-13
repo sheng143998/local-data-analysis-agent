@@ -29,6 +29,7 @@ from backend.app.tools.sql_memory_tools import (
 )
 from backend.app.tools.sql_execution_tools import execute_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
+from backend.app.tools.sql_inspector import inspect_query_plan
 
 BASE_TRANSACTION_TABLES = {
     "orders",
@@ -338,6 +339,14 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
         sql=state.get("selected_sql", ""),
         question_intent=state.get("question_intent"),
     )
+    inspector_issues = inspect_query_plan(
+        state.get("selected_sql", ""),
+        state.get("question_intent", {}).get("query_plan", {}),
+    )
+    if inspector_issues:
+        verification["warnings"] = [*verification["warnings"], *(issue.message for issue in inspector_issues)]
+        verification["inspector_issues"] = [issue.__dict__ for issue in inspector_issues]
+        verification["decision"] = "reject"
     warnings = [*generated_sql.warnings]
     for warning in verification["warnings"]:
         if warning not in warnings:
@@ -391,6 +400,7 @@ def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         "intent_errors": verification.get("warnings", []),
         "required": verification.get("required", {}),
         "observed": _json_safe(verification.get("observed", {})),
+        "inspector_issues": verification.get("inspector_issues", []),
     }
     if execution and execution.status == "error":
         repair_context["execution_error"] = {

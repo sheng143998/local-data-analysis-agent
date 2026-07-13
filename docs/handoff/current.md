@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：SQL Inspector And Categorized Repair（Phase 5）。计划：`docs/plans/2026-07-13-sql-inspector-repair.md`；记录：`docs/modules/2026-07-13-sql-inspector-repair.md`。Inspector 已在 Guard 前依据 Query Plan 检查实体、排行排序、Top N、时间过滤并输出分类 issue 给有限 repair；Guard/Executor 未放宽。验证：focused `35 passed`、后端全量 `240 passed, 1 warning`。风险：EXPLAIN/探针查询与复杂 CTE 语义检查待后续增强。
+
+- 进行中：SQL Inspector And Categorized Repair（Phase 5）。计划：`docs/plans/2026-07-13-sql-inspector-repair.md`。新增 AST+Query Plan 对齐检查并将分类失败交给现有有限 repair；Guard/Executor 保持最终安全边界。
+
 - 已完成：Query Plan And Context Pack（Phase 4）。计划：`docs/plans/2026-07-13-query-plan-context-pack.md`；记录：`docs/modules/2026-07-13-query-plan-context-pack.md`。结构化 Plan 已贯通 intent、Graph、Context Builder 和 SQL payload，限制实体、度量、维度、时间、排序、limit 与预期结果形态；未知概念不猜测 SQL。验证：focused `46 passed`、后端全量 `238 passed, 1 warning`。下一步：Inspector 将以 Plan 对齐作为执行前检查。
 
 - 进行中：Query Plan And Context Pack（Phase 4）。计划：`docs/plans/2026-07-13-query-plan-context-pack.md`。从 QuerySpec、已解析契约和 intent 产生受限计划，并裁剪传给 SQL 模型的上下文；不改变 SQL 安全边界或让 Plan 直接执行 SQL。
