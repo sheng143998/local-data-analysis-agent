@@ -5,10 +5,12 @@ from backend.app.core.embedding_adapter import EmbeddingResponse
 from backend.app.schemas.memories import SqlMemoryRecord
 from backend.app.tools.sql_memory_tools import (
     _build_sql_memory_embeddings,
+    build_sql_memory_context_fingerprints,
     plan_sql_reuse,
     retrieve_sql_memory,
     upsert_successful_sql_memory,
 )
+from backend.app.schemas.retrieval import RetrievalContext, SchemaColumnContext
 
 
 class FakeMemoryRepository:
@@ -121,6 +123,46 @@ def test_plan_sql_reuse_allows_fast_path_when_required_tables_match() -> None:
     assert plan.memory_hit is True
 
 
+def test_plan_sql_reuse_downgrades_verified_memory_when_context_fingerprint_is_missing() -> None:
+    memory = _memory("最近 30 天销售额按天变化如何？", trust_status="verified")
+    candidates = retrieve_sql_memory(
+        "最近 30 天销售额按天变化如何？", metrics=["sales_amount"], tables=["orders", "payments"],
+        repository=FakeMemoryRepository([memory]), context_fingerprints={"schema": "now", "semantic_contracts": "now"},
+    )
+
+    assert candidates[0].context_fingerprint_mismatches == ["schema", "semantic_contracts"]
+    assert plan_sql_reuse(candidates).path_type == "rewrite_path"
+
+
+def test_plan_sql_reuse_accepts_matching_context_fingerprints() -> None:
+    fingerprints = {"schema": "schema-v1", "semantic_contracts": "contracts-v1"}
+    memory = _memory("最近 30 天销售额按天变化如何？", trust_status="verified")
+    memory = memory.model_copy(update={"filters": {"context_fingerprints": fingerprints}})
+    candidates = retrieve_sql_memory(
+        "最近 30 天销售额按天变化如何？", metrics=["sales_amount"], tables=["orders", "payments"],
+        repository=FakeMemoryRepository([memory]), context_fingerprints=fingerprints,
+    )
+
+    assert candidates[0].context_fingerprint_match is True
+    assert plan_sql_reuse(candidates).path_type == "fast_path"
+
+
+def test_context_fingerprints_change_with_schema_or_contract_version() -> None:
+    context = RetrievalContext(
+        tables=["orders"], fields=["orders.id"],
+        schema_columns=[SchemaColumnContext(
+            table_name="orders", column_name="id", data_type="text",
+            description="orders.id", business_meaning="订单标识",
+        )],
+    )
+    first = build_sql_memory_context_fingerprints(context, [{"contract_key": "order_total", "version": 1}])
+    second = build_sql_memory_context_fingerprints(context, [{"contract_key": "order_total", "version": 2}])
+    changed_schema = context.model_copy(update={"fields": ["orders.id", "orders.created_at"]})
+
+    assert first["semantic_contracts"] != second["semantic_contracts"]
+    assert first["schema"] != build_sql_memory_context_fingerprints(changed_schema)["schema"]
+
+
 def test_retrieve_sql_memory_uses_vector_semantic_score_when_available() -> None:
     close_text_memory = _memory("最近 30 天销售额按天变化如何？")
     semantic_memory = _memory(
@@ -175,6 +217,7 @@ def test_upsert_successful_sql_memory_passes_question_and_sql_embeddings() -> No
     assert repo.upsert_payload.sql_embedding == [0.3, 0.4]
     assert repo.upsert_payload.dimensions == ["date"]
     assert repo.upsert_payload.trust_status == "executed"
+    assert repo.upsert_payload.filters == {"context_fingerprints": {}}
 
 
 def test_build_sql_memory_embeddings_returns_none_when_adapter_fails() -> None:

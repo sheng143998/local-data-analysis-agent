@@ -23,6 +23,7 @@ from backend.app.tools.model_sql_generator import generate_sql_with_model
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent, parse_question_intent
 from backend.app.tools.run_logger import QueryRunLogger
 from backend.app.tools.sql_memory_tools import (
+    build_sql_memory_context_fingerprints,
     plan_sql_reuse,
     retrieve_sql_memory,
     upsert_successful_sql_memory,
@@ -188,11 +189,16 @@ def _plan_memory_reuse_node(state: AnalysisGraphState) -> AnalysisGraphState:
     retrieval_context = state["retrieval_context"]
     metric_names = state["metric_names"]
     query_spec = _query_spec_from_intent(state.get("question_intent"))
+    context_fingerprints = build_sql_memory_context_fingerprints(
+        retrieval_context,
+        state.get("question_intent", {}).get("resolved_contracts", []),
+    )
     memory_candidates = retrieve_sql_memory(
         question,
         metrics=query_spec.metrics if query_spec else metric_names,
         tables=sorted(set(retrieval_context.tables) | set(query_spec.required_tables if query_spec else [])),
         required_tables=query_spec.required_tables if query_spec else None,
+        context_fingerprints=context_fingerprints,
     )
     reuse_plan = plan_sql_reuse(memory_candidates)
     return {
@@ -528,6 +534,10 @@ def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
             result_columns=execution.columns,
             row_count=execution.row_count,
             latency_ms=execution.latency_ms,
+            context_fingerprints=build_sql_memory_context_fingerprints(
+                state["retrieval_context"],
+                state.get("question_intent", {}).get("resolved_contracts", []),
+            ),
         )
         updated_memory_id = updated_memory.id
     return {

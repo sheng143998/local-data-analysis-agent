@@ -1,3 +1,6 @@
+import hashlib
+import json
+
 from backend.app.db.repositories.memory_repository import SqlMemoryRepository
 from backend.app.core.embedding_adapter import EmbeddingAdapter, EmbeddingRequest
 from backend.app.schemas.memories import (
@@ -6,6 +9,7 @@ from backend.app.schemas.memories import (
     SqlMemoryUpsert,
     SqlReusePlan,
 )
+from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.tools.retrieval_scoring import overlap_score, text_similarity
 from backend.app.tools.text_normalization import normalize_question
 from backend.app.tools.vector_retrieval import retrieve_sql_memory_vector_candidates
@@ -24,6 +28,7 @@ def retrieve_sql_memory(
     required_tables: list[str] | None = None,
     repository: SqlMemoryRepository | None = None,
     semantic_scores: dict[str, float] | None = None,
+    context_fingerprints: dict[str, str] | None = None,
 ) -> list[SqlMemoryCandidate]:
     """SQL Memory 混合检索：pgvector 语义分 + 文本相似 + 表/指标 + 成功率。"""
     repo = repository or SqlMemoryRepository()
@@ -54,6 +59,7 @@ def retrieve_sql_memory(
         if score <= 0:
             continue
         required_table_match = _sql_contains_required_tables(memory.final_sql, required_table_set)
+        mismatches = _context_fingerprint_mismatches(memory, context_fingerprints)
         candidates.append(
             SqlMemoryCandidate(
                 memory=memory,
@@ -64,6 +70,8 @@ def retrieve_sql_memory(
                 success_score=round(success_score, 4),
                 required_table_match=required_table_match,
                 required_tables=required_table_set,
+                context_fingerprint_match=not mismatches,
+                context_fingerprint_mismatches=mismatches,
             )
         )
 
@@ -78,6 +86,7 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
     if (
         selected.score >= FAST_PATH_THRESHOLD
         and selected.required_table_match
+        and selected.context_fingerprint_match
         and selected.memory.trust_status == "verified"
     ):
         return SqlReusePlan(
@@ -121,6 +130,7 @@ def upsert_successful_sql_memory(
     row_count: int,
     latency_ms: int,
     parameters: dict | None = None,
+    context_fingerprints: dict[str, str] | None = None,
     repository: SqlMemoryRepository | None = None,
     adapter: EmbeddingAdapter | None = None,
 ) -> SqlMemoryRecord:
@@ -144,6 +154,7 @@ def upsert_successful_sql_memory(
             result_columns=result_columns,
             row_count=row_count,
             latency_ms=latency_ms,
+            filters={"context_fingerprints": context_fingerprints or {}},
         )
     )
 
@@ -197,3 +208,43 @@ def _sql_contains_required_tables(sql: str, required_tables: list[str]) -> bool:
         return True
     lowered_sql = sql.lower()
     return all(table.lower() in lowered_sql for table in required_tables)
+
+
+def build_sql_memory_context_fingerprints(
+    retrieval_context: RetrievalContext,
+    resolved_contracts: list[dict] | None = None,
+) -> dict[str, str]:
+    """把当前可用 schema 与已绑定业务契约归一化为可审计、无敏感内容的版本指纹。"""
+    schema_payload = {
+        "tables": sorted(retrieval_context.tables),
+        "fields": sorted(retrieval_context.fields),
+        "relationships": sorted(
+            f"{item.left_table}.{item.left_column}:{item.right_table}.{item.right_column}"
+            for item in retrieval_context.table_relationships
+        ),
+    }
+    semantic_payload = [
+        {
+            "key": item.get("contract_key"), "version": item.get("version"),
+            "tables": sorted(item.get("source_tables", [])), "fields": sorted(item.get("source_fields", [])),
+        }
+        for item in resolved_contracts or []
+    ]
+    return {
+        "schema": _fingerprint(schema_payload),
+        "semantic_contracts": _fingerprint(sorted(semantic_payload, key=lambda item: str(item["key"]))),
+    }
+
+
+def _context_fingerprint_mismatches(memory: SqlMemoryRecord, expected: dict[str, str] | None) -> list[str]:
+    if not expected:
+        return []
+    stored = memory.filters.get("context_fingerprints", {})
+    if not isinstance(stored, dict):
+        return sorted(expected)
+    return sorted(key for key, value in expected.items() if stored.get(key) != value)
+
+
+def _fingerprint(payload: object) -> str:
+    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()

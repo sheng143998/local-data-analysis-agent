@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Trusted SQL Context Fingerprint。计划：`docs/plans/2026-07-13-trusted-sql-context-fingerprint.md`；记录：`docs/modules/2026-07-13-trusted-sql-context-fingerprint.md`。schema 与已解析契约指纹已保存在 SQL Memory 的既有 JSONB，缺失或失配的 verified 记录只能走 rewrite path。验证：Memory/Graph focused `47 passed`；全量测试与标准评测未重复运行，原因及相邻模块结果已记录。待提交/推送。
+
+- 进行中：Trusted SQL Context Fingerprint。计划：`docs/plans/2026-07-13-trusted-sql-context-fingerprint.md`。将使用既有 `sql_memories.filters` JSONB 持久化 schema 与 semantic-contract 指纹，避免无 migration 的重复字段；指纹缺失或失配的 verified SQL 必须降级为 rewrite path，仍经过 Inspector/Guard/Executor。验证：Memory/Graph 聚焦测试、后端全量与标准评测。
+
 - 已完成：SQL EXPLAIN 执行前预检。计划：`docs/plans/2026-07-13-sql-explain-preflight.md`；记录：`docs/modules/2026-07-13-sql-explain-preflight.md`。Graph 已固定为 Guard 后预检成功才执行主查询；预检使用独立只读事务与超时，失败只允许有限修复，不得执行主查询。验证：focused `44 passed, 1 warning`；`eval:standard` 为 `8/20` 执行、`6/20` 严格，失败均发生在预检前的模型/意图路径。后端全量测试本轮未运行，上一模块在 120 秒上限未完成。待提交/推送。
 
 - 已完成：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`；记录：`docs/modules/2026-07-13-semantic-contract-coverage-v2.md`；评测：`eval/reports/semantic_contract_v2_batch_002.json`。`012` migration 为稳定复杂业务概念新增版本化定义，Query Plan 已继承已解析契约的度量、维度、排序、限制和结果形态，不保存固定 SQL。验证：migration 已应用、focused `24 passed`；认证第 11-20 题执行 `10/10`、严格/答案 `7/10`。后端全量测试在 120 秒上限未完成，尚未视为通过。待提交/推送前会隔离并行模块文件。

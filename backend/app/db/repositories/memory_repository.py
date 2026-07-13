@@ -133,7 +133,7 @@ class SqlMemoryRepository:
                     payload.tables,
                     payload.metrics,
                     payload.dimensions,
-                    json.dumps({"trust_status": payload.trust_status}, ensure_ascii=False),
+                    json.dumps(_memory_filters(payload), ensure_ascii=False),
                     payload.latency_ms,
                     payload.result_columns,
                     payload.row_count,
@@ -188,7 +188,7 @@ class SqlMemoryRepository:
                     payload.tables,
                     payload.metrics,
                     payload.dimensions,
-                    json.dumps({"trust_status": payload.trust_status}, ensure_ascii=False),
+                    json.dumps(_memory_filters(payload), ensure_ascii=False),
                     next_success_count,
                     next_avg_latency,
                     payload.result_columns,
@@ -238,3 +238,8 @@ def _vector_literal(vector: list[float] | None) -> str | None:
     if not vector:
         return None
     return "[" + ",".join(f"{float(value):.8f}" for value in vector) + "]"
+
+
+def _memory_filters(payload: SqlMemoryUpsert) -> dict:
+    """SQL Memory 的可信元数据统一落在既有 JSONB，避免平行的未版本化字段。"""
+    return {**payload.filters, "trust_status": payload.trust_status}

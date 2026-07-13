@@ -54,6 +54,8 @@ class SqlMemoryCandidate(BaseModel):
     success_score: float
     required_table_match: bool = True
     required_tables: list[str] = Field(default_factory=list)
+    context_fingerprint_match: bool = True
+    context_fingerprint_mismatches: list[str] = Field(default_factory=list)
 
 
 class SqlReusePlan(BaseModel):
@@ -80,6 +82,7 @@ class SqlMemoryUpsert(BaseModel):
     row_count: int = 0
     latency_ms: int = 0
     trust_status: SqlTrustStatus = "executed"
+    filters: dict = Field(default_factory=dict)
 
 
 class SqlMemoryTrustUpdate(BaseModel):
