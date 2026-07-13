@@ -16,6 +16,7 @@ ReuseType = Literal[
     "subquery_reuse",
     "regenerate",
 ]
+SqlTrustStatus = Literal["candidate", "executed", "reviewed", "verified", "deprecated", "rejected"]
 
 
 class SqlMemoryRecord(BaseModel):
@@ -34,6 +35,7 @@ class SqlMemoryRecord(BaseModel):
     filters: dict = Field(default_factory=dict)
     dialect: str = "postgresql"
     schema_version: str = "v1"
+    trust_status: SqlTrustStatus = "reviewed"
     success_count: int = 0
     failure_count: int = 0
     avg_latency_ms: int = 0
@@ -77,3 +79,4 @@ class SqlMemoryUpsert(BaseModel):
     result_columns: list[str] = Field(default_factory=list)
     row_count: int = 0
     latency_ms: int = 0
+    trust_status: SqlTrustStatus = "executed"

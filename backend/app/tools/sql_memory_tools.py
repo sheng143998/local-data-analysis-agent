@@ -75,7 +75,11 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
         return SqlReusePlan(path_type="cold_path", candidate_count=0)
 
     selected = candidates[0]
-    if selected.score >= FAST_PATH_THRESHOLD and selected.required_table_match:
+    if (
+        selected.score >= FAST_PATH_THRESHOLD
+        and selected.required_table_match
+        and selected.memory.trust_status == "verified"
+    ):
         return SqlReusePlan(
             path_type="fast_path",
             reuse_type="parameter_rewrite",

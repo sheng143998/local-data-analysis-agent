@@ -92,7 +92,7 @@ class SqlMemoryRepository:
                 )
                 VALUES (
                   %s, %s, %s, '', 'sales_trend', %s, %s, %s::vector, %s::vector, '{}'::jsonb, %s::jsonb,
-                  %s, %s, %s, '{}'::jsonb, 'postgresql', 'v1',
+                  %s, %s, %s, %s::jsonb, 'postgresql', 'v1',
                   1, 0, %s, %s, %s, now()
                 )
                 RETURNING id, canonical_question, normalized_question, question_pattern,
@@ -113,6 +113,7 @@ class SqlMemoryRepository:
                     payload.tables,
                     payload.metrics,
                     payload.dimensions,
+                    json.dumps({"trust_status": payload.trust_status}, ensure_ascii=False),
                     payload.latency_ms,
                     payload.result_columns,
                     payload.row_count,
@@ -144,6 +145,7 @@ class SqlMemoryRepository:
                     tables = %s,
                     metrics = %s,
                     dimensions = %s,
+                    filters = %s::jsonb,
                     success_count = %s,
                     avg_latency_ms = %s,
                     last_result_columns = %s,
@@ -166,6 +168,7 @@ class SqlMemoryRepository:
                     payload.tables,
                     payload.metrics,
                     payload.dimensions,
+                    json.dumps({"trust_status": payload.trust_status}, ensure_ascii=False),
                     next_success_count,
                     next_avg_latency,
                     payload.result_columns,
@@ -177,6 +180,7 @@ class SqlMemoryRepository:
 
 
 def _row_to_memory(row) -> SqlMemoryRecord:
+    filters = _json_payload(row[12])
     return SqlMemoryRecord(
         id=row[0],
         canonical_question=row[1],
@@ -190,9 +194,10 @@ def _row_to_memory(row) -> SqlMemoryRecord:
         tables=list(row[9] or []),
         metrics=list(row[10] or []),
         dimensions=list(row[11] or []),
-        filters=_json_payload(row[12]),
+        filters=filters,
         dialect=row[13],
         schema_version=row[14],
+        trust_status=filters.get("trust_status", "reviewed"),
         success_count=row[15],
         failure_count=row[16],
         avg_latency_ms=row[17],

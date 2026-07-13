@@ -47,7 +47,7 @@ class FakeEmbeddingAdapter:
 
 
 def test_retrieve_sql_memory_scores_exact_sales_question() -> None:
-    memory = _memory("最近 30 天销售额按天变化如何？")
+    memory = _memory("最近 30 天销售额按天变化如何？", trust_status="verified")
     candidates = retrieve_sql_memory(
         "最近 30 天销售额按天变化如何？",
         metrics=["sales_amount", "order_count"],
@@ -61,7 +61,7 @@ def test_retrieve_sql_memory_scores_exact_sales_question() -> None:
 
 
 def test_plan_sql_reuse_uses_fast_path_for_high_confidence_candidate() -> None:
-    memory = _memory("最近 30 天销售额按天变化如何？")
+    memory = _memory("最近 30 天销售额按天变化如何？", trust_status="verified")
     candidates = retrieve_sql_memory(
         "最近 30 天销售额按天变化如何？",
         metrics=["sales_amount", "order_count"],
@@ -106,6 +106,7 @@ def test_plan_sql_reuse_allows_fast_path_when_required_tables_match() -> None:
         "过去 6 个月每月新增用户数是多少？",
         final_sql="SELECT u.id FROM users u LIMIT 10",
         tables=["users"],
+        trust_status="verified",
     )
     candidates = retrieve_sql_memory(
         "过去 6 个月每月新增用户数是多少？",
@@ -173,6 +174,7 @@ def test_upsert_successful_sql_memory_passes_question_and_sql_embeddings() -> No
     assert repo.upsert_payload.question_embedding == [0.1, 0.2]
     assert repo.upsert_payload.sql_embedding == [0.3, 0.4]
     assert repo.upsert_payload.dimensions == ["date"]
+    assert repo.upsert_payload.trust_status == "executed"
 
 
 def test_build_sql_memory_embeddings_returns_none_when_adapter_fails() -> None:
@@ -191,6 +193,7 @@ def _memory(
     *,
     final_sql: str = "SELECT DATE(created_at), SUM(total_amount) FROM orders GROUP BY 1 LIMIT 30",
     tables: list[str] | None = None,
+    trust_status: str = "reviewed",
 ) -> SqlMemoryRecord:
     return SqlMemoryRecord(
         id=uuid4(),
@@ -200,6 +203,7 @@ def _memory(
         final_sql=final_sql,
         tables=tables or ["orders", "payments"],
         metrics=["sales_amount", "order_count"],
+        trust_status=trust_status,
         success_count=5,
         failure_count=0,
         avg_latency_ms=20,

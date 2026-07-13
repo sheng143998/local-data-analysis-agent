@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Trusted SQL Repository Foundation（Phase 3）。计划：`docs/plans/2026-07-13-trusted-sql-repository.md`；记录：`docs/modules/2026-07-13-trusted-sql-repository.md`。SQL Memory 生命周期已持久化：新成功 SQL 为 `executed`，旧记录默认为 `reviewed`，只有 `verified` 允许 fast path。验证：SQL Memory/Graph focused `42 passed`。风险：管理员审核提升、契约版本/schema hash 绑定与全量评测对照仍待后续子模块。
+
+- 进行中：Trusted SQL Repository（Phase 3）。计划：`docs/plans/2026-07-13-trusted-sql-repository.md`。将 SQL Memory 分为 candidate/executed/reviewed/verified/deprecated/rejected，只有 verified 可 fast path；新成功 SQL 只记 executed，旧记录降级 reviewed，并绑定契约/schema 版本元数据。所有 SQL 仍须经过 QuerySpec、Guard 和只读 Executor。
+
 - 已完成：Clarification Policy（Phase 2）。计划：`docs/plans/2026-07-13-clarification-policy.md`；记录：`docs/modules/2026-07-13-clarification-policy.md`。独立 Policy 已以结构化缺失业务对象/契约冲突决定追问，Resolver 不再直接生成澄清文案；未知明确概念与低置信度均不会单独触发追问。验证：focused `15 passed, 1 warning`、后端全量 `237 passed, 1 warning`。风险：自然追问生成和多次无进展熔断留待会话状态增强；真实评测将在下一 SQL/Planner 模块统一对照。
 
 - 进行中：Clarification Policy（Phase 2）。计划：`docs/plans/2026-07-13-clarification-policy.md`。Resolver 将只报告契约匹配/冲突，独立 Policy 依据缺失槽位、冲突和动作输出结构化追问决定；未知明确概念和模型低置信度不得单独触发澄清。保持旧 pending 会话兼容，安全 SQL 边界不变。
