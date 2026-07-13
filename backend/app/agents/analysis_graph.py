@@ -160,7 +160,10 @@ def _slowest_node(timings: dict[str, int]) -> dict[str, Any]:
 def _retrieve_context_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
     question = state["question"]
-    retrieval_context = build_retrieval_context(question)
+    retrieval_context = build_retrieval_context(
+        question,
+        semantic_contracts=state.get("question_intent", {}).get("resolved_contracts", []),
+    )
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     return {
         "retrieval_context": retrieval_context,

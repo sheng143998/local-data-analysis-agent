@@ -13,11 +13,18 @@ from backend.app.tools.schema_retriever import retrieve_schema
 DEFAULT_RELATIONSHIP_LIMIT = 24
 
 
-def build_retrieval_context(question: str) -> RetrievalContext:
+def build_retrieval_context(question: str, semantic_contracts: list[dict] | None = None) -> RetrievalContext:
     """组合指标口径和表结构上下文，供 Agent 后续节点使用。"""
     metrics = retrieve_metrics(question)
     schema_columns = retrieve_schema(question, metrics)
     metrics, schema_columns, rerank_diagnostics = rerank_context(question, metrics, schema_columns)
+    contracts = semantic_contracts or []
+    contract_tables = [table for contract in contracts for table in contract.get("source_tables", [])]
+    contract_fields = [field for contract in contracts for field in contract.get("source_fields", [])]
+    contract_summary = "；".join(
+        f"{contract.get('display_name', contract.get('contract_key', ''))}@v{contract.get('version', '')}"
+        for contract in contracts
+    )
     return RetrievalContext(
         metrics=metrics,
         schema_columns=schema_columns,
@@ -25,9 +32,9 @@ def build_retrieval_context(question: str) -> RetrievalContext:
             schema_columns,
             include_database_foreign_keys=True,
         ),
-        tables=_unique_tables(metrics, schema_columns),
-        fields=_unique_fields(metrics, schema_columns),
-        metric_summary=_metric_summary(metrics),
+        tables=_merge_unique(_unique_tables(metrics, schema_columns), contract_tables),
+        fields=_merge_unique(_unique_fields(metrics, schema_columns), contract_fields),
+        metric_summary="；".join(item for item in [_metric_summary(metrics), contract_summary] if item),
         rerank_diagnostics=rerank_diagnostics.as_dict(),
     )
 
@@ -216,6 +223,10 @@ def _unique_fields(
         if field not in fields:
             fields.append(field)
     return fields
+
+
+def _merge_unique(existing: list[str], additions: list[str]) -> list[str]:
+    return list(dict.fromkeys([*existing, *[str(item) for item in additions if item]]))
 
 
 def _append_relationship(

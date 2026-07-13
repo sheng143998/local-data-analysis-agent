@@ -2,6 +2,12 @@
 
 ## 当前状态
 
+- 已完成：Semantic Resolver Integration（Phase 1）。计划：`docs/plans/2026-07-13-semantic-resolver-integration.md`；记录：`docs/modules/2026-07-13-semantic-resolver-integration.md`。启用契约已以 key/展示名/同义词绑定 intent，并透传至 Graph 检索上下文和 SQL Prompt；未知明确概念继续开放式处理，契约不执行 SQL。migration `009` 已初始化 3 个基础快照契约。验证：focused `57 passed, 1 warning`、后端全量 `234 passed, 1 warning`。Phase 2 将独立 Clarification Policy 接管当前冲突澄清。
+
+- 已完成（并行子任务）：Clarification Policy 实施设计（Phase 2）。计划：`docs/plans/2026-07-13-clarification-policy-implementation-design.md`。设计将对话解释器、Semantic Resolver、确定性 Policy 与自然追问生成分离；定义结构化 `missing` / `conflict` / `action`、兼容旧 JSONB pending state 的方案、AgentService/续问的最小接入及完整测试/评测矩阵。当前 Resolver 在冲突时仍直接写 `needs_clarification` 和用户文案，Phase 2 主线须将该职责收回 Policy。验证：已核对现有函数、schema、repository、测试和 UTF-8 文档路径，`git diff --check` 通过。风险：既有持久化状态只支持 `metrics` / `time_range`，实施时必须兼容；Policy 不能把模型置信度或未命中词表当作自动澄清理由。本设计不单独提交，由主线集成提交。
+
+- 进行中：Semantic Resolver Integration（Phase 1）。计划：`docs/plans/2026-07-13-semantic-resolver-integration.md`。将版本化启用契约接入意图、会话续问和 Graph 上下文：唯一匹配绑定结构化语义，冲突才触发确定性澄清，未知明确概念保持开放式检索/模型路径。不会让 Resolver 产生 SQL 或绕过 QuerySpec、Guard、只读 Executor。验证：Resolver/意图/会话/Graph 聚焦测试、后端全量、前端构建和 authenticated 首批标准评测对照。
+
 - 已完成：Evaluator Admin Configuration And First Database Batch。已创建本机专用管理员评测账号，随机凭据仅写入未跟踪 `backend/.env`，没有修改既有管理员密码，也没有提交凭据。`npm.cmd run eval:database-baseline -- --start 0 --limit 10 --report eval/reports/database_batch_001.json` 已完成：执行成功 `5/10`、严格成功 `2/10`、答案匹配 `2/10`、平均 `26,234ms/case`。完整 50 case 需要继续运行 `start=10/20/30/40` 五个独立批次并核对 coverage；当前低成功率是语义/SQL 生成质量基线，不能当作鉴权失败。
 
 - 已完成：Full Database Ground Truth Baseline。完整 50 case 已通过 authenticated runner 执行并写入 `eval/reports/latest_eval_report.json`：执行成功 `28/50`（`56.00%`）、严格成功 `11/50`（`22.00%`）、答案匹配 `10/48`（`20.83%`）、平均 `26,707ms/case`。该基线确认评测账号与管理员 trace 可用，也明确当前首要质量缺口是 SQL 生成/语义口径，而非鉴权；后续每个 Phase 1+ 模块需与此报告对比。

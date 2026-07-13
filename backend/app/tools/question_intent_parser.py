@@ -60,6 +60,9 @@ class ParsedQuestionIntent(BaseModel):
     clarification: str = ""
     source: str = "heuristic"
     warnings: list[str] = Field(default_factory=list)
+    resolved_contracts: list[dict[str, Any]] = Field(default_factory=list)
+    semantic_conflicts: list[str] = Field(default_factory=list)
+    clarification_reason: str = ""
     query_spec: QuerySpec = Field(default_factory=QuerySpec)
 
 
