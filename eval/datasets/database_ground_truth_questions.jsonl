@@ -1,0 +1,50 @@
+{"id":"database_001","category":"基础与时间","question":"当前订单总数是多少？","expected_tables":["orders"],"expected_keywords":["COUNT"],"expected_answer":"99,441"}
+{"id":"database_002","category":"基础与时间","question":"当前用户总数是多少？","expected_tables":["users"],"expected_keywords":["COUNT"],"expected_answer":"99,441"}
+{"id":"database_003","category":"基础与时间","question":"当前商品总数是多少？","expected_tables":["products"],"expected_keywords":["COUNT"],"expected_answer":"32,951"}
+{"id":"database_004","category":"基础与时间","question":"当前订单商品明细总数是多少？","expected_tables":["order_items"],"expected_keywords":["COUNT"],"expected_answer":"112,650"}
+{"id":"database_005","category":"基础与时间","question":"当前支付记录总数是多少？","expected_tables":["payments"],"expected_keywords":["COUNT"],"expected_answer":"103,886"}
+{"id":"database_006","category":"基础与时间","question":"当前退款记录总数是多少？","expected_tables":["refunds"],"expected_keywords":["COUNT"],"expected_answer":"1,234"}
+{"id":"database_007","category":"基础与时间","question":"当前评价总数是多少？","expected_tables":["reviews"],"expected_keywords":["COUNT"],"expected_answer":"98,410"}
+{"id":"database_008","category":"基础与时间","question":"当前流量事件总数是多少？","expected_tables":["traffic_events"],"expected_keywords":["COUNT"],"expected_answer":"0"}
+{"id":"database_009","category":"基础与时间","question":"当前优惠券总数是多少？","expected_tables":["coupons"],"expected_keywords":["COUNT"],"expected_answer":"0"}
+{"id":"database_010","category":"基础与时间","question":"当前优惠券使用记录总数是多少？","expected_tables":["coupon_usages"],"expected_keywords":["COUNT"],"expected_answer":"0"}
+{"id":"database_011","category":"基础与时间","question":"订单数据的时间范围是什么？","expected_tables":["orders"],"expected_keywords":["MIN","MAX"],"expected_answer":"2016-09-04 至 2018-10-17","expected_result_tokens":["2016-09-04","2018-10-17"]}
+{"id":"database_012","category":"基础与时间","question":"2017 年订单数是多少？","expected_tables":["orders"],"expected_keywords":["COUNT"],"expected_answer":"45,101"}
+{"id":"database_013","category":"基础与时间","question":"2017 年订单金额是多少？","expected_tables":["orders"],"expected_keywords":["SUM"],"expected_answer":"7,249,746.73"}
+{"id":"database_014","category":"基础与时间","question":"2017 年平均订单金额是多少？","expected_tables":["orders"],"expected_keywords":["AVG"],"expected_answer":"160.74"}
+{"id":"database_015","category":"基础与时间","question":"2017 年已支付订单数是多少？","expected_tables":["orders","payments"],"expected_keywords":["COUNT","paid"],"expected_answer":"45,101"}
+{"id":"database_016","category":"基础与时间","question":"2017 年已支付订单金额是多少？","expected_tables":["orders","payments"],"expected_keywords":["SUM","paid"],"expected_answer":"7,249,746.73"}
+{"id":"database_017","category":"订单与支付","question":"各订单状态数量是多少？","expected_tables":["orders"],"expected_keywords":["GROUP BY","COUNT"],"expected_answer":"delivered 96,478；shipped 1,107；canceled 625；unavailable 609；invoiced 314；processing 301；created 5；approved 2"}
+{"id":"database_018","category":"订单与支付","question":"各支付状态数量是多少？","expected_tables":["payments"],"expected_keywords":["GROUP BY","COUNT"],"expected_answer":"paid 103,886"}
+{"id":"database_019","category":"订单与支付","question":"各支付方式记录数是多少？","expected_tables":["payments"],"expected_keywords":["GROUP BY","COUNT"],"expected_answer":"credit_card 76,795；boleto 19,784；voucher 5,775；debit_card 1,529；not_defined 3"}
+{"id":"database_020","category":"订单与支付","question":"各支付方式已支付金额是多少？","expected_tables":["payments"],"expected_keywords":["GROUP BY","SUM"],"expected_answer":"credit_card 12,542,084.19；boleto 2,869,361.27；voucher 379,436.87；debit_card 217,989.79；not_defined 0.00"}
+{"id":"database_021","category":"商品与品类","question":"销售额最高的前 5 个品类是什么？","expected_tables":["order_items","products"],"expected_keywords":["GROUP BY","ORDER BY","LIMIT"],"expected_answer":"beleza_saude 1,258,681.34；relogios_presentes 1,205,005.68；cama_mesa_banho 1,036,988.68；esporte_lazer 988,048.97；informatica_acessorios 911,954.32"}
+{"id":"database_022","category":"商品与品类","question":"订单商品数最多的前 5 个品类是什么？","expected_tables":["order_items","products"],"expected_keywords":["GROUP BY","COUNT","LIMIT"],"expected_answer":"cama_mesa_banho 11,115；beleza_saude 9,670；esporte_lazer 8,641；moveis_decoracao 8,334；informatica_acessorios 7,827"}
+{"id":"database_023","category":"商品与品类","question":"销售额最高的前 5 个商品 ID 是什么？","expected_tables":["order_items"],"expected_keywords":["GROUP BY","ORDER BY","LIMIT"],"expected_answer":"bb50f2e236e5eea0100680137654686c 63,885.00；6cdd53843498f92890544667809f1595 54,730.20；d6160fb7873f184099d9bc95e30376af 48,899.34；d1c427060a0f73f6b889a5c7c61f2ac4 47,214.51；99a4788cb24856965c36a24e339b6058 43,025.56"}
+{"id":"database_024","category":"商品与品类","question":"平均单件售价最高的前 5 个品类是什么？","expected_tables":["order_items","products"],"expected_keywords":["GROUP BY","AVG","LIMIT"],"expected_answer":"pcs 1,098.34；portateis_casa_forno_e_cafe 624.29；eletrodomesticos_2 476.12；agro_industria_e_comercio 342.12；instrumentos_musicais 281.62"}
+{"id":"database_025","category":"商品与品类","question":"商品品类数是多少？","expected_tables":["products"],"expected_keywords":["COUNT","DISTINCT"],"expected_answer":"73"}
+{"id":"database_026","category":"商品与品类","question":"商品平均重量是多少克？","expected_tables":["products"],"expected_keywords":["AVG"],"expected_answer":"2,276.47"}
+{"id":"database_027","category":"商品与品类","question":"订单商品运费总额是多少？","expected_tables":["order_items"],"expected_keywords":["SUM"],"expected_answer":"2,256,599.44"}
+{"id":"database_028","category":"商品与品类","question":"商品成本总额是多少？","expected_tables":["product_costs"],"expected_keywords":["SUM"],"expected_answer":"750,278.45"}
+{"id":"database_029","category":"商品与品类","question":"按商品明细计算的毛利率是多少？","expected_tables":["order_items","product_costs"],"expected_keywords":["SUM"],"expected_answer":"82.65%"}
+{"id":"database_030","category":"商品与品类","question":"最新库存快照日期是什么？","expected_tables":["inventory_snapshots"],"expected_keywords":["MAX"],"expected_answer":"2026-07-03"}
+{"id":"database_031","category":"商品与品类","question":"最新快照总库存是多少？","expected_tables":["inventory_snapshots"],"expected_keywords":["SUM"],"expected_answer":"9,847,740"}
+{"id":"database_032","category":"商品与品类","question":"最新快照中库存少于 10 件的商品数是多少？","expected_tables":["inventory_snapshots"],"expected_keywords":["COUNT"],"expected_answer":"0"}
+{"id":"database_033","category":"退款与评价","question":"退款总金额是多少？","expected_tables":["refunds"],"expected_keywords":["SUM"],"expected_answer":"269,735.11"}
+{"id":"database_034","category":"退款与评价","question":"退款订单数是多少？","expected_tables":["refunds"],"expected_keywords":["COUNT"],"expected_answer":"1,234"}
+{"id":"database_035","category":"退款与评价","question":"退款订单率是多少？","expected_tables":["refunds","orders"],"expected_keywords":["COUNT"],"expected_answer":"1.24%"}
+{"id":"database_036","category":"退款与评价","question":"退款金额最高的原因是什么？","expected_tables":["refunds"],"expected_keywords":["GROUP BY","SUM"],"expected_answer":"canceled 143,255.60；unavailable 126,479.51"}
+{"id":"database_037","category":"退款与评价","question":"平均评价分是多少？","expected_tables":["reviews"],"expected_keywords":["AVG"],"expected_answer":"4.09"}
+{"id":"database_038","category":"退款与评价","question":"各评价分数量是多少？","expected_tables":["reviews"],"expected_keywords":["GROUP BY","COUNT"],"expected_answer":"1分 11,282；2分 3,114；3分 8,097；4分 19,007；5分 56,910"}
+{"id":"database_039","category":"用户与履约","question":"用户数最多的前 5 个州是什么？","expected_tables":["users"],"expected_keywords":["GROUP BY","COUNT","LIMIT"],"expected_answer":"SP 41,746；RJ 12,852；MG 11,635；RS 5,466；PR 5,045"}
+{"id":"database_040","category":"用户与履约","question":"用户数最多的前 5 个城市是什么？","expected_tables":["users"],"expected_keywords":["GROUP BY","COUNT","LIMIT"],"expected_answer":"sao paulo 15,540；rio de janeiro 6,882；belo horizonte 2,773；brasilia 2,131；curitiba 1,521"}
+{"id":"database_041","category":"用户与履约","question":"订单数最多的前 5 个城市是什么？","expected_tables":["users","orders"],"expected_keywords":["GROUP BY","COUNT","LIMIT"],"expected_answer":"sao paulo 15,540；rio de janeiro 6,882；belo horizonte 2,773；brasilia 2,131；curitiba 1,521"}
+{"id":"database_042","category":"用户与履约","question":"至少有 20 单且平均订单金额最高的前 5 个城市是什么？","expected_tables":["users","orders"],"expected_keywords":["GROUP BY","AVG","HAVING","LIMIT"],"expected_answer":"gaspar 387.79；sobral 386.35；porto seguro 351.49；arapiraca 350.00；campina grande 335.05"}
+{"id":"database_043","category":"用户与履约","question":"复购用户数是多少？","expected_tables":["orders","users"],"expected_keywords":["COUNT","HAVING"],"expected_answer":"0"}
+{"id":"database_044","category":"用户与履约","question":"复购率是多少？","expected_tables":["orders","users"],"expected_keywords":["COUNT"],"expected_answer":"0.00%"}
+{"id":"database_045","category":"用户与履约","question":"已送达订单的平均送达天数是多少？","expected_tables":["orders"],"expected_keywords":["AVG"],"expected_answer":"12.56 天"}
+{"id":"database_046","category":"用户与履约","question":"晚于预计送达日期的订单数是多少？","expected_tables":["orders"],"expected_keywords":["COUNT"],"expected_answer":"7,827"}
+{"id":"database_047","category":"空数据处理","question":"各流量来源的事件数是多少？","expected_tables":["traffic_events"],"expected_keywords":["GROUP BY","COUNT"],"expected_answer":"无数据，返回空结果集","result_match_mode":"empty"}
+{"id":"database_048","category":"空数据处理","question":"各流量事件类型数量是多少？","expected_tables":["traffic_events"],"expected_keywords":["GROUP BY","COUNT"],"expected_answer":"无数据，返回空结果集","result_match_mode":"empty"}
+{"id":"database_049","category":"空数据处理","question":"访问用户到下单用户转化率是多少？","expected_tables":["traffic_events","orders"],"expected_keywords":["COUNT"],"expected_answer":"不可计算，访问用户数为 0","result_match_mode":"skip"}
+{"id":"database_050","category":"空数据处理","question":"加购用户到已支付用户转化率是多少？","expected_tables":["traffic_events","payments"],"expected_keywords":["COUNT"],"expected_answer":"不可计算，加购用户数为 0","result_match_mode":"skip"}

@@ -8,6 +8,7 @@
     "backend:dev": ".venv\\Scripts\\python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000",
     "backend:test": ".venv\\Scripts\\python -m pytest backend/tests",
     "eval:standard": ".venv\\Scripts\\python eval/scripts/run_eval.py",
+    "eval:database-baseline": ".venv\\Scripts\\python eval/scripts/run_eval.py --dataset eval/datasets/database_ground_truth_questions.jsonl",
     "context:refresh": ".venv\\Scripts\\python backend/scripts/refresh_context.py",
     "test:e2e": ".venv\\Scripts\\python backend/tests/smoke_api.py"
   }

@@ -1,14 +1,32 @@
 from eval.scripts.run_eval import (
+    EvaluationConfigurationError,
     EvalCase,
     _build_run_trace_summary,
     _extract_eval_run_trace,
     _fetch_run_trace_summary,
     _find_latest_run_id,
+    authenticate_evaluation_client,
     load_cases,
+    load_database_ground_truth_cases,
     load_regression_cases,
     run_cases,
     summarize_results,
 )
+
+
+class _FakeLoginResponse:
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+
+
+class _FakeLoginClient:
+    def __init__(self, status_code: int = 200) -> None:
+        self.status_code = status_code
+        self.requests: list[tuple[str, dict]] = []
+
+    def post(self, path: str, json: dict):  # type: ignore[no-untyped-def]
+        self.requests.append((path, json))
+        return _FakeLoginResponse(self.status_code)
 
 
 def test_load_standard_questions_contains_twenty_cases() -> None:
@@ -26,6 +44,41 @@ def test_load_regression_questions_contains_forbidden_assertions() -> None:
     assert cases[0].id == "regression_001"
     assert "avg_order_value" in cases[0].expected_keywords
     assert "AVG(payments.amount)" in cases[0].forbidden_keywords
+
+
+def test_load_database_ground_truth_questions_contains_fifty_cases() -> None:
+    cases = load_database_ground_truth_cases()
+
+    assert len(cases) == 50
+    assert cases[0].expected_answer == "99,441"
+    assert cases[-1].result_match_mode == "skip"
+
+
+def test_authenticate_evaluation_client_requires_explicit_credentials() -> None:
+    try:
+        authenticate_evaluation_client(
+            _FakeLoginClient(),  # type: ignore[arg-type]
+            auth_required=True,
+            environment={},
+        )
+    except EvaluationConfigurationError as exc:
+        assert "EVAL_AUTH_EMAIL" in str(exc)
+    else:
+        raise AssertionError("缺少评测账号时应明确阻断")
+
+
+def test_authenticate_evaluation_client_logs_in_with_explicit_credentials() -> None:
+    client = _FakeLoginClient()
+
+    authenticate_evaluation_client(
+        client,  # type: ignore[arg-type]
+        auth_required=True,
+        environment={"EVAL_AUTH_EMAIL": "eval@example.com", "EVAL_AUTH_PASSWORD": "safe-password"},
+    )
+
+    assert client.requests == [
+        ("/api/auth/login", {"email": "eval@example.com", "password": "safe-password"})
+    ]
 
 
 def test_run_cases_and_summary_collect_eval_metrics() -> None:
@@ -86,6 +139,39 @@ def test_run_cases_and_summary_collect_eval_metrics() -> None:
     )
     assert report["cases"][0]["run_trace_summary"]["context_tables"] == ["orders"]
     assert report["cases"][1]["strict_ok"] is False
+
+
+def test_run_cases_compares_structured_rows_against_ground_truth_tokens() -> None:
+    case = EvalCase(
+        id="ground_truth_001",
+        category="真实库基线",
+        question="各状态数量",
+        expected_tables=["orders"],
+        expected_keywords=["SELECT"],
+        expected_answer="delivered 96,478；shipped 1,107",
+    )
+
+    results = run_cases(
+        [case],
+        lambda _: (
+            200,
+            {
+                "path": "cold_path",
+                "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status",
+                "rows": [
+                    {"status": "delivered", "order_count": 96478},
+                    {"status": "shipped", "order_count": 1107},
+                ],
+                "source": {"security": "只读 SELECT，已通过 SQL Guard", "returnedRows": 2},
+            },
+        ),
+    )
+    report = summarize_results(results)
+
+    assert results[0].answer_match is True
+    assert results[0].strict_ok is True
+    assert report["answer_checked_count"] == 1
+    assert report["answer_match_rate"] == 1
 
 
 def test_summary_separates_execution_success_from_assertion_match() -> None:

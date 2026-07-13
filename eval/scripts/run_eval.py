@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+from argparse import ArgumentParser
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,10 +18,12 @@ sys.path.insert(0, str(ROOT))
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
+from backend.app.core.config import settings
 
 
 DATASET_PATH = ROOT / "eval" / "datasets" / "standard_questions.jsonl"
 REGRESSION_DATASET_PATH = ROOT / "eval" / "datasets" / "regression_questions.jsonl"
+DATABASE_GROUND_TRUTH_DATASET_PATH = ROOT / "eval" / "datasets" / "database_ground_truth_questions.jsonl"
 REPORT_PATH = ROOT / "eval" / "reports" / "latest_eval_report.json"
 
 
@@ -30,6 +35,9 @@ class EvalCase:
     expected_tables: list[str]
     expected_keywords: list[str]
     forbidden_keywords: list[str] = field(default_factory=list)
+    expected_answer: str = ""
+    expected_result_tokens: list[str] = field(default_factory=list)
+    result_match_mode: str = "tokens"
 
 
 @dataclass(frozen=True)
@@ -54,6 +62,10 @@ class EvalCaseResult:
     forbidden_match: bool
     strict_ok: bool
     returned_rows: int
+    expected_answer: str = ""
+    actual_answer: str = ""
+    answer_match: bool | None = None
+    answer_mismatch: str = ""
     run_id: str | None = None
     run_detail_path: str = ""
     run_trace_summary: dict[str, Any] = field(default_factory=dict)
@@ -61,6 +73,10 @@ class EvalCaseResult:
 
 
 AnalyzeFunc = Callable[[str], tuple[int, dict[str, Any]]]
+
+
+class EvaluationConfigurationError(RuntimeError):
+    """评测环境缺少必要配置时中止，避免把环境问题误记为模型失败。"""
 
 
 def load_cases(path: Path = DATASET_PATH) -> list[EvalCase]:
@@ -77,12 +93,21 @@ def load_cases(path: Path = DATASET_PATH) -> list[EvalCase]:
                 expected_tables=list(payload.get("expected_tables") or []),
                 expected_keywords=list(payload.get("expected_keywords") or []),
                 forbidden_keywords=list(payload.get("forbidden_keywords") or []),
+                expected_answer=str(payload.get("expected_answer") or ""),
+                expected_result_tokens=list(payload.get("expected_result_tokens") or []),
+                result_match_mode=str(payload.get("result_match_mode") or "tokens"),
             )
         )
     return cases
 
 
 def load_regression_cases(path: Path = REGRESSION_DATASET_PATH) -> list[EvalCase]:
+    return load_cases(path)
+
+
+def load_database_ground_truth_cases(
+    path: Path = DATABASE_GROUND_TRUTH_DATASET_PATH,
+) -> list[EvalCase]:
     return load_cases(path)
 
 
@@ -115,7 +140,15 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             table_match = len(missing_tables) == 0
             keyword_match = len(missing_keywords) == 0
             forbidden_match = len(forbidden_keyword_hits) == 0
-            strict_ok = ok and table_match and keyword_match and forbidden_match
+            actual_answer = _serialize_rows(body.get("rows"))
+            answer_match, answer_mismatch = _match_expected_answer(case, body.get("rows"))
+            strict_ok = (
+                ok
+                and table_match
+                and keyword_match
+                and forbidden_match
+                and (answer_match is not False)
+            )
             results.append(
                 EvalCaseResult(
                     id=case.id,
@@ -138,6 +171,10 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     forbidden_match=forbidden_match,
                     strict_ok=strict_ok,
                     returned_rows=int(source.get("returnedRows") or 0),
+                    expected_answer=case.expected_answer,
+                    actual_answer=actual_answer,
+                    answer_match=answer_match,
+                    answer_mismatch=answer_mismatch,
                     run_id=run_id,
                     run_detail_path=run_detail_path,
                     run_trace_summary=run_trace_summary,
@@ -167,6 +204,10 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     forbidden_match=False,
                     strict_ok=False,
                     returned_rows=0,
+                    expected_answer=case.expected_answer,
+                    actual_answer="",
+                    answer_match=False if case.expected_answer else None,
+                    answer_mismatch="评测执行异常，未获得可比较结果" if case.expected_answer else "",
                     run_id=None,
                     run_detail_path="",
                     run_trace_summary={},
@@ -186,6 +227,8 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
     table_match_count = sum(1 for result in results if result.table_match)
     keyword_match_count = sum(1 for result in results if result.keyword_match)
     forbidden_match_count = sum(1 for result in results if result.forbidden_match)
+    answer_checked_results = [result for result in results if result.answer_match is not None]
+    answer_match_count = sum(1 for result in answer_checked_results if result.answer_match)
     path_counts: dict[str, int] = {}
     for result in results:
         path_counts[result.path] = path_counts.get(result.path, 0) + 1
@@ -205,6 +248,9 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         "table_match_rate": _rate(table_match_count, total),
         "keyword_match_rate": _rate(keyword_match_count, total),
         "forbidden_match_rate": _rate(forbidden_match_count, total),
+        "answer_checked_count": len(answer_checked_results),
+        "answer_match_count": answer_match_count,
+        "answer_match_rate": _rate(answer_match_count, len(answer_checked_results)),
         "memory_hit_rate": _rate(memory_hit_count, total),
         "reuse_success_rate": _rate(reuse_success_count, total),
         "average_latency_ms": round(
@@ -225,6 +271,22 @@ def write_report(report: dict[str, Any], path: Path = REPORT_PATH) -> None:
 
 def analyze_with_test_client(question: str) -> tuple[int, dict[str, Any]]:
     client = TestClient(app)
+    authenticate_evaluation_client(client)
+    return _analyze_with_client(client, question)
+
+
+def create_test_client_analyzer() -> AnalyzeFunc:
+    """每批评测只登录一次，避免为每个 case 生成无意义会话记录。"""
+    client = TestClient(app)
+    authenticate_evaluation_client(client)
+
+    def analyze(question: str) -> tuple[int, dict[str, Any]]:
+        return _analyze_with_client(client, question)
+
+    return analyze
+
+
+def _analyze_with_client(client: TestClient, question: str) -> tuple[int, dict[str, Any]]:
     response = client.post("/api/analyze", json={"question": question})
     body = response.json()
     if isinstance(body, dict):
@@ -236,9 +298,41 @@ def analyze_with_test_client(question: str) -> tuple[int, dict[str, Any]]:
     return response.status_code, body
 
 
+def authenticate_evaluation_client(
+    client: TestClient,
+    *,
+    auth_required: bool | None = None,
+    environment: dict[str, str] | None = None,
+) -> None:
+    """鉴权开启时以专用账号登录，禁止通过关闭鉴权伪造评测成功。"""
+    if not (settings.auth_required if auth_required is None else auth_required):
+        return
+    values = os.environ if environment is None else environment
+    email = str(values.get("EVAL_AUTH_EMAIL") or "").strip()
+    password = str(values.get("EVAL_AUTH_PASSWORD") or "")
+    if not email or not password:
+        raise EvaluationConfigurationError(
+            "AUTH_REQUIRED=true 时必须配置 EVAL_AUTH_EMAIL 和 EVAL_AUTH_PASSWORD；"
+            "评测不会自动注册或创建用户。"
+        )
+    response = client.post("/api/auth/login", json={"email": email, "password": password})
+    if response.status_code != 200:
+        raise EvaluationConfigurationError(
+            f"评测账号登录失败（HTTP {response.status_code}）。请检查 EVAL_AUTH_EMAIL、"
+            "EVAL_AUTH_PASSWORD 与账号状态；不会把该错误计入模型质量报告。"
+        )
+
+
 def main() -> None:
-    cases = load_cases()
-    results = run_cases(cases, analyze_with_test_client)
+    parser = ArgumentParser(description="运行本地数据分析 Agent 评测")
+    parser.add_argument("--dataset", type=Path, default=DATASET_PATH, help="JSONL 评测集路径")
+    args = parser.parse_args()
+    cases = load_cases(args.dataset)
+    try:
+        analyze = create_test_client_analyzer()
+    except EvaluationConfigurationError as exc:
+        raise SystemExit(f"eval blocked: {exc}") from exc
+    results = run_cases(cases, analyze)
     report = summarize_results(results)
     write_report(report)
     print(
@@ -246,6 +340,7 @@ def main() -> None:
         f"{report['success_count']}/{report['total']} ok, "
         f"execution_success_rate={report['execution_success_rate']:.2%}, "
         f"strict_success_rate={report['strict_success_rate']:.2%}, "
+        f"answer_match_rate={report['answer_match_rate']:.2%}, "
         f"report={REPORT_PATH}"
     )
 
@@ -254,6 +349,47 @@ def _rate(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0
     return round(numerator / denominator, 4)
+
+
+def _match_expected_answer(case: EvalCase, rows: Any) -> tuple[bool | None, str]:
+    if not case.expected_answer or case.result_match_mode == "skip":
+        return None, ""
+    normalized_actual = _normalize_answer(_serialize_rows(rows))
+    if case.result_match_mode == "empty":
+        if not normalized_actual:
+            return True, ""
+        return False, "期望空结果集，但接口返回了数据"
+    token_source = case.expected_result_tokens or re.split(r"[；;]", case.expected_answer)
+    expected_tokens = [
+        _normalize_answer(token)
+        for token in token_source
+        if _normalize_answer(token)
+    ]
+    missing = [token for token in expected_tokens if token not in normalized_actual]
+    if not missing:
+        return True, ""
+    return False, f"未匹配期望结果片段：{'；'.join(missing)}"
+
+
+def _serialize_rows(rows: Any) -> str:
+    if not isinstance(rows, list):
+        return ""
+    serialized_rows: list[str] = []
+    for row in rows:
+        if isinstance(row, dict):
+            serialized_rows.append(" ".join(str(value) for value in row.values() if value is not None))
+        elif row is not None:
+            serialized_rows.append(str(row))
+    return "；".join(serialized_rows)
+
+
+def _normalize_answer(value: str) -> str:
+    text = str(value).strip().lower()
+    text = text.replace(",", "").replace("，", "")
+    text = text.replace("¥", "").replace("元", "").replace("天", "").replace("分", "")
+    text = re.sub(r"\s+", "", text)
+    text = re.sub(r"(\d+)\.0+(?=\D|$)", r"\1", text)
+    return text
 
 
 def _extract_eval_run_trace(body: dict[str, Any]) -> tuple[str | None, str, dict[str, Any]]:

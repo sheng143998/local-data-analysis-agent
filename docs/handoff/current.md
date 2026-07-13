@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Authenticated Ground Truth Evaluation（升级草案 Phase 0）。计划：`docs/plans/2026-07-13-authenticated-ground-truth-evaluation.md`；完成记录：`docs/modules/2026-07-13-authenticated-ground-truth-evaluation.md`。评测在 `AUTH_REQUIRED=true` 时会使用显式 `EVAL_AUTH_EMAIL` / `EVAL_AUTH_PASSWORD` 登录，并在整个批次复用一个会话；缺少凭据或登录失败会在执行 case 前明确阻断，不再产生误导性的 401 质量报告。用户提供的 50 条真实数据库问答已固化为 `eval/datasets/database_ground_truth_questions.jsonl`，报告新增结构化行结果的答案匹配状态、原因与匹配率；新增 `npm.cmd run eval:database-baseline`。验证：focused `14 passed, 1 warning`、后端全量 `223 passed, 1 warning`、前端构建通过。真实数据库基线尚未执行，原因是本机未配置专用评测凭据，命令已按设计明确阻断且未生成伪造报告。风险：需配置管理员评测账号才可采集 run trace；复杂多行/不可计算语义会在后续 Result Contract 阶段升级为结构化断言。模块提交将在本次交付后记录。
+
 - 待审查：复合式数据分析 Agent 升级改造草案。计划：`docs/plans/2026-07-13-compound-data-agent-upgrade-draft.md`；文档交付记录：`docs/modules/2026-07-13-compound-data-agent-upgrade-draft.md`。草案综合 Semantic View/MDL、Trusted SQL、Knowledge Store、Query Checker/Inspect、Tool Memory 等成熟机制，规划 Semantic Layer V2、确定性 Clarification Policy、Verified Query 分级、Query Plan、独立 Inspector、`EXPLAIN`/探针验证、Result Contract、authenticated evaluation 和模型路由。推荐下一步只实施 Phase 0：恢复鉴权评测与可信基线；当前未修改业务代码、数据库、API、配置或前端。
 
 - 已完成：Current Aggregate SQL Repair。计划：`docs/plans/2026-07-12-current-aggregate-sql-repair.md`；完成记录：`docs/modules/2026-07-12-current-aggregate-sql-repair.md`。已补充当前快照、实体总量和支付口径的通用意图/SQL Prompt 约束，并为 `orders.status = 'paid'` Guard 错误加入明确 Repair 规则；没有增加固定用户数 SQL。截图 503 对应的无效支付谓词被 Guard 安全阻断；更新后真实只读重试生成 `COUNT(DISTINCT users.id)` 并返回 `99441`。验证：focused `57 passed`、后端全量 `219 passed, 1 warning`、前端构建通过。风险：本地 3B SQL 模型仍有输出波动，展示层仍将用户总量误称为销售趋势；标准评测缺鉴权测试会话。模块提交将在本次交付后记录。
