@@ -133,6 +133,8 @@ def build_sql_generation_payload(
     payload = {
         "question": question,
         "question_intent": _compact_question_intent(question_intent),
+        # 业务规则：Query Plan 是本次 SQL 生成的必需契约，召回上下文仅作为候选知识，避免模型被无关表带偏。
+        "query_plan": _compact_query_plan(question_intent),
         "reuse_plan": {
             "path_type": reuse_plan.path_type,
             "reuse_type": reuse_plan.reuse_type,
@@ -169,6 +171,10 @@ def build_sql_generation_payload(
             },
         },
         "requirements": [
+            "以 query_plan 的 entities、measures、dimensions、filters、order_by、limit 和 expected_row_shape 为本次查询的必需约束",
+            "query_plan.entities 中的表必须实际参与查询；allowed_tables 中未被计划要求的表只是候选上下文，不要仅因其存在而 JOIN",
+            "每个 query_plan.measures 只计算一次，并使用稳定的输出别名；每个 query_plan.dimensions 必须与聚合粒度一致",
+            "排行必须同时选择维度和度量、按 query_plan.order_by 排序并遵守 query_plan.limit",
             "只能使用 allowed_tables 和 schema_fields 中出现的字段",
             "跨表查询优先使用 table_relationships 中的高置信关系",
             "不要编造表名、字段名或业务口径",
@@ -180,6 +186,18 @@ def build_sql_generation_payload(
             "同时查询总销售额和平均销售额时，必须分别输出 sales_amount 和 avg_order_value，不能把二者混为一个指标",
             "如果 JOIN payments 后汇总 orders.total_amount，必须先按 orders.id 去重或先按 payments.order_id 聚合，避免一单多支付导致订单金额重复累计",
             "输出 SQL 后还会经过 Validator 和 Guard",
+        ],
+    }
+    query_plan = payload["query_plan"]
+    payload["generation_contract"] = {
+        "required_entities": query_plan["entities"],
+        "required_measures": query_plan["measures"],
+        "required_dimensions": query_plan["dimensions"],
+        "required_filters": query_plan["filters"],
+        "required_output_columns": query_plan["expected_columns"],
+        "expected_row_shape": query_plan["expected_row_shape"],
+        "optional_context_tables": [
+            table for table in retrieval_context.tables if table not in query_plan["entities"]
         ],
     }
     time_filter = _intent_time_filter(question_intent)
@@ -286,6 +304,7 @@ def _intent_time_filter(question_intent: dict[str, Any] | None) -> str:
 
 def _repair_rules(repair_context: dict[str, Any]) -> list[str]:
     rules: list[str] = []
+    rules.extend(_inspector_repair_rules(repair_context.get("inspector_issues")))
     guard_errors = repair_context.get("guard_error", {}).get("guard_errors", [])
     all_errors = [*repair_context.get("intent_errors", []), *guard_errors]
     text = " ".join(str(error) for error in all_errors)
@@ -306,6 +325,34 @@ def _repair_rules(repair_context: dict[str, Any]) -> list[str]:
         )
     if not rules:
         rules.append("逐条修复 repair_context 中的错误后再输出完整 PostgreSQL SELECT 查询。")
+    # 业务规则：同一条规则只传一次，减少小模型重复注意力消耗和互相矛盾的修复指令。
+    return list(dict.fromkeys(rule for rule in rules if str(rule).strip()))
+
+
+def _inspector_repair_rules(issues: Any) -> list[str]:
+    """把 Inspector 类别转换为可复制指令；未知类别保持保守，不猜测业务公式。"""
+    if not isinstance(issues, list):
+        return []
+    fallback = "根据 inspector issue 修复 SQL 的结构问题；不得猜测业务公式，修复后仍必须满足 QuerySpec、Guard 和只读执行边界。"
+    rules: list[str] = []
+    category_defaults = {
+        "syntax": "只输出一条可解析的 PostgreSQL SELECT；检查括号、逗号、引号和表别名，不输出 Markdown、解释文字或多条语句。",
+        "missing_table": "补齐 Query Plan 要求的实体表，并只使用允许的真实连接字段；不要因为召回上下文中存在其他表而额外 JOIN。",
+        "missing_order": "排行查询必须选择排行维度和度量，并按 Query Plan 的排序表达式加入 ORDER BY；不能按任意字段排序。",
+        "missing_limit": "补齐 Query Plan 要求的 LIMIT，并使用计划给定数量；不得超过 SQL Guard 的行数上限。",
+        "time_range": "在 WHERE 中补齐完整半开时间区间，使用 >= 起点和 < 终点；将占位时间字段替换为允许的真实字段。",
+        "missing_measure": "补齐 Query Plan 中缺失的度量，每个度量只计算一次并使用稳定输出别名。",
+        "missing_dimension": "补齐 Query Plan 中缺失的维度，并让 SELECT 与 GROUP BY 保持相同粒度。",
+        "missing_output": "补齐 Query Plan 要求的输出列和别名，不要用 SELECT *。",
+    }
+    for issue in issues:
+        if isinstance(issue, dict):
+            explicit = str(issue.get("repair_rule") or "").strip()
+            category = str(issue.get("category") or "").strip()
+        else:
+            explicit = str(getattr(issue, "repair_rule", "") or "").strip()
+            category = str(getattr(issue, "category", "") or "").strip()
+        rules.append(explicit or category_defaults.get(category, fallback))
     return rules
 
 
@@ -330,3 +377,39 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if item is not None]
+
+
+def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any]:
+    """只保留 SQL 生成需要的计划字段，避免把内部解析细节暴露给模型。"""
+    if not isinstance(question_intent, dict):
+        return {
+            "entities": [],
+            "measures": [],
+            "dimensions": [],
+            "filters": [],
+            "time_filter": "",
+            "order_by": [],
+            "limit": None,
+            "expected_columns": [],
+            "expected_row_shape": "unknown",
+        }
+    raw = question_intent.get("query_plan")
+    if not isinstance(raw, dict):
+        raw = {}
+    measures: list[dict[str, str]] = []
+    for measure in raw.get("measures", []):
+        if isinstance(measure, dict) and measure.get("name"):
+            measures.append({"name": str(measure["name"]), "operation": str(measure.get("operation") or "")})
+        elif measure:
+            measures.append({"name": str(measure), "operation": ""})
+    return {
+        "entities": _string_list(raw.get("entities")),
+        "measures": measures,
+        "dimensions": _string_list(raw.get("dimensions")),
+        "filters": _string_list(raw.get("filters")),
+        "time_filter": str(raw.get("time_filter") or ""),
+        "order_by": _string_list(raw.get("order_by")),
+        "limit": raw.get("limit") if isinstance(raw.get("limit"), int) else None,
+        "expected_columns": _string_list(raw.get("expected_columns")),
+        "expected_row_shape": str(raw.get("expected_row_shape") or "unknown"),
+    }

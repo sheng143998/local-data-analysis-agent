@@ -46,3 +46,29 @@ def test_resolver_clarifies_only_contract_conflict() -> None:
     assert resolved.needs_clarification is False
     assert set(resolved.semantic_conflicts) == {"registered_users", "ordering_users"}
     assert apply_clarification_policy(resolved).clarification_reason == "multiple_semantic_contracts"
+
+
+def test_resolver_binds_payment_method_paid_amount_contract_without_clarification() -> None:
+    contract = _contract(
+        "payment_method_paid_amount",
+        "各支付方式已支付金额",
+        synonyms=["各支付方式已支付金额"],
+        config={
+            "plan": {
+                "measures": [{"name": "payment_method_paid_amount", "operation": "sum"}],
+                "dimensions": ["payment_type"],
+                "filters": ["payments.status = 'paid'"],
+                "expected_row_shape": "grouped",
+            }
+        },
+    )
+    intent = ParsedQuestionIntent(
+        original_question="各支付方式已支付金额是多少？",
+        normalized_question="各支付方式已支付金额是多少？",
+    )
+
+    resolved = apply_semantic_resolution(intent, SemanticResolver(_Repository([contract])))
+
+    assert resolved.needs_clarification is False
+    assert resolved.resolved_contracts[0]["contract_key"] == "payment_method_paid_amount"
+    assert resolved.resolved_contracts[0]["semantic_config"]["plan"]["filters"] == ["payments.status = 'paid'"]

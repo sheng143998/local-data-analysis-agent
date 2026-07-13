@@ -37,3 +37,28 @@ def test_query_plan_inherits_declarative_shape_from_resolved_contract() -> None:
     assert plan.order_by == ["category_sales_amount DESC"]
     assert plan.limit == 5
     assert plan.expected_row_shape == "ranking"
+
+
+def test_query_plan_inherits_payment_status_filter_from_contract() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="各支付方式已支付金额是多少？",
+        normalized_question="各支付方式已支付金额是多少？",
+        resolved_contracts=[{
+            "contract_key": "payment_method_paid_amount",
+            "source_tables": ["payments"],
+            "semantic_config": {"plan": {
+                "measures": [{"name": "payment_method_paid_amount", "operation": "sum"}],
+                "dimensions": ["payment_method"],
+                "filters": ["payments.status = 'paid'"],
+                "expected_columns": ["payment_method", "payment_method_paid_amount"],
+                "expected_row_shape": "grouped",
+            }},
+        }],
+    )
+
+    plan = build_query_plan(intent)
+
+    assert plan.entities == ["payments"]
+    assert plan.dimensions == ["payment_type"]
+    assert plan.filters == ["payments.status = 'paid'"]
+    assert plan.expected_row_shape == "grouped"

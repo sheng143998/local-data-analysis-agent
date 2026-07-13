@@ -174,6 +174,31 @@ def test_build_sql_generation_payload_preserves_resolved_contract_plan() -> None
     assert payload["question_intent"]["resolved_contracts"][0]["contract_key"] == "category_sales_ranking"
 
 
+def test_build_sql_generation_payload_separates_required_plan_from_optional_context() -> None:
+    payload = build_sql_generation_payload(
+        "销售额最高的前 5 个品类是什么？",
+        _context(relationship_type="foreign_key"),
+        _plan(),
+        question_intent={
+            "query_plan": {
+                "entities": ["order_items", "products"],
+                "measures": [{"name": "category_sales_amount", "operation": "sum"}],
+                "dimensions": ["category"],
+                "filters": [],
+                "order_by": ["category_sales_amount DESC"],
+                "limit": 5,
+                "expected_columns": ["category", "category_sales_amount"],
+                "expected_row_shape": "ranking",
+            }
+        },
+    )
+
+    assert payload["query_plan"]["entities"] == ["order_items", "products"]
+    assert payload["generation_contract"]["required_measures"][0]["name"] == "category_sales_amount"
+    assert payload["generation_contract"]["optional_context_tables"] == ["orders", "payments"]
+    assert any("只是候选上下文" in requirement for requirement in payload["requirements"])
+
+
 def test_build_sql_generation_payload_requires_explicit_time_predicate_and_repair_rules() -> None:
     payload = build_sql_generation_payload(
         "2017年卖了多少钱？",
@@ -214,6 +239,29 @@ def test_build_sql_generation_payload_repairs_invalid_payment_status_filter() ->
 
     assert any("不得使用 orders.status = 'paid'" in rule for rule in payload["repair_rules"])
     assert any("删除支付状态过滤" in rule for rule in payload["repair_rules"])
+
+
+def test_build_sql_generation_payload_forwards_inspector_rules_by_category() -> None:
+    payload = build_sql_generation_payload(
+        "销售额最高的前 5 个品类是什么？",
+        _context(),
+        _plan(),
+        repair_context={
+            "inspector_issues": [
+                {
+                    "category": "missing_order",
+                    "message": "排行计划缺少 ORDER BY。",
+                    "repair_rule": "必须按计划度量排序并加入 ORDER BY。",
+                },
+                {"category": "missing_limit", "message": "Top N 计划缺少 LIMIT。"},
+                {"category": "unclassified_issue", "message": "未知结构问题"},
+            ]
+        },
+    )
+
+    assert "必须按计划度量排序并加入 ORDER BY。" in payload["repair_rules"]
+    assert any("LIMIT" in rule for rule in payload["repair_rules"])
+    assert any("不得猜测业务公式" in rule for rule in payload["repair_rules"])
 
 
 def test_parse_model_sql_response_extracts_json_sql() -> None:
