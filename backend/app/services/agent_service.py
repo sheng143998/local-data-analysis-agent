@@ -20,12 +20,14 @@ from backend.app.schemas.conversation import ConversationState, CurrentAnalysis
 from backend.app.services.conversation_store import ConversationStore, get_conversation_store
 from backend.app.services.followup_resolver import pending_from_intent, resolve_followup
 from backend.app.services.long_term_memory_service import LongTermMemoryService
+from backend.app.services.dialogue_service import DialogueService
 from backend.app.services.working_memory import build_working_context, refresh_working_memory
 from backend.app.tools.analysis_presenter import present_clarification_response
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent, parse_question_intent
 from backend.app.tools.semantic_resolver import apply_semantic_resolution
 from backend.app.tools.clarification_policy import apply_clarification_policy
 from backend.app.tools.query_planner import build_query_plan
+from backend.app.tools.dialogue_router import route_dialogue
 
 
 class AnalysisUnavailableError(RuntimeError):
@@ -35,9 +37,10 @@ class AnalysisUnavailableError(RuntimeError):
 class AgentService:
     """API 层的业务编排服务，负责调用 Agent 并返回前端契约。"""
 
-    def __init__(self, conversation_store: ConversationStore | None = None, long_term_memory_service: LongTermMemoryService | None = None) -> None:
+    def __init__(self, conversation_store: ConversationStore | None = None, long_term_memory_service: LongTermMemoryService | None = None, dialogue_service: DialogueService | None = None) -> None:
         self.conversation_store = conversation_store or get_conversation_store()
         self.long_term_memory_service = long_term_memory_service or LongTermMemoryService()
+        self.dialogue_service = dialogue_service or DialogueService()
 
     def analyze(
         self,
@@ -82,6 +85,14 @@ class AgentService:
                 state.pending_clarification = None
                 state.status = "active"
             intent = resolution.intent
+
+        decision = route_dialogue(question, state)
+        if decision.role == "unsupported":
+            return self._finish(state, _dialogue_response(question, "我不能协助处理系统指令、密钥或越权操作。你可以直接说明需要讨论的问题或业务数据。"), on_stage=on_stage)
+        if decision.role in {"general_chat", "explain_result"}:
+            _notify_stage(on_stage, "解释当前结论" if decision.role == "explain_result" else "处理通用对话")
+            reply = self.dialogue_service.reply(question, state, explain_result=decision.role == "explain_result")
+            return self._finish(state, _dialogue_response(question, reply), on_stage=on_stage)
 
         long_term_context = self.long_term_memory_service.context_for(app_user_id, question)
         conversation_context = "\n\n".join(item for item in (long_term_context, build_working_context(state)) if item)
@@ -226,6 +237,20 @@ def _analysis_failure_response(question: str) -> AnalyzeResponse:
         source={"dataset": "Olist 巴西电商公开数据集 + 合成增强数据", "tables": [], "fields": [], "metricDefinition": "安全失败摘要", "range": "等待重试", "returnedRows": 0, "queryTime": "0ms", "security": "未生成 SQL，已保存失败记录"},
         trace={"toolCalls": 0, "modelCalls": 0, "memoryCandidates": 0, "totalTime": "0ms"},
         steps=[{"name": "保存失败会话", "status": "已完成", "time": "0ms"}],
+    )
+
+
+def _dialogue_response(question: str, summary: str) -> AnalyzeResponse:
+    return AnalyzeResponse(
+        question=question,
+        path="cold_path",
+        summary=summary,
+        sql="",
+        metrics=[],
+        rows=[],
+        source={"dataset": "通用对话", "tables": [], "fields": [], "metricDefinition": "非数据对话", "range": "当前会话", "returnedRows": 0, "queryTime": "0ms", "security": "未访问数据库，未生成 SQL"},
+        trace={"toolCalls": 0, "modelCalls": 0, "memoryCandidates": 0, "totalTime": "0ms"},
+        steps=[{"name": "处理通用对话", "status": "已完成", "time": "0ms"}],
     )
 
 

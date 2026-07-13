@@ -17,4 +17,6 @@ def route_model(role: str) -> ModelRoute:
         return ModelRoute(role, settings.intent_model_provider, settings.intent_model_name, settings.intent_model_base_url)
     if role in {"sql_generation", "sql_repair"}:
         return ModelRoute(role, settings.model_provider, settings.model_name, settings.model_base_url)
+    if role == "dialogue":
+        return ModelRoute(role, settings.dialogue_model_provider, settings.dialogue_model_name, settings.dialogue_model_base_url)
     return ModelRoute(role, settings.model_provider, settings.model_name, settings.model_base_url)

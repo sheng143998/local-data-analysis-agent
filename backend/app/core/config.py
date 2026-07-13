@@ -80,6 +80,13 @@ class Settings(BaseModel):
     intent_model_max_retries: int = Field(
         default_factory=lambda: int(os.getenv("INTENT_MODEL_MAX_RETRIES", os.getenv("MODEL_MAX_RETRIES", "1")))
     )
+    dialogue_model_enabled: bool = Field(default_factory=lambda: _env_bool("DIALOGUE_MODEL_ENABLED", default=False))
+    dialogue_model_provider: str = Field(default_factory=lambda: os.getenv("DIALOGUE_MODEL_PROVIDER", ""))
+    dialogue_model_base_url: str = Field(default_factory=lambda: os.getenv("DIALOGUE_MODEL_BASE_URL", ""))
+    dialogue_model_name: str = Field(default_factory=lambda: os.getenv("DIALOGUE_MODEL_NAME", ""))
+    dialogue_model_api_key: str = Field(default_factory=lambda: _env_first("DIALOGUE_MODEL_API_KEY"))
+    dialogue_model_timeout_seconds: float = Field(default_factory=lambda: float(os.getenv("DIALOGUE_MODEL_TIMEOUT_SECONDS", "20")))
+    dialogue_model_max_retries: int = Field(default_factory=lambda: int(os.getenv("DIALOGUE_MODEL_MAX_RETRIES", "0")))
     embedding_provider: str = Field(default_factory=lambda: os.getenv("EMBEDDING_PROVIDER", "aliyun"))
     embedding_base_url: str = Field(
         default_factory=lambda: os.getenv(
