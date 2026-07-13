@@ -226,7 +226,8 @@ def _route_generated_sql_intent(state: AnalysisGraphState) -> str:
     verification = state.get("sql_intent_verification", {})
     if verification.get("decision") == "accept":
         return "guard_sql"
-    if state.get("repair_attempts", 0) < 1 and state.get("selected_sql", "").strip():
+    # 首次空 SQL 也需要一次 Repair Prompt，避免格式性漏字段直接中断数据分析。
+    if state.get("repair_attempts", 0) < 1:
         return "repair_model_sql"
     return "guard_sql"
 
@@ -381,7 +382,8 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
         "generated_sql": generated_sql.model_copy(update={"warnings": warnings}),
         "node_timings": _add_node_timing(state, "sql_intent_validation", started),
     }
-    cannot_repair = not state.get("selected_sql", "").strip() or state.get("repair_attempts", 0) >= 1
+    # 空 SQL 与无效 SQL 均只允许一次受控修复，第二次失败后才进入 Guard 终止。
+    cannot_repair = state.get("repair_attempts", 0) >= 1
     if verification["decision"] == "reject" and cannot_repair:
         fallback_sql = _single_order_count_fallback(state.get("question_intent"))
         if fallback_sql:

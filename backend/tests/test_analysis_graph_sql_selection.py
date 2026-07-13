@@ -120,6 +120,29 @@ def test_route_generated_sql_intent_repairs_once_before_guard() -> None:
     )
 
 
+def test_route_generated_sql_intent_repairs_first_empty_sql_before_guard() -> None:
+    assert (
+        _route_generated_sql_intent(
+            {
+                "sql_intent_verification": {"decision": "reject"},
+                "selected_sql": "",
+                "repair_attempts": 0,
+            }
+        )
+        == "repair_model_sql"
+    )
+    assert (
+        _route_generated_sql_intent(
+            {
+                "sql_intent_verification": {"decision": "reject"},
+                "selected_sql": "",
+                "repair_attempts": 1,
+            }
+        )
+        == "guard_sql"
+    )
+
+
 def test_route_execution_result_repairs_runtime_error_once() -> None:
     assert (
         _route_execution_result(
@@ -533,6 +556,39 @@ def test_validate_generated_sql_uses_fallback_only_after_failed_repair() -> None
     assert state["generated_sql"].path == "query_spec_fallback"
     assert "pay.status = 'paid'" in state["selected_sql"]
     assert state["sql_intent_verification"]["decision"] == "accept"
+
+
+def test_validate_generated_sql_keeps_first_empty_result_for_controlled_repair() -> None:
+    state = _validate_generated_sql_intent_node(
+        {
+            "question": "当前商品总数是多少？",
+            "retrieval_context": _context_with_extra_table("products"),
+            "generated_sql": GeneratedSql(path="model_generate", sql="", warnings=["模型响应未包含 sql 字段"]),
+            "selected_sql": "",
+            "repair_attempts": 0,
+            "question_intent": {"query_spec": {"metrics": [], "dimensions": [], "required_table_groups": []}},
+        }
+    )
+
+    assert state["generated_sql"].path == "model_generate"
+    assert state["sql_intent_verification"]["decision"] == "reject"
+    assert _route_generated_sql_intent({**state, "repair_attempts": 0}) == "repair_model_sql"
+
+
+def test_validate_generated_sql_marks_second_empty_result_as_model_error() -> None:
+    state = _validate_generated_sql_intent_node(
+        {
+            "question": "当前商品总数是多少？",
+            "retrieval_context": _context_with_extra_table("products"),
+            "generated_sql": GeneratedSql(path="model_repair", sql="", warnings=["模型响应未包含 sql 字段"]),
+            "selected_sql": "",
+            "repair_attempts": 1,
+            "question_intent": {"query_spec": {"metrics": [], "dimensions": [], "required_table_groups": []}},
+        }
+    )
+
+    assert state["generated_sql"].path == "model_error"
+    assert state["selected_sql"] == ""
 
 
 def test_select_generated_sql_uses_model_for_enabled_cold_path() -> None:
