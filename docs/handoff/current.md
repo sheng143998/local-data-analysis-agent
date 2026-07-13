@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Upgrade Full Benchmark。报告：`eval/reports/post_upgrade_full_eval.json`；记录：`docs/modules/2026-07-13-upgrade-full-benchmark.md`。相同 authenticated 50-case 真值集对比：执行成功 `28/50 -> 31/50`，严格成功 `11/50 -> 13/50`，答案匹配 `10/48 -> 14/48`。升级有可复现提升但远未达到质量门槛；下一步以失败分类扩展审核语义资产/verified SQL，并 benchmark SQL 模型。
+
 - 已完成：Entity Total Semantic Contracts。计划：`docs/plans/2026-07-13-entity-total-semantic-contracts.md`；记录：`docs/modules/2026-07-13-entity-total-semantic-contracts.md`；报告：`eval/reports/entity_contract_batch_001.json`。10 个基础实体契约已传入 SQL Prompt；前 10 条严格成功和答案匹配从 `2/10` 提升至 `3/10`，执行成功维持 `7/10`。无固定 SQL；复杂口径仍待进一步语义资产和模型评测。
 
 - 进行中：Entity Total Semantic Contracts。计划：`docs/plans/2026-07-13-entity-total-semantic-contracts.md`。benchmark 已证实基础表真值正确，失败来自模型将多个实体总数误生成为订单数；将补齐契约并把定义透传 SQL Prompt，不增加固定 SQL。
