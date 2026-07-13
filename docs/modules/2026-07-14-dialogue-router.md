@@ -13,4 +13,4 @@
 
 ## Delivery
 
-- 待本轮 commit/push；未包含评测工件。
+- `9071a1d` 已推送至 `origin/main`；未包含评测工件。
