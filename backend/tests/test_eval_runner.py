@@ -6,12 +6,15 @@ from eval.scripts.run_eval import (
     _fetch_run_trace_summary,
     _find_latest_run_id,
     authenticate_evaluation_client,
+    build_batch_metadata,
     load_cases,
     load_database_ground_truth_cases,
     load_regression_cases,
     run_cases,
+    select_case_batch,
     summarize_results,
 )
+from pathlib import Path
 
 
 class _FakeLoginResponse:
@@ -52,6 +55,59 @@ def test_load_database_ground_truth_questions_contains_fifty_cases() -> None:
     assert len(cases) == 50
     assert cases[0].expected_answer == "99,441"
     assert cases[-1].result_match_mode == "skip"
+
+
+def test_select_case_batch_uses_stable_non_overlapping_ranges() -> None:
+    cases = [
+        EvalCase(str(index), "分批", f"问题 {index}", [], [])
+        for index in range(5)
+    ]
+
+    first_batch = select_case_batch(cases, start=0, limit=2)
+    second_batch = select_case_batch(cases, start=2, limit=2)
+    last_batch = select_case_batch(cases, start=4, limit=2)
+
+    assert [case.id for case in first_batch] == ["0", "1"]
+    assert [case.id for case in second_batch] == ["2", "3"]
+    assert [case.id for case in last_batch] == ["4"]
+    assert {case.id for case in first_batch}.isdisjoint(case.id for case in second_batch)
+
+
+def test_select_case_batch_rejects_invalid_or_out_of_range_selection() -> None:
+    cases = [EvalCase("0", "分批", "问题", [], [])]
+
+    for kwargs in ({"start": -1}, {"limit": 0}, {"start": 1}):
+        try:
+            select_case_batch(cases, **kwargs)
+        except EvaluationConfigurationError:
+            continue
+        raise AssertionError("非法分段参数必须在执行模型前明确阻断")
+
+
+def test_build_batch_metadata_marks_partial_report_scope() -> None:
+    all_cases = [
+        EvalCase("case_1", "分批", "问题 1", [], []),
+        EvalCase("case_2", "分批", "问题 2", [], []),
+        EvalCase("case_3", "分批", "问题 3", [], []),
+    ]
+
+    metadata = build_batch_metadata(
+        Path("eval/datasets/database_ground_truth_questions.jsonl"),
+        all_cases,
+        all_cases[1:3],
+        start=1,
+        limit=2,
+    )
+
+    assert metadata == {
+        "path": "eval/datasets/database_ground_truth_questions.jsonl",
+        "total_case_count": 3,
+        "selected_start": 1,
+        "selected_limit": 2,
+        "selected_case_count": 2,
+        "selected_case_ids": ["case_2", "case_3"],
+        "is_complete_dataset": False,
+    }
 
 
 def test_authenticate_evaluation_client_requires_explicit_credentials() -> None:

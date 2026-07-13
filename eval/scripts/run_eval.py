@@ -111,6 +111,49 @@ def load_database_ground_truth_cases(
     return load_cases(path)
 
 
+def select_case_batch(
+    cases: list[EvalCase],
+    *,
+    start: int = 0,
+    limit: int | None = None,
+) -> list[EvalCase]:
+    """按稳定数据集顺序选择一批 case，供长耗时评测分段恢复。"""
+    if start < 0:
+        raise EvaluationConfigurationError("--start 必须大于或等于 0")
+    if limit is not None and limit <= 0:
+        raise EvaluationConfigurationError("--limit 必须大于 0")
+    if start >= len(cases):
+        raise EvaluationConfigurationError(
+            f"--start={start} 超出数据集范围；数据集共 {len(cases)} 条 case"
+        )
+    end = len(cases) if limit is None else min(start + limit, len(cases))
+    return cases[start:end]
+
+
+def build_batch_metadata(
+    dataset_path: Path,
+    all_cases: list[EvalCase],
+    selected_cases: list[EvalCase],
+    *,
+    start: int,
+    limit: int | None,
+) -> dict[str, Any]:
+    """标明报告的真实覆盖范围，禁止把单批结果误读为全量质量结论。"""
+    try:
+        dataset_label = dataset_path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        dataset_label = dataset_path.as_posix()
+    return {
+        "path": dataset_label,
+        "total_case_count": len(all_cases),
+        "selected_start": start,
+        "selected_limit": limit,
+        "selected_case_count": len(selected_cases),
+        "selected_case_ids": [case.id for case in selected_cases],
+        "is_complete_dataset": len(selected_cases) == len(all_cases),
+    }
+
+
 def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResult]:
     results: list[EvalCaseResult] = []
     for case in cases:
@@ -326,22 +369,51 @@ def authenticate_evaluation_client(
 def main() -> None:
     parser = ArgumentParser(description="运行本地数据分析 Agent 评测")
     parser.add_argument("--dataset", type=Path, default=DATASET_PATH, help="JSONL 评测集路径")
+    parser.add_argument(
+        "--start",
+        type=int,
+        default=0,
+        help="从 0 开始的 case 偏移量，用于分段恢复长耗时评测",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="本批最多执行的 case 数；省略时执行从 start 起的全部 case",
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=REPORT_PATH,
+        help="本批报告输出路径；分批运行时应为不同批次指定不同路径",
+    )
     args = parser.parse_args()
-    cases = load_cases(args.dataset)
+    all_cases = load_cases(args.dataset)
+    try:
+        cases = select_case_batch(all_cases, start=args.start, limit=args.limit)
+    except EvaluationConfigurationError as exc:
+        raise SystemExit(f"eval blocked: {exc}") from exc
     try:
         analyze = create_test_client_analyzer()
     except EvaluationConfigurationError as exc:
         raise SystemExit(f"eval blocked: {exc}") from exc
     results = run_cases(cases, analyze)
     report = summarize_results(results)
-    write_report(report)
+    report["dataset"] = build_batch_metadata(
+        args.dataset,
+        all_cases,
+        cases,
+        start=args.start,
+        limit=args.limit,
+    )
+    write_report(report, args.report)
     print(
         "eval completed: "
         f"{report['success_count']}/{report['total']} ok, "
         f"execution_success_rate={report['execution_success_rate']:.2%}, "
         f"strict_success_rate={report['strict_success_rate']:.2%}, "
         f"answer_match_rate={report['answer_match_rate']:.2%}, "
-        f"report={REPORT_PATH}"
+        f"report={args.report}"
     )
 
 
