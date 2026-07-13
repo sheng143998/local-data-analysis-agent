@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Clarification Policy（Phase 2）。计划：`docs/plans/2026-07-13-clarification-policy.md`；记录：`docs/modules/2026-07-13-clarification-policy.md`。独立 Policy 已以结构化缺失业务对象/契约冲突决定追问，Resolver 不再直接生成澄清文案；未知明确概念与低置信度均不会单独触发追问。验证：focused `15 passed, 1 warning`、后端全量 `237 passed, 1 warning`。风险：自然追问生成和多次无进展熔断留待会话状态增强；真实评测将在下一 SQL/Planner 模块统一对照。
+
+- 进行中：Clarification Policy（Phase 2）。计划：`docs/plans/2026-07-13-clarification-policy.md`。Resolver 将只报告契约匹配/冲突，独立 Policy 依据缺失槽位、冲突和动作输出结构化追问决定；未知明确概念和模型低置信度不得单独触发澄清。保持旧 pending 会话兼容，安全 SQL 边界不变。
+
 - 已完成：Semantic Resolver Integration（Phase 1）。计划：`docs/plans/2026-07-13-semantic-resolver-integration.md`；记录：`docs/modules/2026-07-13-semantic-resolver-integration.md`。启用契约已以 key/展示名/同义词绑定 intent，并透传至 Graph 检索上下文和 SQL Prompt；未知明确概念继续开放式处理，契约不执行 SQL。migration `009` 已初始化 3 个基础快照契约。验证：focused `57 passed, 1 warning`、后端全量 `234 passed, 1 warning`。Phase 2 将独立 Clarification Policy 接管当前冲突澄清。
 
 - 已完成（并行子任务）：Clarification Policy 实施设计（Phase 2）。计划：`docs/plans/2026-07-13-clarification-policy-implementation-design.md`。设计将对话解释器、Semantic Resolver、确定性 Policy 与自然追问生成分离；定义结构化 `missing` / `conflict` / `action`、兼容旧 JSONB pending state 的方案、AgentService/续问的最小接入及完整测试/评测矩阵。当前 Resolver 在冲突时仍直接写 `needs_clarification` 和用户文案，Phase 2 主线须将该职责收回 Policy。验证：已核对现有函数、schema、repository、测试和 UTF-8 文档路径，`git diff --check` 通过。风险：既有持久化状态只支持 `metrics` / `time_range`，实施时必须兼容；Policy 不能把模型置信度或未命中词表当作自动澄清理由。本设计不单独提交，由主线集成提交。

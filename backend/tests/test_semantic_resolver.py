@@ -1,6 +1,7 @@
 from backend.app.schemas.semantic_contracts import SemanticContract
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent
 from backend.app.tools.semantic_resolver import SemanticResolver, apply_semantic_resolution
+from backend.app.tools.clarification_policy import apply_clarification_policy
 
 
 class _Repository:
@@ -42,6 +43,6 @@ def test_resolver_clarifies_only_contract_conflict() -> None:
     intent = ParsedQuestionIntent(original_question="用户数是多少", normalized_question="用户数是多少", semantic_metrics=["用户数"])
     resolved = apply_semantic_resolution(intent, SemanticResolver(_Repository(contracts)))
 
-    assert resolved.needs_clarification is True
-    assert resolved.clarification_reason == "multiple_semantic_contracts"
+    assert resolved.needs_clarification is False
     assert set(resolved.semantic_conflicts) == {"registered_users", "ordering_users"}
+    assert apply_clarification_policy(resolved).clarification_reason == "multiple_semantic_contracts"

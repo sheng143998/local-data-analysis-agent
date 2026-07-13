@@ -31,17 +31,10 @@ def apply_semantic_resolution(
 ) -> ParsedQuestionIntent:
     resolution = (resolver or SemanticResolver()).resolve(intent)
     payload = [_contract_summary(contract) for contract in resolution.contracts]
-    if not resolution.conflicts:
-        return intent.model_copy(update={"resolved_contracts": payload})
-    labels = "、".join(contract.display_name for contract in resolution.conflicts)
     return intent.model_copy(
         update={
             "resolved_contracts": payload,
             "semantic_conflicts": [contract.contract_key for contract in resolution.conflicts],
-            "clarification_reason": "multiple_semantic_contracts",
-            "needs_clarification": True,
-            # 业务名称由契约动态生成，避免固定指标话术。
-            "clarification": f"这个问题可能对应多个业务口径：{labels}。请明确你要查询哪一种。",
         }
     )
 

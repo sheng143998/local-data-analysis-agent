@@ -14,6 +14,7 @@ from backend.app.services.working_memory import build_working_context, refresh_w
 from backend.app.tools.analysis_presenter import present_clarification_response
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent, parse_question_intent
 from backend.app.tools.semantic_resolver import apply_semantic_resolution
+from backend.app.tools.clarification_policy import apply_clarification_policy
 
 
 class AnalysisUnavailableError(RuntimeError):
@@ -67,6 +68,7 @@ class AgentService:
         conversation_context = "\n\n".join(item for item in (long_term_context, build_working_context(state)) if item)
         intent = intent or parse_question_intent(question, conversation_context=conversation_context)
         intent = apply_semantic_resolution(intent)
+        intent = apply_clarification_policy(intent)
         if intent.needs_clarification:
             state.pending_clarification = pending_from_intent(intent)
             state.status = "waiting_for_clarification"
