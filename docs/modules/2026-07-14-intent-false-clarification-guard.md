@@ -24,4 +24,4 @@
 
 ## 交付
 
-- Commit：待生成并推送。
+- Commit：`4dc5466`，已推送至 `origin/main`。
