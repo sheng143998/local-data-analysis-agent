@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 待审查：复合式数据分析 Agent 升级改造草案。计划：`docs/plans/2026-07-13-compound-data-agent-upgrade-draft.md`；文档交付记录：`docs/modules/2026-07-13-compound-data-agent-upgrade-draft.md`。草案综合 Semantic View/MDL、Trusted SQL、Knowledge Store、Query Checker/Inspect、Tool Memory 等成熟机制，规划 Semantic Layer V2、确定性 Clarification Policy、Verified Query 分级、Query Plan、独立 Inspector、`EXPLAIN`/探针验证、Result Contract、authenticated evaluation 和模型路由。推荐下一步只实施 Phase 0：恢复鉴权评测与可信基线；当前未修改业务代码、数据库、API、配置或前端。
+
 - 已完成：Current Aggregate SQL Repair。计划：`docs/plans/2026-07-12-current-aggregate-sql-repair.md`；完成记录：`docs/modules/2026-07-12-current-aggregate-sql-repair.md`。已补充当前快照、实体总量和支付口径的通用意图/SQL Prompt 约束，并为 `orders.status = 'paid'` Guard 错误加入明确 Repair 规则；没有增加固定用户数 SQL。截图 503 对应的无效支付谓词被 Guard 安全阻断；更新后真实只读重试生成 `COUNT(DISTINCT users.id)` 并返回 `99441`。验证：focused `57 passed`、后端全量 `219 passed, 1 warning`、前端构建通过。风险：本地 3B SQL 模型仍有输出波动，展示层仍将用户总量误称为销售趋势；标准评测缺鉴权测试会话。模块提交将在本次交付后记录。
 
 - 已完成：Cloud Dialogue Model Connectivity。计划：`docs/plans/2026-07-12-cloud-dialogue-model-connectivity.md`；完成记录：`docs/modules/2026-07-12-cloud-dialogue-model-connectivity.md`。已修复阿里云云端意图模型继承本机 SOCKS 代理而缺少 `socksio` 的问题，改为 provider 直连；本机意图调用预算为单次 45 秒。真实云端调用“当前用户总数”已返回 `source=llm`、`needs_clarification=false` 与用户总数语义候选；“我想修改”也返回模型生成的上下文追问。模型不可用时只会返回中性缺失信息提示，不再推荐固定经营指标。验证：focused `29 passed, 1 warning`、后端全量 `217 passed, 1 warning`、前端构建通过。风险：云端响应可能需要数十秒；鉴权环境中的标准评测仍缺测试会话。模块提交将在本次交付后记录。
