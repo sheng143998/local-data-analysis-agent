@@ -25,7 +25,7 @@
 - [x] 实现消息窗口截取并返回 `has_more` 与 `next_before`。
 - [x] 同步 API 路由、前端类型/client/ChatPage 与 API 文档。
 - [x] 新增 focused tests，运行前端构建和 diff 检查。
-- [ ] 写模块记录、更新 handoff、commit 并 push。
+- [x] 写模块记录、更新 handoff、commit 并 push。
 
 ## Validation plan
 

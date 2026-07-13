@@ -24,7 +24,7 @@
 ## Implementation steps
 
 - [x] 盘点现有 ChatPage、会话存储、Mock 组件、ECharts 依赖和模型路由边界。
-- [ ] 建立会话列表 cursor 分页和消息窗口分页 API，保持 owner 隔离和 Redis/PostgreSQL 回退。
+- [x] 建立会话列表 cursor 分页和消息窗口分页 API，保持 owner 隔离和 Redis/PostgreSQL 回退。
 - [ ] 将 ChatPage 改为 ChatGPT 风格 shell：会话搜索/分页、消息虚拟窗口、向上加载、稳定滚动锚点和响应式布局。
 - [ ] 新增 `VisualizationSpec` 和真实 ECharts 结果组件，清理数据问答相关 Mock。
 - [ ] 新增 `POST /api/analyze/stream` 事件协议、取消处理和前端真实流式消费。
