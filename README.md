@@ -4,6 +4,12 @@
 
 普通用户界面聚焦可信分析结果；模型、数据库连接状态、SQL Memory 评分、工具调用 payload 和评估报告等调试信息默认不展示给业务用户。
 
+## 当前交付状态
+
+当前主链路已经完成复合数据分析 Agent 的 Phase 0-7 升级：authenticated 真值评测、Semantic Contract/Resolver、Clarification Policy、Trusted SQL、Query Plan/Context Pack、SQL Inspector/Repair、Result Contract/Presenter 和 Model Routing/Observability 均已落地。可信 50-case 基线位于 `eval/reports/post_upgrade_full_eval.json`：执行成功 `31/50`、严格成功 `13/50`、答案匹配 `14/48`。这代表链路可追踪、SQL 安全边界有效，但模型语义和 SQL 准确率仍在持续优化，不把当前结果表述为质量达标。
+
+外部真值文本 `C:\Users\admin\Desktop\新建 文本文档.txt` 已与仓库 JSONL 数据集核对：50 条问题、答案均一致；对照报告见 `eval/reports/ground_truth_text_alignment.json`。本地评测账号只存在于未跟踪的 `backend/.env`，不会写入文档或提交。
+
 ## 项目亮点
 
 - **Agentic NL2SQL 编排**：使用 LangGraph 将问题理解、RAG 召回、SQL Memory、模型生成、校验修复、只读执行和结果呈现拆成可观测节点。
@@ -17,11 +23,14 @@
 ```mermaid
 flowchart TD
   A["业务用户自然语言提问"] --> B["LangGraph Agent 编排"]
-  B --> C["Query Context 构建"]
+  B --> S["语义解析与 Clarification Policy"]
+  S -->|信息不足或契约冲突| Q["模型生成自然澄清"]
+  S -->|信息足够| P["Query Plan"]
+  P --> C["Query Context 构建"]
   C --> C1["指标/Schema 粗召回<br/>pgvector + 关键词 + 业务主题"]
   C1 --> C2["规则 Rerank<br/>指标、表、字段、时间意图加权"]
   C2 --> C3["上下文压缩<br/>保留必需字段、时间字段、Join Key"]
-  C3 --> D["SQL Memory 检索"]
+  C3 --> D["Trusted SQL Memory 检索"]
   D --> E{"历史 SQL 是否高置信"}
   E -->|是| F["复用校验<br/>表、指标、维度、时间粒度、Top N"]
   F -->|通过| G["memory_reuse_verified"]
@@ -30,7 +39,7 @@ flowchart TD
   H --> J["SQL 意图校验"]
   I --> J
   G --> K["SQL Guard<br/>只读、白名单、字段、CTE、LIMIT"]
-  J -->|失败| L["模型修复一次"]
+  J -->|失败| L["Inspector 分类 + Repair Rule"]
   L --> J
   J -->|通过| K
   K --> M["只读 PostgreSQL 执行"]
@@ -52,6 +61,9 @@ flowchart TD
 - 数据上下文刷新命令：`npm run context:refresh` 会先同步 `schema_metadata`，再同步 schema、metric、SQL Memory embedding，用于换库、换表后的检索资产刷新。
 - 统一 ModelAdapter 基础层：已提供 OpenAI-compatible chat completions 适配器、模型配置、超时、重试和结构化错误，后续 SQL Generator 必须通过该入口调用模型。
 - LangGraph 正式编排：`/api/analyze` 主链路已由 LangGraph `StateGraph` 编排，串起上下文召回、SQL Memory、SQL 生成、SQL Guard、只读执行、结果呈现和运行日志。
+- 语义契约与澄清策略：版本化 Semantic Contract 绑定指标、实体、维度和业务口径；Resolver 只负责结构化匹配，Clarification Policy 只在信息缺失或契约冲突时触发追问，未知但明确的概念仍保留开放式模型路径。
+- Query Plan 与 Context Pack：把实体、度量、维度、过滤器、时间半开区间、排序、Top N 和预期结果形态固化为结构化计划，再裁剪模型上下文；计划本身不执行 SQL。
+- Trusted SQL 生命周期：SQL Memory 记录 candidate/executed/reviewed/verified 等状态，只有审核后的 verified 候选才允许尝试 fast path，所有复用 SQL 仍重新经过 QuerySpec、Inspector、Guard 和只读 Executor。
 - Model-backed SQL Generator 基础工具：已能基于召回到的 schema/metric 构造受控 prompt payload、调用 ModelAdapter、解析模型 JSON SQL；已通过开关接入 `/api/analyze` 主链路。
 - Schema 表关系上下文：`RetrievalContext` 会优先读取 PostgreSQL 真实外键，并用字段命名规则兜底生成 join hints，提供给模型 SQL 生成 prompt，减少跨表问题对固定模板的依赖。
 - Model SQL Generator 接入：`/api/analyze` 已具备模型优先 SQL 生成入口；本地默认接入 Ollama `qwen2.5-coder:3b`，固定模板生成路径已移除，最终 SQL 仍必经 Guard 和只读 Executor。
@@ -63,10 +75,13 @@ flowchart TD
 - SQL 生成路径：固定模板运行时路径已移除；未通过复用校验或无候选时，由模型基于召回 schema、指标口径、历史 SQL 参考和表关系上下文生成或改写 SQL；模型 SQL 还会经过意图校验，失败时自动修复一次。
 - SQL 执行错误修复闭环：数据库执行失败会被分类为 `group_by`、`missing_column`、`missing_table`、`type_cast`、`division_by_zero`、`syntax` 或 `runtime`，并带着错误类别、原 SQL 和业务化摘要回传模型修复一次，修复后仍必须重新通过意图校验与 SQL Guard。
 - SQL Guard 增强：支持 CTE / 派生表输出列校验，同时继续拦截写操作、多语句、非白名单真实表、不存在字段和 `SELECT *`。
+- SQL Inspector 与分类修复：在 Guard 前按实体表、度量、维度、时间边界、排序和 LIMIT 检查 SQL 是否对齐 Query Plan，并向模型传递可复制的 Repair Rule；Guard 和 Executor 仍是最终安全边界。
 - 前端统一 API Client：数据问答和指标 CRUD 已统一通过 `frontend/src/api/client.ts` 调用后端，支持 FastAPI `detail` 解析和中文错误提示。
 - 前端问答展示优化：长 SQL 支持折叠/展开、自动换行、滚动和复制反馈；分析结果按摘要、自然语言分析、SQL 和结果表分层展示，接口或执行失败时展示业务友好的错误卡片。
 - 通用结果表：`/api/analyze.rows` 已改为 SQL 执行结果的通用表格结构，前端聊天页会动态生成表头，减少对固定销售趋势字段的依赖。
 - 通用结果总结：Presenter 会根据 SQL 返回列动态识别维度列、数值列和比例列，生成中文摘要和指标卡，减少对固定销售趋势字段的依赖。
+- Result Contract：Presenter 消费 Query Plan、真实列角色、结果行、范围和告警，区分空结果、零值和不可计算结果；公开 API 保持稳定。
+- Model Routing 与可观测：意图、SQL 生成和 SQL 修复使用显式任务角色路由，run trace 只记录 provider/model/latency 摘要，不记录密钥、完整 prompt 或原始用户数据。
 - 前端接口契约补齐：`AnalysisResponse` 已声明后端返回的 `trace` 和 `steps`，但普通用户页面不展示内部调试细节。
 - 统一检索评分基础层：metric、schema、SQL Memory 检索已复用文本相似、关键词命中、集合重合和加权评分工具，为后续 embedding / pgvector 混合检索打基础。
 - EmbeddingAdapter 基础层：已提供 OpenAI-compatible embeddings 统一入口和 deterministic 本地 fallback，后续 schema、metric、SQL Memory 向量化必须通过该入口。
@@ -86,13 +101,13 @@ docs/       计划文档、模块完成说明、handoff、数据库说明
 eval/       标准问题评估集、评估脚本和最新报告
 ```
 
-## V1 核心文档
+## 核心文档
 
 - [架构说明](docs/architecture.md)
 - [数据模型说明](docs/data_model.md)
 - [Agent 工作流说明](docs/agent_workflow.md)
 - [接口文档索引与阅读顺序](docs/api_index.md)
-- [V1 接口文档](docs/api.md)
+- [接口文档](docs/api.md)
 - [前后端接口映射文档](docs/api_frontend_mapping.md)
 - [接口错误码与权限边界文档](docs/api_error_auth.md)
 - [接口变更流程与版本维护文档](docs/api_change_process.md)
@@ -100,6 +115,9 @@ eval/       标准问题评估集、评估脚本和最新报告
 - [SQL Guard 与只读执行说明](docs/sql_guard.md)
 - [SQL Memory 机制说明](docs/sql_memory.md)
 - [标准问题评估说明](docs/evaluation.md)
+- [升级计划与当前交接](docs/handoff/current.md)
+- [升级计划目录](docs/plans/)
+- [模块完成记录目录](docs/modules/)
 
 ## 本地环境
 
@@ -138,6 +156,7 @@ EMBEDDING_DIMENSIONS=1536
 ```bash
 npm run backend:test
 npm run eval:standard
+npm run eval:database-baseline -- --start 0 --limit 10 --report eval/reports/database_batch_001.json
 npm run context:refresh
 npm run test:e2e
 npm run frontend:build
@@ -238,18 +257,23 @@ INTENT_MODEL_API_KEY=replace_in_local_env
 npm run eval:standard
 ```
 
-评估数据集位于 `eval/datasets/standard_questions.jsonl`，当前包含 20 个 V1 标准问题。报告输出到 `eval/reports/latest_eval_report.json`，包含执行成功率、严格成功率、SQL 生成成功率、表命中率、关键词命中率、记忆命中率、复用成功率、平均延迟、路径占比、执行失败案例、断言失败案例，以及每个 case 对应的 `run_id` / `run_detail_path` / `run_trace_summary`。
+评估分为两层：
+
+- `eval/datasets/standard_questions.jsonl`：20 条快速回归问题，报告输出到 `eval/reports/latest_eval_report.json`，用于本地开发迭代。
+- `eval/datasets/database_ground_truth_questions.jsonl`：50 条真实数据库真值问题，必须在 `AUTH_REQUIRED=true` 下使用 `EVAL_AUTH_EMAIL` / `EVAL_AUTH_PASSWORD` 登录后运行 `npm run eval:database-baseline`；可信对照报告为 `eval/reports/post_upgrade_full_eval.json`。
+
+两类报告都包含执行成功率、严格成功率、SQL 生成成功率、表命中率、关键词命中率、记忆命中率、复用成功率、平均延迟、路径占比、失败分类，以及每个 case 对应的 `run_id` / `run_detail_path` / `run_trace_summary`。分批评测可使用 `--start`、`--limit` 和独立 `--report` 参数恢复。
 
 当前评估区分两层结果：
 
 - `execution_success_rate`：API 链路是否成功返回 SQL、通过 SQL Guard、得到结果。
 - `strict_success_rate`：在链路成功基础上，SQL 是否命中预期表和关键词。
 
-最近一次后端模块回归为 `157 passed, 1 warning`。SQL Memory fast 候选已加入执行前复用校验，避免仅凭相似度直接复用历史 SQL；未通过校验的候选会转为模型改写。
+SQL Memory fast 候选已加入执行前复用校验，避免仅凭相似度直接复用历史 SQL；未通过校验的候选会转为模型改写。可信 50-case 对照当前为执行 `31/50`、严格 `13/50`、答案 `14/48`；该基线用于比较后续模型和语义资产改动，不代表质量门槛已经达标。
 
 ## 下一步建议
 
-当前主链路已经从“固定模板 + 直接 fast 复用”升级为“LangGraph 编排 + RAG rerank + verified memory + model-first SQL 生成 + SQL 意图校验/自动修复 + 执行错误修复闭环”。下一步建议进入 **评估驱动的失败归因**：
+当前主链路已经从“固定模板 + 直接 fast 复用”升级为“语义契约 + Clarification Policy + Query Plan/Context Pack + verified memory + model-first SQL 生成 + Inspector/Repair + Result Contract + Model Routing”。下一步建议进入 **评估驱动的失败归因与模型对照**：
 
 1. **P0：评估驱动的失败归因**
    - 扩展 `eval/datasets/standard_questions.jsonl`，覆盖更多真实业务问法、同义词、时间范围、跨表 join、空结果和 Top N 场景。
@@ -268,7 +292,7 @@ npm run eval:standard
 
 ## 当前验证
 
-最近一次模块验证通过：
+文档对应的最近一次已记录验证：
 
 ```bash
 npm run frontend:build
@@ -277,7 +301,7 @@ npm run test:e2e
 npm run eval:standard
 ```
 
-本轮验证结果：`npm run frontend:build` 通过，`npm run backend:test` 为 `157 passed, 1 warning`，`npm run test:e2e` 通过。`npm run eval:standard` 未在本轮重复执行。
+本轮升级 focused tests 为 `55 passed, 1 warning`，文本真值对照为 `50/50` 且问题/答案差异为 `0`。前端构建和历史模块 smoke 已有记录；后端全量测试在本机 `124s` 窗口内多次超时，因此这里不写成全量通过。完整认证基线请以 `eval/reports/post_upgrade_full_eval.json` 为准。
 
 ## 开发约定
 

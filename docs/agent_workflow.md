@@ -26,11 +26,15 @@ POST /api/analyze
 
 ## 当前工作流
 
-`backend/app/agents/analysis_graph.py` 是 V1 主链路，当前使用 LangGraph `StateGraph` 编排正式节点流转。
+`backend/app/agents/analysis_graph.py` 是当前主链路，使用 LangGraph `StateGraph` 编排正式节点流转。语义理解、计划生成、SQL 生成、检查、执行和展示保持分层，任何模型输出都不能跳过确定性安全工具。
 
 1. 读取用户问题。
    - 意图解析会构建 `QuerySpec`，明确指标、维度、时间、排序、必需表组、输出 token 和禁止口径。
-2. `build_retrieval_context()` 召回指标口径和 schema：
+   - Semantic Resolver 绑定启用的版本化契约；Clarification Policy 只在缺失关键槽位或契约冲突时返回结构化追问。低置信度、词表未命中和未知但明确的概念不能单独触发追问。
+2. 构建 `Query Plan` 和 `Context Pack`：
+   - Query Plan 固化实体、度量、维度、过滤器、时间半开区间、排序、LIMIT 和预期结果形态。
+   - Context Pack 只保留本次计划需要的 schema、指标和关系上下文；计划是模型约束，不是可执行 SQL。
+3. `build_retrieval_context()` 召回指标口径和 schema：
    - metric/schema retriever 先用 `EmbeddingAdapter` 生成问题向量。
    - pgvector 候选分与关键词、文本相似度、必需表字段等规则分融合排序。
    - 对用户、流量、优惠券、退款、毛利、商品等业务主题，会补充召回相关表字段，避免后续生成阶段缺少真实 schema。
@@ -39,40 +43,43 @@ POST /api/analyze
    - rerank 诊断会写入开发者 `tool_calls`，普通用户页面不展示内部评分。
    - embedding 或 pgvector 不可用时自动退回原文本检索，不中断分析。
    - 后端会优先从 PostgreSQL 真实外键读取 `table_relationships`，并在没有外键时基于已召回字段命名推断关系，例如 `orders.id = payments.order_id`，供模型 SQL 生成参考。
-3. `retrieve_sql_memory()` 检索历史成功 SQL：
+4. `retrieve_sql_memory()` 检索历史成功 SQL：
    - 优先使用 `sql_memories.question_embedding` 的 pgvector 候选分作为 `semantic_similarity`。
    - 再融合文本相似、表/指标匹配和历史成功率。
    - 向量不可用或旧 memory 没有 embedding 时回退文本相似。
-4. `plan_sql_reuse()` 决定 `fast_path`、`rewrite_path` 或 `cold_path`。
-5. 如果存在历史 SQL 候选，先进入 `verify_memory_sql()`：
+5. `plan_sql_reuse()` 决定 `fast_path`、`rewrite_path` 或 `cold_path`。
+6. 如果存在历史 SQL 候选，先进入 `verify_memory_sql()`：
    - 校验候选 SQL 是否覆盖当前召回的关键表。
    - 校验当前问题所需指标 token、维度 token、时间粒度、Top N / LIMIT 是否匹配。
    - 只有校验通过的 `fast_path` 候选会输出 `memory_reuse_verified`，继续进入 Guard。
    - 校验失败的候选会降级为 `rewrite_path`，历史 SQL 仅作为模型改写参考。
    - SQL Memory 检索、复用校验和成功写入都使用当前 `QuerySpec`；写入时只保存最终 SQL 实际使用的表和语义维度。
-6. `generate_model_sql()` 负责模型生成或模型改写：
+7. `generate_model_sql()` 负责模型生成或模型改写：
    - `rewrite_path` 会把历史 SQL 参考放入 prompt payload。
    - `cold_path` 基于召回字段、指标口径和表关系上下文重新生成。
-   - prompt 会包含 `QuerySpec`，要求 SQL 覆盖对应表组、输出指标/维度 token，并规避已知错误口径。
+   - prompt 会包含 `QuerySpec` 和 Query Plan，明确 required entities/measures/dimensions/filters 与可选召回表，要求 SQL 覆盖对应表组、输出指标/维度 token，并规避已知错误口径。
+   - 意图、SQL 生成和 SQL 修复使用显式任务角色路由；run trace 仅记录 provider/model/latency 摘要。
    - 运行时固定 SQL 模板已移除；模型失败或无 SQL 时返回 `model_error`，不再硬编码兜底。
-7. `validate_generated_sql_intent()` 校验模型 SQL 是否回答当前问题：
+8. `validate_generated_sql_intent()` 校验模型 SQL 是否回答当前问题：
    - 基于 `QuerySpec` 校验明确要求的关键表、指标 token、维度 token、时间粒度和 Top N / LIMIT。
-   - 校验失败时进入 `repair_model_sql()`，带着原 SQL、错误列表和上下文让模型修复一次。
+   - 校验失败时进入 `repair_model_sql()`；SQL Inspector 同时按 `missing_table`、`missing_measure`、`missing_dimension`、`time_range`、`missing_order`、`missing_limit` 等类别生成可复制 Repair Rule。
+   - 修复请求优先遵循 Query Plan 的 required constraints，召回但未列入计划的表仅作为可选上下文。
    - 修复后仍失败会转为 `model_error`，不会继续执行。
-8. `guard_sql()` 做 SQL 安全拦截；即使 SQL 来自模型或已验证 memory，也会经过字段存在性、CTE / 派生列、只读、白名单真实表、`SELECT *` 和 LIMIT 等校验。
-9. `execute_guarded_sql()` 在显式只读事务中执行，并设置 statement/lock timeout；Guard 会强制收紧 LIMIT 并拦截危险数据库函数。
-10. 如果数据库执行失败，执行器会分类错误：
+9. `guard_sql()` 做 SQL 安全拦截；即使 SQL 来自模型或已验证 memory，也会经过字段存在性、CTE / 派生列、只读、白名单真实表、`SELECT *` 和 LIMIT 等校验。
+10. `execute_guarded_sql()` 在显式只读事务中执行，并设置 statement/lock timeout；Guard 会强制收紧 LIMIT 并拦截危险数据库函数。
+11. 如果数据库执行失败，执行器会分类错误：
    - `group_by`：聚合字段没有正确进入 `GROUP BY`。
    - `missing_column` / `missing_table`：模型使用了不存在的字段或表。
    - `type_cast` / `division_by_zero` / `syntax` / `runtime`：类型、除零、语法或其他运行时错误。
    - 若还未触发过执行错误修复，则把错误类别、原始错误、用户友好摘要和原 SQL 回传 `repair_model_sql()`，修复后重新进入意图校验、Guard 和执行。
    - 若修复后仍失败，系统返回业务化错误摘要，不把原始数据库错误直接作为普通用户主文案。
-11. `present_sales_trend_result()` 组织业务结果：
+12. `present_sales_trend_result()` 组织业务结果：
    - 基于 SQL Executor 返回的真实列生成 `rows`。
    - 自动识别维度列、数值列和比例列，生成通用中文摘要和指标卡。
+   - Result Contract 把 Query Plan、真实列角色、结果行、范围和告警传给 Presenter，区分空结果、零值和不可计算结果。
    - 保持普通用户只看到业务结果、SQL、来源和安全说明。
-12. `QueryRunLogger` 写入 `query_runs` 和 `tool_calls`。
-13. 成功查询写入或更新 SQL Memory。
+13. `QueryRunLogger` 写入 `query_runs` 和 `tool_calls`，只记录安全摘要，不记录密钥或完整 prompt。
+14. 成功查询写入或更新 SQL Memory；新记录默认是 executed，管理员审核后才能升级为 verified。
 
 如果模型和 SQL Memory 都无法产出可执行 SQL，`/api/analyze` 返回 `503`，不会把空 SQL 包装成分析成功结果。
 
@@ -141,11 +148,11 @@ EMBEDDING_API_KEY=<dashscope-api-key>
 
 ## 下一步实现重点
 
-当前主链路已经具备 **RAG rerank + SQL Memory verified reuse + 模型生成/改写 + 意图校验 + 执行错误修复闭环**。后续建议进入评估驱动优化：
+当前主链路已经具备 **Semantic Contract + Clarification Policy + Query Plan/Context Pack + Trusted SQL Memory + Inspector/Repair + Result Contract + Model Routing**。后续建议进入评估驱动优化：
 
-1. 扩展标准评估集和失败归因报表。
-2. 补齐指标口径、schema 字段解释和表关系元数据。
-3. 增加模型/embedding 健康检查与运行时可观测。
+1. 使用稳定模型配置重跑 authenticated 50-case 基线，按缺表、错误聚合、空 SQL、执行错误和答案不匹配分类比较模型。
+2. 补齐关键指标口径、schema 字段解释和真实表关系元数据，换库或换表后执行统一上下文刷新。
+3. 增加 Ollama、云端意图模型和 embedding provider 的健康检查、超时指标和慢查询告警。
 
 ## 日志与追踪
 

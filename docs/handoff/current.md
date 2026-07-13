@@ -1,5 +1,14 @@
 ﻿# 当前 Handoff
 
+## README 与展示文档刷新（已完成，待提交推送）
+
+- 任务计划：`docs/plans/2026-07-13-readme-documentation-refresh.md`。
+- 范围：同步 README、架构、Agent 工作流、评估说明和项目结构，修正旧 mock/固定模板/测试数字描述，补充已交付升级阶段与 authenticated 50-case 基线。
+- 当前风险：`eval/reports/latest_eval_report.json` 和 `eval/reports/semantic_contract_v2_batch_002.json` 是本地未提交评测工件；文档只引用可信的 `post_upgrade_full_eval.json` 和 `ground_truth_text_alignment.json`。
+- 已完成：README、架构、Agent 工作流、评估说明和项目结构均已同步当前实现，不再保留 mock 闭环、旧测试数字或过期评估结论。
+- 验证：Markdown 相对链接 `MARKDOWN_LINKS_OK`、目标文档 UTF-8 读取通过、`git diff --check` 通过；模块记录：`docs/modules/2026-07-13-readme-documentation-refresh.md`。
+- 交付：待本模块文档提交并推送后补写 commit hash。
+
 ## 本轮升级交付状态
 
 - 复合数据 Agent 升级 Phase 0-7 已完成代码与文档交付：可信 authenticated 基线、Semantic Contract/Resolver、Clarification Policy、Trusted SQL、Query Plan/Context Pack、Inspector/Repair、Result Contract/Presenter 和 Model Routing/Observability 均已落地并推送。

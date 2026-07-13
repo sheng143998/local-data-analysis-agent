@@ -1,4 +1,4 @@
-# 标准问题评估说明
+# 评估说明
 
 ## 目标
 
@@ -15,7 +15,7 @@
 eval/datasets/standard_questions.jsonl
 ```
 
-当前包含 20 个 V1 标准问题，覆盖：
+快速回归集当前包含 20 个标准问题，覆盖：
 
 - 基础查询。
 - 复杂指标。
@@ -29,6 +29,32 @@ eval/datasets/standard_questions.jsonl
 - `question`
 - `expected_tables`
 - `expected_keywords`
+
+## Authenticated 真值评测
+
+真实数据库质量基线使用：
+
+```text
+eval/datasets/database_ground_truth_questions.jsonl
+```
+
+该数据集包含 50 条来自 `C:\Users\admin\Desktop\新建 文本文档.txt` 的问题和真值答案，覆盖基础实体、时间、支付、商品、退款、评价、用户履约以及空结果/不可计算场景。文本对照报告为 `eval/reports/ground_truth_text_alignment.json`，当前核对结果为 50/50、问题差异 0、答案差异 0。
+
+鉴权开启时必须使用专用管理员评测账号：
+
+```bash
+npm run eval:database-baseline -- --start 0 --limit 10 --report eval/reports/database_batch_001.json
+```
+
+评测脚本从本机未跟踪的 `backend/.env` 读取 `EVAL_AUTH_EMAIL` 和 `EVAL_AUTH_PASSWORD`，在 case 执行前登录并复用会话；缺少凭据或登录失败会直接阻断，不会把 401/403 统计为模型质量失败。分批运行必须使用不同 `--report`，结束后按 case ID 核对完整覆盖。
+
+可信 50-case 对照报告：
+
+```text
+eval/reports/post_upgrade_full_eval.json
+```
+
+当前结果为执行成功 `31/50`、严格成功 `13/50`、答案匹配 `14/48`。该报告是升级对照基线，不代表质量已经达标；`latest_eval_report.json` 只代表后续标准集运行，不得替代该 50-case 基线。
 
 ## 运行命令
 
@@ -71,16 +97,14 @@ eval/reports/latest_eval_report.json
 - `assertion_failure_summary.by_missing_table_context_status`：对缺失表做进一步聚合，区分该表是没有进入召回上下文，还是已进入上下文但最终 SQL 没有使用。
 - `/api/runs/{run_id}` 的 `analysis_graph.select_generated_sql` 工具调用会包含 `context_table_coverage`，用于判断已召回的非默认业务表是否被最终 SQL 使用。
 
-## 最近基线
+## 最近标准集工件
 
-最近一次评估：
+标准集最近一次记录：
 
-- 20/20 链路执行成功。
-- `execution_success_rate=100%`。
-- `strict_success_rate=55%`。
-- SQL Memory 关键表约束后，`memory_hit_rate` 从 100% 降为 60%。
+- 当前本地工件记录为执行 `8/20`、严格 `6/20`；该文件可能随开发运行变化。
+- 该标准集工件不替代 authenticated 50-case 基线，也不用于宣称模型质量达标。
 
-这说明主链路稳定，但语义覆盖仍需提升。
+这类 20 题报告只用于快速回归；真实质量判断优先使用 authenticated 50-case 对照。
 
 ## 如何使用报告
 
@@ -96,6 +120,6 @@ eval/reports/latest_eval_report.json
 
 ## 后续方向
 
-- 在真实本地模型可用后，开启 `MODEL_SQL_GENERATOR_ENABLED=true` 跑评估。
-- 增加字段命中、指标口径命中和结果形态断言。
-- 后续可把评估报告中的 `run_detail_path` 做成开发者页面链接，但普通用户界面不展示评估报告。
+- 使用稳定的本地或云端 SQL 模型配置重跑同一 50-case 数据集，比较执行、严格和答案匹配率。
+- 按失败分类补齐 Query Plan/Inspector 断言、字段命中、指标口径命中和结果形态断言。
+- 评估报告中的 `run_detail_path` 只供开发者排查，普通用户界面不展示评估报告、prompt、模型密钥或原始工具 payload。
