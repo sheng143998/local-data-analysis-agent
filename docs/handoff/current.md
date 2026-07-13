@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- 已完成：Upgrade Benchmark Batch 001。报告：`eval/reports/post_upgrade_batch_001.json`；记录：`docs/modules/2026-07-13-upgrade-benchmark-batch-001.md`。升级后前 10 条执行成功 `7/10`，较升级前 `5/10` 提升；严格成功和答案匹配均仍为 `2/10`。结论：链路稳定性改善，业务口径/SQL 准确性仍是主瓶颈，不能将当前升级视为完成。
+
 - 已增强：Model Routing And Observability。SQL generator/repair 已使用显式路由，run trace 记录 provider/model/latency 摘要而不记录 prompt 或密钥。验证：SQL generator/run trace/routing `17 passed, 1 warning`。模型选择仍必须通过 authenticated benchmark。
 
 - 已增强：Trusted SQL Repository 管理。管理员可通过 `PATCH /api/memories/{memory_id}/trust` 显式审核并提升 SQL Memory 状态，只有 `verified` 可 fast path；仍经过 QuerySpec、Inspector、Guard 和 Executor。验证：Memory/API/reuse `21 passed, 1 warning`。schema/契约 fingerprint 待后续自动化。
