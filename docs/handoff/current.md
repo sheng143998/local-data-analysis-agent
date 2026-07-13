@@ -12,7 +12,7 @@
 - 安全边界：只有 `data_analysis` 可进入 Semantic Contract、Query Plan、Inspector、Guard 和只读 Executor；通用聊天默认不读取数据库、不发送完整 schema/SQL 到云端。
 - 验证：分页 focused pytest、后续前端 build/e2e、SSE contract/router eval 和 authenticated 50-case 对照。每个模块通过后独立提交推送。
 - 已完成子模块：前端业务 Mock 清理。计划：`docs/plans/2026-07-14-frontend-mock-removal.md`；记录：`docs/modules/2026-07-14-frontend-mock-removal.md`。`frontend/src/data/mock.ts` 已删除；查询历史、SQL Memory 与实时运行评估页改为只读真实管理员 API，数据源页面保持受限空态，遗留问答组件仅消费调用方传入的真实数据。验证：`npm.cmd run frontend:build` 通过、`data/mock` 源码扫描无匹配、`git diff --check` 通过。交付：`ce8d8b9`，推送待完成；`eval/reports/latest_eval_report.json` 和 `eval/reports/semantic_contract_v2_batch_002.json` 是用户/评测工件，不提交也不改动。
-- 已完成子模块：Dialogue Router 澄清回归修复。计划：`docs/plans/2026-07-14-dialogue-router-clarification-regression.md`；记录：`docs/modules/2026-07-14-dialogue-router-clarification-regression.md`。业务概览短语现进入 `data_analysis` 并复用既有澄清策略，避免误走通用聊天；普通闲聊仍不进入 Graph。验证：Router、SSE、会话分页和可视化 focused pytest `28 passed, 1 warning`，`git diff --check` 通过。提交待生成；本地评测工件继续不提交。
+- 已完成子模块：Dialogue Router 澄清回归修复。计划：`docs/plans/2026-07-14-dialogue-router-clarification-regression.md`；记录：`docs/modules/2026-07-14-dialogue-router-clarification-regression.md`。业务概览短语现进入 `data_analysis` 并复用既有澄清策略，避免误走通用聊天；普通闲聊仍不进入 Graph。验证：Router、SSE、会话分页和可视化 focused pytest `28 passed, 1 warning`，`git diff --check` 通过。交付：`1ed9ad4` 已推送；本地评测工件继续不提交。
 
 ## README 与展示文档刷新（已完成，已提交并推送）
 
