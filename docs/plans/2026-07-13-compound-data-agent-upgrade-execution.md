@@ -18,11 +18,13 @@
 
 ## Implementation steps
 
-- [ ] 验证本地管理员账号，配置未跟踪的 `EVAL_AUTH_*`，生成并归档首份 50 case 基线。
-- [ ] 建立 Phase 1 Semantic Layer V2 的独立实施计划和数据模型。
-- [ ] 实现 Semantic Contract migration、repository、schema、resolver 与聚焦测试。
-- [ ] 以 benchmark 验证 Phase 1，记录模块、commit、push。
-- [ ] 依次执行 Phase 2 至 Phase 7，每阶段单独建立计划并通过对应质量门槛。
+- [x] 验证本地管理员账号，配置未跟踪的 `EVAL_AUTH_*`，生成并归档首份 50 case 基线。
+- [x] 建立 Phase 1 Semantic Layer V2 的独立实施计划和数据模型。
+- [x] 实现 Semantic Contract migration、repository、schema、resolver 与聚焦测试。
+- [x] 以 benchmark 验证 Phase 1，记录模块、commit、push。
+- [x] 依次执行 Phase 2 至 Phase 7 的实现、计划、模块记录、focused 验证和提交推送。
+
+交付状态：Phase 1-7 的代码边界和文档已落地并推送。当前可信 50-case 对照为 `eval/reports/post_upgrade_full_eval.json`（执行 31/50、严格 13/50、答案 14/48）；`新建 文本文档.txt` 与 JSONL 真值集已核对 50/50、问题/答案差异 0。剩余工作是使用稳定模型配置重跑完整 authenticated benchmark 并按失败分类继续提升质量，不把当前低通过率宣称为质量达标。
 
 ## Validation plan
 

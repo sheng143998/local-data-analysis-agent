@@ -1,13 +1,13 @@
 ﻿# 当前 Handoff
 
-## SQL Inspector/Repair 质量专项（已完成，待提交推送）
+## SQL Inspector/Repair 质量专项（已完成，已提交并推送）
 
 - 任务计划：`docs/plans/2026-07-13-sql-repair-rule-contract.md`。
 - 目标：将 Inspector 分类 issue 转为可复制的模型修复规则，改善 Query Plan 对齐和生成 SQL 修复；不写固定 SQL、不修改语义契约或评测报告。
 - 当前证据：`eval/reports/post_upgrade_full_eval.json` 中严格成功 `13/50`；失败 trace 主要出现实体表/度量遗漏、排行排序/Top N、时间粒度与错误支付口径，现有 repair prompt 对 Inspector 类别仅传递通用文本。
 - 已完成：Inspector 分类 issue 现在附带可复制 `repair_rule`；SQL generator payload 显式区分 Query Plan 必需约束和召回上下文候选，Repair Prompt 按类别透传规则；未增加固定 SQL或放宽安全边界。模块记录：`docs/modules/2026-07-13-sql-repair-rule-contract.md`。
-- 验证：Inspector/Generator `19 passed`；Graph/Planner/Validator 回归 `49 passed`；`git diff --check` 通过。未运行 authenticated benchmark，未修改评测报告；主线集成后需统一复测。
-- 交付：代码和文档已准备独立提交，提交 hash/push 结果待写入模块记录。
+- 验证：Inspector/Generator `19 passed`；Graph/Planner/Validator 回归 `49 passed`；主线收口 focused 合计 `55 passed`；`git diff --check` 通过。该专项未单独重跑 authenticated benchmark，评测基线未被修改。
+- 交付：`fdcfcd1` 已推送至 `origin/main`；并行语义契约文件因共享 Git index 同批进入该提交，未改写历史。
 
 ## 当前状态
 
@@ -21,9 +21,9 @@
 
 - 当前主要风险：本地 `qwen2.5-coder:3b` 会产生空 SQL 或错误分组 SQL；安全链路已收紧，质量改进必须通过稳定的 authenticated 50-case 复测证明。后端全量/API 组合测试在本机 120 秒窗口内多次未完成，不能视为全绿。
 
-- 下一步：为订单/支付状态分组与支付方式金额等稳定口径增加审核语义契约，完成后用完整 50-case 认证评测与模型路由对照验证；不通过固定 SQL 绕过模型、Inspector、Guard 或 Executor。
+- 下一步：在现有语义契约、Query Plan、Inspector 和模型路由基础上，重新运行稳定的 authenticated 50-case 对照，比较模型配置并按失败分类提升质量；不通过固定 SQL 绕过模型、Inspector、Guard 或 Executor。
 
-- 已完成（并行模块）：Transaction State Semantic Contract Coverage。计划：`docs/plans/2026-07-13-transaction-state-semantic-contract-coverage.md`；记录：`docs/modules/2026-07-13-transaction-state-semantic-contract-coverage.md`。新增订单状态分布、支付状态分布、支付方式记录数与支付方式已支付金额四个版本化契约，并让契约声明性过滤器进入 Query Plan；真实 PostgreSQL 已应用 `013`，Resolver/Planner/migration focused `18 passed`。未写固定 SQL、未放宽安全链路；完整 authenticated 50-case 尚待主线复测。模块提交和推送待本次收尾。
+- 已完成（并行模块）：Transaction State Semantic Contract Coverage。计划：`docs/plans/2026-07-13-transaction-state-semantic-contract-coverage.md`；记录：`docs/modules/2026-07-13-transaction-state-semantic-contract-coverage.md`。新增订单状态分布、支付状态分布、支付方式记录数与支付方式已支付金额四个版本化契约，并让契约声明性过滤器进入 Query Plan；真实 PostgreSQL 已应用 `013`，Resolver/Planner/migration focused `18 passed`。未写固定 SQL、未放宽安全链路；改动随 `fdcfcd1` 推送。完整 authenticated 50-case 仍需后续以稳定模型配置复测。
 
 - 已完成：Contract And Plan Prompt Enforcement Experiment（已撤回）。报告：`eval/reports/contract_plan_prompt_batch_001.json`；记录：`docs/modules/2026-07-13-contract-plan-prompt-enforcement.md`。Prompt 强约束导致 authenticated 前 10 条从 `7/10`、`3/10`、`3/10` 回归到 `6/10`、`2/10`、`2/10`，已从主链路撤回。结论：不以单次 Prompt 规则替代语义资产/Inspector。
 
