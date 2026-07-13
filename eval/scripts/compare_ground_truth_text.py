@@ -94,6 +94,16 @@ def compare_text_and_dataset(
                     "text_answer": text_row["answer"],
                 }
             )
+    missing_expected_tables = [
+        str(row.get("id") or f"line_{index + 1:03d}")
+        for index, row in enumerate(dataset_rows)
+        if not list(row.get("expected_tables") or [])
+    ]
+    missing_expected_keywords = [
+        str(row.get("id") or f"line_{index + 1:03d}")
+        for index, row in enumerate(dataset_rows)
+        if not list(row.get("expected_keywords") or [])
+    ]
     return {
         "text_case_count": len(text_rows),
         "dataset_case_count": len(dataset_rows),
@@ -106,6 +116,13 @@ def compare_text_and_dataset(
         "answer_mismatches": answer_mismatches,
         "special_result_cases": mode_mismatches,
         "special_result_case_count": len(mode_mismatches),
+        "dataset_metadata": {
+            "missing_expected_tables_count": len(missing_expected_tables),
+            "missing_expected_tables_case_ids": missing_expected_tables,
+            "missing_expected_keywords_count": len(missing_expected_keywords),
+            "missing_expected_keywords_case_ids": missing_expected_keywords,
+            "complete": not missing_expected_tables and not missing_expected_keywords,
+        },
     }
 
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-13T14:06:27.618121+00:00",
+  "generated_at": "2026-07-13T14:12:37.450164+00:00",
   "source_text": "C:\\Users\\admin\\Desktop\\新建 文本文档.txt",
   "dataset_path": "C:\\Users\\admin\\Desktop\\本地数据分析agent\\eval\\datasets\\database_ground_truth_questions.jsonl",
   "text_dataset_alignment": {
@@ -38,7 +38,14 @@
         "text_answer": "不可计算，加购用户数为 0"
       }
     ],
-    "special_result_case_count": 4
+    "special_result_case_count": 4,
+    "dataset_metadata": {
+      "missing_expected_tables_count": 0,
+      "missing_expected_tables_case_ids": [],
+      "missing_expected_keywords_count": 0,
+      "missing_expected_keywords_case_ids": [],
+      "complete": true
+    }
   },
   "evaluation_report": {
     "path": "eval/reports/ground_truth_current_batch_001.json",
