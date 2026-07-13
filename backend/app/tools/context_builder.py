@@ -13,13 +13,15 @@ from backend.app.tools.schema_retriever import retrieve_schema
 DEFAULT_RELATIONSHIP_LIMIT = 24
 
 
-def build_retrieval_context(question: str, semantic_contracts: list[dict] | None = None) -> RetrievalContext:
+def build_retrieval_context(question: str, semantic_contracts: list[dict] | None = None, query_plan: dict | None = None) -> RetrievalContext:
     """组合指标口径和表结构上下文，供 Agent 后续节点使用。"""
     metrics = retrieve_metrics(question)
     schema_columns = retrieve_schema(question, metrics)
     metrics, schema_columns, rerank_diagnostics = rerank_context(question, metrics, schema_columns)
     contracts = semantic_contracts or []
+    plan = query_plan or {}
     contract_tables = [table for contract in contracts for table in contract.get("source_tables", [])]
+    contract_tables.extend(plan.get("entities", []))
     contract_fields = [field for contract in contracts for field in contract.get("source_fields", [])]
     contract_summary = "；".join(
         f"{contract.get('display_name', contract.get('contract_key', ''))}@v{contract.get('version', '')}"

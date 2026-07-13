@@ -15,6 +15,7 @@ from backend.app.tools.analysis_presenter import present_clarification_response
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent, parse_question_intent
 from backend.app.tools.semantic_resolver import apply_semantic_resolution
 from backend.app.tools.clarification_policy import apply_clarification_policy
+from backend.app.tools.query_planner import build_query_plan
 
 
 class AnalysisUnavailableError(RuntimeError):
@@ -69,6 +70,7 @@ class AgentService:
         intent = intent or parse_question_intent(question, conversation_context=conversation_context)
         intent = apply_semantic_resolution(intent)
         intent = apply_clarification_policy(intent)
+        intent = intent.model_copy(update={"query_plan": build_query_plan(intent).model_dump()})
         if intent.needs_clarification:
             state.pending_clarification = pending_from_intent(intent)
             state.status = "waiting_for_clarification"

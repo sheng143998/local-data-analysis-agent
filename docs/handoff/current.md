@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Query Plan And Context Pack（Phase 4）。计划：`docs/plans/2026-07-13-query-plan-context-pack.md`；记录：`docs/modules/2026-07-13-query-plan-context-pack.md`。结构化 Plan 已贯通 intent、Graph、Context Builder 和 SQL payload，限制实体、度量、维度、时间、排序、limit 与预期结果形态；未知概念不猜测 SQL。验证：focused `46 passed`、后端全量 `238 passed, 1 warning`。下一步：Inspector 将以 Plan 对齐作为执行前检查。
+
+- 进行中：Query Plan And Context Pack（Phase 4）。计划：`docs/plans/2026-07-13-query-plan-context-pack.md`。从 QuerySpec、已解析契约和 intent 产生受限计划，并裁剪传给 SQL 模型的上下文；不改变 SQL 安全边界或让 Plan 直接执行 SQL。
+
 - 已完成：Trusted SQL Repository Foundation（Phase 3）。计划：`docs/plans/2026-07-13-trusted-sql-repository.md`；记录：`docs/modules/2026-07-13-trusted-sql-repository.md`。SQL Memory 生命周期已持久化：新成功 SQL 为 `executed`，旧记录默认为 `reviewed`，只有 `verified` 允许 fast path。验证：SQL Memory/Graph focused `42 passed`。风险：管理员审核提升、契约版本/schema hash 绑定与全量评测对照仍待后续子模块。
 
 - 进行中：Trusted SQL Repository（Phase 3）。计划：`docs/plans/2026-07-13-trusted-sql-repository.md`。将 SQL Memory 分为 candidate/executed/reviewed/verified/deprecated/rejected，只有 verified 可 fast path；新成功 SQL 只记 executed，旧记录降级 reviewed，并绑定契约/schema 版本元数据。所有 SQL 仍须经过 QuerySpec、Guard 和只读 Executor。

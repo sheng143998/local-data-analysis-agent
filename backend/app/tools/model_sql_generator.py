@@ -261,6 +261,7 @@ def _compact_question_intent(question_intent: dict[str, Any] | None) -> dict[str
         "needs_clarification",
         "source",
         "query_spec",
+        "query_plan",
     }
     return {key: question_intent[key] for key in allowed_keys if key in question_intent}
 

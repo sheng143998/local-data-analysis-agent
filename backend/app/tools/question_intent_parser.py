@@ -63,6 +63,7 @@ class ParsedQuestionIntent(BaseModel):
     resolved_contracts: list[dict[str, Any]] = Field(default_factory=list)
     semantic_conflicts: list[str] = Field(default_factory=list)
     clarification_reason: str = ""
+    query_plan: dict[str, Any] = Field(default_factory=dict)
     query_spec: QuerySpec = Field(default_factory=QuerySpec)
 
 

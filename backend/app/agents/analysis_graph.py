@@ -163,6 +163,7 @@ def _retrieve_context_node(state: AnalysisGraphState) -> AnalysisGraphState:
     retrieval_context = build_retrieval_context(
         question,
         semantic_contracts=state.get("question_intent", {}).get("resolved_contracts", []),
+        query_plan=state.get("question_intent", {}).get("query_plan", {}),
     )
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     return {
