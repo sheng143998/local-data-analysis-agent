@@ -1,0 +1,1954 @@
+{
+  "generated_at": "2026-07-13T09:30:47.743528+00:00",
+  "total": 10,
+  "success_count": 7,
+  "strict_success_count": 3,
+  "execution_success_rate": 0.7,
+  "strict_success_rate": 0.3,
+  "sql_generation_success_rate": 0.7,
+  "table_match_rate": 0.5,
+  "keyword_match_rate": 0.7,
+  "forbidden_match_rate": 1.0,
+  "answer_checked_count": 10,
+  "answer_match_count": 3,
+  "answer_match_rate": 0.3,
+  "memory_hit_rate": 0.0,
+  "reuse_success_rate": 0.0,
+  "average_latency_ms": 28262,
+  "path_counts": {
+    "rewrite_path": 7,
+    "": 3
+  },
+  "failures": [
+    {
+      "id": "database_003",
+      "category": "基础与时间",
+      "question": "当前商品总数是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 36641,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "products"
+      ],
+      "missing_keywords": [
+        "COUNT"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "expected_answer": "32,951",
+      "actual_answer": "",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：32951",
+      "run_id": "7c83b4f4-27bb-41c5-951d-7d8602514182",
+      "run_detail_path": "/api/runs/7c83b4f4-27bb-41c5-951d-7d8602514182",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "order_items",
+          "products"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "order_items.product_id",
+          "order_items.order_id",
+          "order_items.id",
+          "products.id",
+          "products.created_at",
+          "order_items.seller_id",
+          "order_items.freight_value",
+          "order_items.item_seq",
+          "order_items.price",
+          "order_items.shipping_limit_at",
+          "products.category",
+          "products.description_length",
+          "products.height_cm",
+          "products.length_cm",
+          "products.name_length"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 41,
+        "relationship_count": 17,
+        "generation_path": "model_error",
+        "generation_warning_count": 2,
+        "generation_warnings": [
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：products。"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 2,
+        "guard_errors": [
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：products。"
+        ],
+        "memory_path_type": "cold_path",
+        "memory_reuse_type": "none",
+        "memory_hit": false,
+        "memory_score": 0.645,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 11965,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 6159,
+          "context_retrieval": 2691,
+          "sql_intent_validation": 1,
+          "memory_retrieval_and_plan": 1321
+        },
+        "total_latency_ms": 22146,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 11965
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_009",
+      "category": "基础与时间",
+      "question": "当前优惠券总数是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 27359,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "coupons"
+      ],
+      "missing_keywords": [
+        "COUNT"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "expected_answer": "0",
+      "actual_answer": "",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：0",
+      "run_id": "c8206cc3-e9ed-456e-b987-a4d0b8f5c937",
+      "run_detail_path": "/api/runs/c8206cc3-e9ed-456e-b987-a4d0b8f5c937",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "coupons",
+          "coupon_usages",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "coupons.id",
+          "coupons.code",
+          "coupons.discount_type",
+          "coupons.discount_value",
+          "coupons.ends_at",
+          "coupons.starts_at",
+          "coupon_usages.order_id",
+          "payments.order_id",
+          "coupon_usages.id",
+          "payments.id",
+          "refunds.id",
+          "users.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "users.created_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 40,
+        "relationship_count": 24,
+        "generation_path": "model_error",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupons。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 4,
+        "guard_errors": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupons。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "memory_path_type": "cold_path",
+        "memory_reuse_type": "none",
+        "memory_hit": false,
+        "memory_score": 0.6108,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 2140,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 6524,
+          "context_retrieval": 2694,
+          "sql_intent_validation": 1,
+          "memory_retrieval_and_plan": 1315
+        },
+        "total_latency_ms": 12681,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 6524
+        },
+        "context_table_coverage": {
+          "covered": false,
+          "sql_tables": [],
+          "missing_tables": [
+            "coupon_usages",
+            "coupons"
+          ],
+          "required_tables": [
+            "coupon_usages",
+            "coupons"
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_010",
+      "category": "基础与时间",
+      "question": "当前优惠券使用记录总数是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 26811,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "coupon_usages"
+      ],
+      "missing_keywords": [
+        "COUNT"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "expected_answer": "0",
+      "actual_answer": "",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：0",
+      "run_id": "82b42ba3-7528-48ed-b09f-f27ec274641d",
+      "run_detail_path": "/api/runs/82b42ba3-7528-48ed-b09f-f27ec274641d",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "coupons",
+          "coupon_usages",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "coupons.id",
+          "coupons.code",
+          "coupons.discount_type",
+          "coupons.discount_value",
+          "coupons.ends_at",
+          "coupons.starts_at",
+          "coupon_usages.order_id",
+          "payments.order_id",
+          "coupon_usages.id",
+          "payments.id",
+          "refunds.id",
+          "users.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "users.created_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 40,
+        "relationship_count": 24,
+        "generation_path": "model_error",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupon_usages。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 4,
+        "guard_errors": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupon_usages。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "memory_path_type": "cold_path",
+        "memory_reuse_type": "none",
+        "memory_hit": false,
+        "memory_score": 0.5834,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 2133,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 6089,
+          "context_retrieval": 2722,
+          "sql_intent_validation": 1,
+          "memory_retrieval_and_plan": 1327
+        },
+        "total_latency_ms": 12281,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 6089
+        },
+        "context_table_coverage": {
+          "covered": false,
+          "sql_tables": [],
+          "missing_tables": [
+            "coupon_usages",
+            "coupons"
+          ],
+          "required_tables": [
+            "coupon_usages",
+            "coupons"
+          ]
+        }
+      },
+      "error": ""
+    }
+  ],
+  "assertion_failures": [
+    {
+      "id": "database_001",
+      "category": "基础与时间",
+      "question": "当前订单总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 20707,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "99,441",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：99441",
+      "run_id": "284cf4f9-b0eb-4c9e-9726-a6a196b811bc",
+      "run_detail_path": "/api/runs/284cf4f9-b0eb-4c9e-9726-a6a196b811bc",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "refunds.id",
+          "payments.id",
+          "orders.created_at",
+          "orders.user_id",
+          "orders.approved_at",
+          "orders.purchase_at",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at",
+          "orders.estimated_delivery_at",
+          "payments.order_id",
+          "refunds.created_at",
+          "refunds.amount",
+          "refunds.reason",
+          "payments.amount",
+          "payments.installments"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 23,
+        "relationship_count": 6,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.9667,
+        "node_timings_ms": {
+          "sql_guard": 60,
+          "intent_parse": 0,
+          "memory_update": 1372,
+          "sql_execution": 125,
+          "present_result": 0,
+          "sql_generation": 4872,
+          "context_retrieval": 2730,
+          "sql_intent_validation": 2,
+          "memory_sql_verification": 5,
+          "memory_retrieval_and_plan": 1316
+        },
+        "total_latency_ms": 9126,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 4872
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_004",
+      "category": "基础与时间",
+      "question": "当前订单商品明细总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 37273,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [
+        "order_items"
+      ],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "112,650",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：112650",
+      "run_id": "fb8d4d53-d868-44a2-855e-549580bf5482",
+      "run_detail_path": "/api/runs/fb8d4d53-d868-44a2-855e-549580bf5482",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "products",
+          "order_items"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "products.id",
+          "order_items.id",
+          "order_items.product_id",
+          "order_items.order_id",
+          "refunds.id",
+          "payments.id",
+          "orders.created_at",
+          "products.created_at",
+          "orders.user_id",
+          "order_items.seller_id",
+          "products.category",
+          "order_items.price",
+          "products.height_cm",
+          "products.length_cm",
+          "products.photos_qty"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 41,
+        "relationship_count": 17,
+        "generation_path": "query_spec_fallback",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "模型 SQL 缺少当前问题需要的数据表：payments",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：order_items, payments。",
+          "模型生成与修复未满足 QuerySpec，已使用受控订单数 fallback。"
+        ],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.8911,
+        "node_timings_ms": {
+          "sql_guard": 60,
+          "sql_repair": 12445,
+          "intent_parse": 0,
+          "memory_update": 1383,
+          "sql_execution": 125,
+          "present_result": 0,
+          "sql_generation": 2097,
+          "context_retrieval": 2697,
+          "sql_intent_validation": 1,
+          "memory_sql_verification": 1,
+          "memory_retrieval_and_plan": 1331
+        },
+        "total_latency_ms": 18769,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 12445
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_005",
+      "category": "基础与时间",
+      "question": "当前支付记录总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 23765,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "103,886",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：103886",
+      "run_id": "b7c56934-1bd1-466b-8fd6-6fdf0b092713",
+      "run_detail_path": "/api/runs/b7c56934-1bd1-466b-8fd6-6fdf0b092713",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "payments",
+          "refunds"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "payments.status",
+          "refunds.order_id",
+          "payments.id",
+          "payments.order_id",
+          "refunds.id",
+          "orders.created_at",
+          "orders.user_id",
+          "payments.amount",
+          "payments.payment_type",
+          "orders.approved_at",
+          "orders.purchase_at",
+          "payments.installments",
+          "payments.paid_at",
+          "payments.payment_sequential",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at",
+          "orders.estimated_delivery_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 23,
+        "relationship_count": 6,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.9667,
+        "node_timings_ms": {
+          "sql_guard": 59,
+          "intent_parse": 0,
+          "memory_update": 1370,
+          "sql_execution": 122,
+          "present_result": 0,
+          "sql_generation": 3392,
+          "context_retrieval": 2780,
+          "sql_intent_validation": 2,
+          "memory_sql_verification": 1,
+          "memory_retrieval_and_plan": 1332
+        },
+        "total_latency_ms": 7694,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 3392
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_006",
+      "category": "基础与时间",
+      "question": "当前退款记录总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 39053,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [
+        "refunds"
+      ],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "1,234",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：1234",
+      "run_id": "e4d0b220-21e5-42b8-9bcb-4eaf30ecaba5",
+      "run_detail_path": "/api/runs/e4d0b220-21e5-42b8-9bcb-4eaf30ecaba5",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "order_items",
+          "products"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "refunds.order_id",
+          "orders.total_amount",
+          "payments.status",
+          "refunds.id",
+          "payments.order_id",
+          "order_items.order_id",
+          "products.id",
+          "payments.id",
+          "order_items.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "orders.user_id",
+          "refunds.reason",
+          "refunds.amount",
+          "orders.approved_at",
+          "orders.purchase_at",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 41,
+        "relationship_count": 17,
+        "generation_path": "query_spec_fallback",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "模型 SQL 缺少当前问题需要的数据表：payments",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：payments, refunds。",
+          "模型生成与修复未满足 QuerySpec，已使用受控订单数 fallback。"
+        ],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.94,
+        "node_timings_ms": {
+          "sql_guard": 60,
+          "sql_repair": 12378,
+          "intent_parse": 0,
+          "memory_update": 1367,
+          "sql_execution": 123,
+          "present_result": 0,
+          "sql_generation": 6766,
+          "context_retrieval": 2693,
+          "sql_intent_validation": 1,
+          "memory_sql_verification": 1,
+          "memory_retrieval_and_plan": 1319
+        },
+        "total_latency_ms": 23353,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 12378
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    }
+  ],
+  "assertion_failure_summary": {
+    "total": 4,
+    "by_missing_table": [
+      {
+        "name": "order_items",
+        "count": 1
+      },
+      {
+        "name": "refunds",
+        "count": 1
+      }
+    ],
+    "by_forbidden_keyword": [],
+    "by_missing_table_context_status": [
+      {
+        "name": "order_items",
+        "missing_from_context": 0,
+        "present_in_context": 1
+      },
+      {
+        "name": "refunds",
+        "missing_from_context": 0,
+        "present_in_context": 1
+      }
+    ],
+    "by_category": [
+      {
+        "name": "基础与时间",
+        "count": 4
+      }
+    ],
+    "by_path": [
+      {
+        "name": "rewrite_path",
+        "count": 4
+      }
+    ],
+    "case_ids": [
+      "database_001",
+      "database_004",
+      "database_005",
+      "database_006"
+    ]
+  },
+  "cases": [
+    {
+      "id": "database_001",
+      "category": "基础与时间",
+      "question": "当前订单总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 20707,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "orders"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "99,441",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：99441",
+      "run_id": "284cf4f9-b0eb-4c9e-9726-a6a196b811bc",
+      "run_detail_path": "/api/runs/284cf4f9-b0eb-4c9e-9726-a6a196b811bc",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "refunds.id",
+          "payments.id",
+          "orders.created_at",
+          "orders.user_id",
+          "orders.approved_at",
+          "orders.purchase_at",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at",
+          "orders.estimated_delivery_at",
+          "payments.order_id",
+          "refunds.created_at",
+          "refunds.amount",
+          "refunds.reason",
+          "payments.amount",
+          "payments.installments"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 23,
+        "relationship_count": 6,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.9667,
+        "node_timings_ms": {
+          "sql_guard": 60,
+          "intent_parse": 0,
+          "memory_update": 1372,
+          "sql_execution": 125,
+          "present_result": 0,
+          "sql_generation": 4872,
+          "context_retrieval": 2730,
+          "sql_intent_validation": 2,
+          "memory_sql_verification": 5,
+          "memory_retrieval_and_plan": 1316
+        },
+        "total_latency_ms": 9126,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 4872
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_002",
+      "category": "基础与时间",
+      "question": "当前用户总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 24759,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "users"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": true,
+      "returned_rows": 1,
+      "expected_answer": "99,441",
+      "actual_answer": "99441",
+      "answer_match": true,
+      "answer_mismatch": "",
+      "run_id": "5407c369-20b9-417c-8510-1ad5331d682a",
+      "run_detail_path": "/api/runs/5407c369-20b9-417c-8510-1ad5331d682a",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "users.id",
+          "users.created_at",
+          "orders.user_id",
+          "users.unique_id",
+          "users.city",
+          "users.state",
+          "users.zip_code_prefix",
+          "payments.order_id",
+          "payments.id",
+          "refunds.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "orders.approved_at",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 29,
+        "relationship_count": 10,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.825,
+        "node_timings_ms": {
+          "sql_guard": 59,
+          "intent_parse": 0,
+          "memory_update": 1377,
+          "sql_execution": 66,
+          "present_result": 0,
+          "sql_generation": 2649,
+          "context_retrieval": 2707,
+          "sql_intent_validation": 0,
+          "memory_sql_verification": 0,
+          "memory_retrieval_and_plan": 1327
+        },
+        "total_latency_ms": 6815,
+        "slowest_node": {
+          "name": "context_retrieval",
+          "latency_ms": 2707
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "users"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_003",
+      "category": "基础与时间",
+      "question": "当前商品总数是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 36641,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "products"
+      ],
+      "missing_keywords": [
+        "COUNT"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "expected_answer": "32,951",
+      "actual_answer": "",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：32951",
+      "run_id": "7c83b4f4-27bb-41c5-951d-7d8602514182",
+      "run_detail_path": "/api/runs/7c83b4f4-27bb-41c5-951d-7d8602514182",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "order_items",
+          "products"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "order_items.product_id",
+          "order_items.order_id",
+          "order_items.id",
+          "products.id",
+          "products.created_at",
+          "order_items.seller_id",
+          "order_items.freight_value",
+          "order_items.item_seq",
+          "order_items.price",
+          "order_items.shipping_limit_at",
+          "products.category",
+          "products.description_length",
+          "products.height_cm",
+          "products.length_cm",
+          "products.name_length"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 41,
+        "relationship_count": 17,
+        "generation_path": "model_error",
+        "generation_warning_count": 2,
+        "generation_warnings": [
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：products。"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 2,
+        "guard_errors": [
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：products。"
+        ],
+        "memory_path_type": "cold_path",
+        "memory_reuse_type": "none",
+        "memory_hit": false,
+        "memory_score": 0.645,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 11965,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 6159,
+          "context_retrieval": 2691,
+          "sql_intent_validation": 1,
+          "memory_retrieval_and_plan": 1321
+        },
+        "total_latency_ms": 22146,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 11965
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_004",
+      "category": "基础与时间",
+      "question": "当前订单商品明细总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 37273,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [
+        "order_items"
+      ],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "112,650",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：112650",
+      "run_id": "fb8d4d53-d868-44a2-855e-549580bf5482",
+      "run_detail_path": "/api/runs/fb8d4d53-d868-44a2-855e-549580bf5482",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "products",
+          "order_items"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "products.id",
+          "order_items.id",
+          "order_items.product_id",
+          "order_items.order_id",
+          "refunds.id",
+          "payments.id",
+          "orders.created_at",
+          "products.created_at",
+          "orders.user_id",
+          "order_items.seller_id",
+          "products.category",
+          "order_items.price",
+          "products.height_cm",
+          "products.length_cm",
+          "products.photos_qty"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 41,
+        "relationship_count": 17,
+        "generation_path": "query_spec_fallback",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "模型 SQL 缺少当前问题需要的数据表：payments",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：order_items, payments。",
+          "模型生成与修复未满足 QuerySpec，已使用受控订单数 fallback。"
+        ],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.8911,
+        "node_timings_ms": {
+          "sql_guard": 60,
+          "sql_repair": 12445,
+          "intent_parse": 0,
+          "memory_update": 1383,
+          "sql_execution": 125,
+          "present_result": 0,
+          "sql_generation": 2097,
+          "context_retrieval": 2697,
+          "sql_intent_validation": 1,
+          "memory_sql_verification": 1,
+          "memory_retrieval_and_plan": 1331
+        },
+        "total_latency_ms": 18769,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 12445
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_005",
+      "category": "基础与时间",
+      "question": "当前支付记录总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 23765,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "payments"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "103,886",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：103886",
+      "run_id": "b7c56934-1bd1-466b-8fd6-6fdf0b092713",
+      "run_detail_path": "/api/runs/b7c56934-1bd1-466b-8fd6-6fdf0b092713",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "payments",
+          "refunds"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "payments.status",
+          "refunds.order_id",
+          "payments.id",
+          "payments.order_id",
+          "refunds.id",
+          "orders.created_at",
+          "orders.user_id",
+          "payments.amount",
+          "payments.payment_type",
+          "orders.approved_at",
+          "orders.purchase_at",
+          "payments.installments",
+          "payments.paid_at",
+          "payments.payment_sequential",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at",
+          "orders.estimated_delivery_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 23,
+        "relationship_count": 6,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.9667,
+        "node_timings_ms": {
+          "sql_guard": 59,
+          "intent_parse": 0,
+          "memory_update": 1370,
+          "sql_execution": 122,
+          "present_result": 0,
+          "sql_generation": 3392,
+          "context_retrieval": 2780,
+          "sql_intent_validation": 2,
+          "memory_sql_verification": 1,
+          "memory_retrieval_and_plan": 1332
+        },
+        "total_latency_ms": 7694,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 3392
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_006",
+      "category": "基础与时间",
+      "question": "当前退款记录总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 39053,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [
+        "refunds"
+      ],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 1,
+      "expected_answer": "1,234",
+      "actual_answer": "99440",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：1234",
+      "run_id": "e4d0b220-21e5-42b8-9bcb-4eaf30ecaba5",
+      "run_detail_path": "/api/runs/e4d0b220-21e5-42b8-9bcb-4eaf30ecaba5",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "order_items",
+          "products"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "refunds.order_id",
+          "orders.total_amount",
+          "payments.status",
+          "refunds.id",
+          "payments.order_id",
+          "order_items.order_id",
+          "products.id",
+          "payments.id",
+          "order_items.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "orders.user_id",
+          "refunds.reason",
+          "refunds.amount",
+          "orders.approved_at",
+          "orders.purchase_at",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 41,
+        "relationship_count": 17,
+        "generation_path": "query_spec_fallback",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "模型 SQL 缺少当前问题需要的数据表：payments",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：payments, refunds。",
+          "模型生成与修复未满足 QuerySpec，已使用受控订单数 fallback。"
+        ],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.94,
+        "node_timings_ms": {
+          "sql_guard": 60,
+          "sql_repair": 12378,
+          "intent_parse": 0,
+          "memory_update": 1367,
+          "sql_execution": 123,
+          "present_result": 0,
+          "sql_generation": 6766,
+          "context_retrieval": 2693,
+          "sql_intent_validation": 1,
+          "memory_sql_verification": 1,
+          "memory_retrieval_and_plan": 1319
+        },
+        "total_latency_ms": 23353,
+        "slowest_node": {
+          "name": "sql_repair",
+          "latency_ms": 12378
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "orders",
+            "payments"
+          ],
+          "missing_tables": [],
+          "required_tables": []
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_007",
+      "category": "基础与时间",
+      "question": "当前评价总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 23295,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "reviews"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": true,
+      "returned_rows": 1,
+      "expected_answer": "98,410",
+      "actual_answer": "98410",
+      "answer_match": true,
+      "answer_mismatch": "",
+      "run_id": "43c74b79-59dd-44bf-abe8-1a6892ce5e3e",
+      "run_detail_path": "/api/runs/43c74b79-59dd-44bf-abe8-1a6892ce5e3e",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "reviews"
+        ],
+        "context_fields_sample": [
+          "orders.total_amount",
+          "orders.id",
+          "orders.status",
+          "refunds.order_id",
+          "payments.status",
+          "payments.order_id",
+          "payments.id",
+          "refunds.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "orders.user_id",
+          "orders.approved_at",
+          "orders.delivered_carrier_at",
+          "orders.delivered_customer_at",
+          "orders.estimated_delivery_at",
+          "orders.purchase_at",
+          "payments.amount",
+          "payments.installments",
+          "payments.paid_at",
+          "payments.payment_sequential"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 23,
+        "relationship_count": 6,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.825,
+        "node_timings_ms": {
+          "sql_guard": 59,
+          "intent_parse": 0,
+          "memory_update": 1451,
+          "sql_execution": 158,
+          "present_result": 0,
+          "sql_generation": 2477,
+          "context_retrieval": 2716,
+          "sql_intent_validation": 0,
+          "memory_sql_verification": 0,
+          "memory_retrieval_and_plan": 1324
+        },
+        "total_latency_ms": 6741,
+        "slowest_node": {
+          "name": "context_retrieval",
+          "latency_ms": 2716
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "reviews"
+          ],
+          "missing_tables": [],
+          "required_tables": [
+            "reviews"
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_008",
+      "category": "基础与时间",
+      "question": "当前流量事件总数是多少？",
+      "ok": true,
+      "path": "rewrite_path",
+      "status_code": 200,
+      "latency_ms": 22961,
+      "has_sql": true,
+      "guard_passed": true,
+      "memory_hit": false,
+      "expected_table_hits": [
+        "traffic_events"
+      ],
+      "expected_keyword_hits": [
+        "COUNT"
+      ],
+      "missing_tables": [],
+      "missing_keywords": [],
+      "forbidden_keyword_hits": [],
+      "table_match": true,
+      "keyword_match": true,
+      "forbidden_match": true,
+      "strict_ok": true,
+      "returned_rows": 1,
+      "expected_answer": "0",
+      "actual_answer": "0",
+      "answer_match": true,
+      "answer_mismatch": "",
+      "run_id": "a6f9b8e9-0b58-4237-9897-fa43b65d1648",
+      "run_detail_path": "/api/runs/a6f9b8e9-0b58-4237-9897-fa43b65d1648",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "traffic_events",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "traffic_events.id",
+          "traffic_events.created_at",
+          "traffic_events.product_id",
+          "traffic_events.user_id",
+          "traffic_events.event_type",
+          "traffic_events.source",
+          "payments.order_id",
+          "payments.id",
+          "refunds.id",
+          "users.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "users.created_at",
+          "orders.user_id",
+          "users.unique_id"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 35,
+        "relationship_count": 16,
+        "generation_path": "model_rewrite",
+        "generation_warning_count": 0,
+        "generation_warnings": [],
+        "guard_status": "allowed",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 0,
+        "guard_errors": [],
+        "memory_path_type": "rewrite_path",
+        "memory_reuse_type": "regenerate",
+        "memory_hit": false,
+        "memory_score": 0.82,
+        "node_timings_ms": {
+          "sql_guard": 58,
+          "intent_parse": 0,
+          "memory_update": 1384,
+          "sql_execution": 58,
+          "present_result": 0,
+          "sql_generation": 2811,
+          "context_retrieval": 2701,
+          "sql_intent_validation": 0,
+          "memory_sql_verification": 0,
+          "memory_retrieval_and_plan": 1323
+        },
+        "total_latency_ms": 6957,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 2811
+        },
+        "context_table_coverage": {
+          "covered": true,
+          "sql_tables": [
+            "traffic_events"
+          ],
+          "missing_tables": [],
+          "required_tables": [
+            "traffic_events"
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_009",
+      "category": "基础与时间",
+      "question": "当前优惠券总数是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 27359,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "coupons"
+      ],
+      "missing_keywords": [
+        "COUNT"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "expected_answer": "0",
+      "actual_answer": "",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：0",
+      "run_id": "c8206cc3-e9ed-456e-b987-a4d0b8f5c937",
+      "run_detail_path": "/api/runs/c8206cc3-e9ed-456e-b987-a4d0b8f5c937",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "coupons",
+          "coupon_usages",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "coupons.id",
+          "coupons.code",
+          "coupons.discount_type",
+          "coupons.discount_value",
+          "coupons.ends_at",
+          "coupons.starts_at",
+          "coupon_usages.order_id",
+          "payments.order_id",
+          "coupon_usages.id",
+          "payments.id",
+          "refunds.id",
+          "users.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "users.created_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 40,
+        "relationship_count": 24,
+        "generation_path": "model_error",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupons。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 4,
+        "guard_errors": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupons。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "memory_path_type": "cold_path",
+        "memory_reuse_type": "none",
+        "memory_hit": false,
+        "memory_score": 0.6108,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 2140,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 6524,
+          "context_retrieval": 2694,
+          "sql_intent_validation": 1,
+          "memory_retrieval_and_plan": 1315
+        },
+        "total_latency_ms": 12681,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 6524
+        },
+        "context_table_coverage": {
+          "covered": false,
+          "sql_tables": [],
+          "missing_tables": [
+            "coupon_usages",
+            "coupons"
+          ],
+          "required_tables": [
+            "coupon_usages",
+            "coupons"
+          ]
+        }
+      },
+      "error": ""
+    },
+    {
+      "id": "database_010",
+      "category": "基础与时间",
+      "question": "当前优惠券使用记录总数是多少？",
+      "ok": false,
+      "path": "",
+      "status_code": 503,
+      "latency_ms": 26811,
+      "has_sql": false,
+      "guard_passed": false,
+      "memory_hit": false,
+      "expected_table_hits": [],
+      "expected_keyword_hits": [],
+      "missing_tables": [
+        "coupon_usages"
+      ],
+      "missing_keywords": [
+        "COUNT"
+      ],
+      "forbidden_keyword_hits": [],
+      "table_match": false,
+      "keyword_match": false,
+      "forbidden_match": true,
+      "strict_ok": false,
+      "returned_rows": 0,
+      "expected_answer": "0",
+      "actual_answer": "",
+      "answer_match": false,
+      "answer_mismatch": "未匹配期望结果片段：0",
+      "run_id": "82b42ba3-7528-48ed-b09f-f27ec274641d",
+      "run_detail_path": "/api/runs/82b42ba3-7528-48ed-b09f-f27ec274641d",
+      "run_trace_summary": {
+        "context_tables": [
+          "orders",
+          "refunds",
+          "payments",
+          "coupons",
+          "coupon_usages",
+          "users"
+        ],
+        "context_fields_sample": [
+          "orders.id",
+          "orders.status",
+          "orders.total_amount",
+          "refunds.order_id",
+          "payments.status",
+          "coupons.id",
+          "coupons.code",
+          "coupons.discount_type",
+          "coupons.discount_value",
+          "coupons.ends_at",
+          "coupons.starts_at",
+          "coupon_usages.order_id",
+          "payments.order_id",
+          "coupon_usages.id",
+          "payments.id",
+          "refunds.id",
+          "users.id",
+          "orders.created_at",
+          "refunds.created_at",
+          "users.created_at"
+        ],
+        "metric_count": 4,
+        "schema_column_count": 40,
+        "relationship_count": 24,
+        "generation_path": "model_error",
+        "generation_warning_count": 4,
+        "generation_warnings": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupon_usages。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "guard_status": "blocked",
+        "guard_warning_count": 0,
+        "guard_warnings": [],
+        "guard_error_count": 4,
+        "guard_errors": [
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons",
+          "模型 SQL 使用了错误支付口径：orders.status 没有 paid，请关联 payments 并使用 payments.status = 'paid'。",
+          "SQL 未使用计划实体表：coupon_usages。",
+          "SQL 未覆盖已召回的关键上下文表：coupon_usages, coupons"
+        ],
+        "memory_path_type": "cold_path",
+        "memory_reuse_type": "none",
+        "memory_hit": false,
+        "memory_score": 0.5834,
+        "node_timings_ms": {
+          "sql_guard": 0,
+          "sql_repair": 2133,
+          "intent_parse": 0,
+          "memory_update": 0,
+          "sql_execution": 0,
+          "present_result": 0,
+          "sql_generation": 6089,
+          "context_retrieval": 2722,
+          "sql_intent_validation": 1,
+          "memory_retrieval_and_plan": 1327
+        },
+        "total_latency_ms": 12281,
+        "slowest_node": {
+          "name": "sql_generation",
+          "latency_ms": 6089
+        },
+        "context_table_coverage": {
+          "covered": false,
+          "sql_tables": [],
+          "missing_tables": [
+            "coupon_usages",
+            "coupons"
+          ],
+          "required_tables": [
+            "coupon_usages",
+            "coupons"
+          ]
+        }
+      },
+      "error": ""
+    }
+  ],
+  "dataset": {
+    "path": "eval/datasets/database_ground_truth_questions.jsonl",
+    "total_case_count": 50,
+    "selected_start": 0,
+    "selected_limit": 10,
+    "selected_case_count": 10,
+    "selected_case_ids": [
+      "database_001",
+      "database_002",
+      "database_003",
+      "database_004",
+      "database_005",
+      "database_006",
+      "database_007",
+      "database_008",
+      "database_009",
+      "database_010"
+    ],
+    "is_complete_dataset": false
+  }
+}

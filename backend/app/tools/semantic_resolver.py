@@ -72,6 +72,7 @@ def _contract_summary(contract: SemanticContract) -> dict:
         "version": contract.version,
         "contract_type": contract.contract_type,
         "display_name": contract.display_name,
+        "business_definition": contract.business_definition,
         "source_tables": contract.source_tables,
         "source_fields": contract.source_fields,
         "aggregation": contract.aggregation,

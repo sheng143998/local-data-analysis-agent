@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Entity Total Semantic Contracts。计划：`docs/plans/2026-07-13-entity-total-semantic-contracts.md`；记录：`docs/modules/2026-07-13-entity-total-semantic-contracts.md`；报告：`eval/reports/entity_contract_batch_001.json`。10 个基础实体契约已传入 SQL Prompt；前 10 条严格成功和答案匹配从 `2/10` 提升至 `3/10`，执行成功维持 `7/10`。无固定 SQL；复杂口径仍待进一步语义资产和模型评测。
+
+- 进行中：Entity Total Semantic Contracts。计划：`docs/plans/2026-07-13-entity-total-semantic-contracts.md`。benchmark 已证实基础表真值正确，失败来自模型将多个实体总数误生成为订单数；将补齐契约并把定义透传 SQL Prompt，不增加固定 SQL。
+
 - 已完成：Upgrade Benchmark Batch 001。报告：`eval/reports/post_upgrade_batch_001.json`；记录：`docs/modules/2026-07-13-upgrade-benchmark-batch-001.md`。升级后前 10 条执行成功 `7/10`，较升级前 `5/10` 提升；严格成功和答案匹配均仍为 `2/10`。结论：链路稳定性改善，业务口径/SQL 准确性仍是主瓶颈，不能将当前升级视为完成。
 
 - 已增强：Model Routing And Observability。SQL generator/repair 已使用显式路由，run trace 记录 provider/model/latency 摘要而不记录 prompt 或密钥。验证：SQL generator/run trace/routing `17 passed, 1 warning`。模型选择仍必须通过 authenticated benchmark。
