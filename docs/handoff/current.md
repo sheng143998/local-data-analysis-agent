@@ -11,7 +11,7 @@
 
 ## 当前状态
 
-- 已完成（并行评测子任务）：Ground Truth Text Alignment And Authenticated Evaluation。计划：`docs/plans/2026-07-13-ground-truth-text-alignment.md`；记录：`docs/modules/2026-07-13-ground-truth-text-alignment.md`；对照报告：`eval/reports/ground_truth_text_alignment.json`。外部 `新建 文本文档.txt` 与 JSONL 真值集均为 50 条，问题/答案差异均为 0，4 条特殊结果模式一致。认证第 1 批 `ground_truth_current_batch_001.json` 已完成 `7/10` 执行、`3/10` 严格、`3/10` 答案匹配；`database_001` 返回 `99440` 对真值 `99441`，Guard 允许且 trace 为 `model_rewrite`，归类为语义/模型生成口径偏差，不是鉴权问题。未修改核心 graph、Prompt、Guard 或 Executor；待提交/推送本子任务文件。
+- 已完成（并行评测子任务）：Ground Truth Text Alignment And Authenticated Evaluation。计划：`docs/plans/2026-07-13-ground-truth-text-alignment.md`；记录：`docs/modules/2026-07-13-ground-truth-text-alignment.md`；对照报告：`eval/reports/ground_truth_text_alignment.json`。外部 `新建 文本文档.txt` 与 JSONL 真值集均为 50 条，问题/答案差异均为 0，4 条特殊结果模式一致。认证第 1 批 `ground_truth_current_batch_001.json` 已完成 `7/10` 执行、`3/10` 严格、`3/10` 答案匹配；`database_001` 返回 `99440` 对真值 `99441`，Guard 允许且 trace 为 `model_rewrite`，归类为语义/模型生成口径偏差，不是鉴权问题。未修改核心 graph、Prompt、Guard 或 Executor；提交 `ef14aa0`、`5a65b26` 已推送至 `origin/main`。
 
 - 进行中：Handoff State Consolidation。计划：`docs/plans/2026-07-13-handoff-state-consolidation.md`。仅清理已完成模块遗留的重复状态，明确当前可信评测报告与未提交评测工件；不修改应用或评测内容。
 
