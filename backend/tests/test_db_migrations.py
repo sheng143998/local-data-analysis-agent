@@ -11,6 +11,7 @@ def test_required_migrations_exist() -> None:
     assert "002_business_tables.sql" in names
     assert "003_agent_metadata.sql" in names
     assert "007_conversation_states.sql" in names
+    assert "008_semantic_contracts.sql" in names
 
 
 def test_conversation_state_persistence_declared() -> None:
@@ -50,3 +51,10 @@ def test_agent_metadata_tables_declared() -> None:
         "embedding_documents",
     ]:
         assert f"CREATE TABLE IF NOT EXISTS {table}" in sql
+
+
+def test_semantic_contract_versioning_declared() -> None:
+    sql = (MIGRATION_DIR / "008_semantic_contracts.sql").read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS semantic_contracts" in sql
+    assert "UNIQUE (contract_key, version)" in sql
+    assert "idx_semantic_contracts_key_status_version" in sql

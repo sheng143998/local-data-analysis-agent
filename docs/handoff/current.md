@@ -2,6 +2,18 @@
 
 ## 当前状态
 
+- 已完成：Semantic Contract Data Foundation（Phase 1）。计划：`docs/plans/2026-07-13-semantic-contract-data-foundation.md`；完成记录：`docs/modules/2026-07-13-semantic-contract-data-foundation.md`。`semantic_contracts` 已通过 `contract_key + version` 保留指标、维度、实体和关系的历史口径；repository 默认读取最高启用版本且只允许新增版本，不修改现有 Graph、QuerySpec、Guard 或只读 Executor。真实 PostgreSQL 已应用 migration `008`。验证：focused `9 passed`、后端全量 `228 passed, 1 warning`。后续将按 Resolver 集成设计接入运行链路，未知但明确概念仍保留开放式 schema/模型路径。
+
+- 已完成（并行子任务）：可恢复分批评测。计划：`docs/plans/2026-07-13-evaluation-resumable-batches.md`；记录：`docs/modules/2026-07-13-evaluation-resumable-batches.md`。runner 支持 `--start`、`--limit` 和独立 `--report`，报告包含数据集总量、选择范围、已运行 case ID 与完整性标记；非法参数会在模型执行前阻断，鉴权及质量定义未变。验证：`.venv` 聚焦测试 `17 passed, 1 warning`，CLI 帮助通过。风险：每个分批报告仅代表该批，主线汇总完整 50 题前必须核对 case ID 覆盖；本子模块不单独提交/推送，由主线集成。
+
+- 进行中（并行子任务）：Semantic Resolver 集成设计（Phase 1）。计划：`docs/plans/2026-07-13-semantic-resolver-integration-design.md`。范围：梳理意图、会话续问、QuerySpec、检索和 Graph 的最小接入边界，形成数据流、测试矩阵和风险；不修改共享运行代码、migration 或 SQL 安全链路。验证：UTF-8 文档路径、函数名和数据流与当前代码核对。风险：必须依赖并行 Semantic Contract 数据基础层的公开 schema/repository，不能创建重复模型。
+
+- 已完成（并行子任务）：管理员评测账号安全核验。计划：`docs/plans/2026-07-13-evaluator-admin-account-validation.md`；记录：`docs/modules/2026-07-13-evaluator-admin-account-validation.md`。已确认启用管理员账号与评测登录/run trace 权限路径，且缺失 `EVAL_AUTH_*` 会在评测前明确阻断。主线必须将已知管理员凭据写入未跟踪 `backend/.env` 后运行 `npm.cmd run eval:database-baseline`；不允许用 analyst 账号替代，否则会丢失管理员 trace。该并行核验按主线边界不单独提交。
+
+- 已完成（并行子任务）：Semantic Contract 数据基础层（Phase 1）。计划：`docs/plans/2026-07-13-semantic-contract-data-foundation.md`；记录：`docs/modules/2026-07-13-semantic-contract-data-foundation.md`。新增 `semantic_contracts` 的版本化 migration、Pydantic schema 和 repository；按 `contract_key + version` 保留历史口径，默认读取最新启用版本，且只新增版本不覆盖既有定义。未改 `analysis_graph`、意图 Resolver 或 SQL 安全链路。验证：项目 `.venv` 聚焦测试 `9 passed`；系统 Python 因缺少 `langgraph` 无法加载 conftest；`npm.cmd run backend:test` 在 124 秒超时且未产生失败输出，未计为通过，主线集成后必须重跑。风险：migration 尚待真实 PostgreSQL 应用验证；与 `metric_definitions` 暂时并存。本子模块按并行协作约定不单独提交或推送。
+
+- 进行中：Compound Data Agent Upgrade Execution。总计划：`docs/plans/2026-07-13-compound-data-agent-upgrade-execution.md`；用户已批准按升级草案执行，并要求采用多 agent 并行开发。当前先验证并配置本机未跟踪的专用管理员评测凭据，运行 50 case 真值基线；并行准备 Semantic Layer V2 的迁移/repository 设计和现有意图/上下文接入点。每个阶段保持独立计划、验证、模块记录、commit 和 push。风险：不得暴露凭据或把配置失败记为模型质量，migration 与核心 graph 改动由主线统一集成。
+
 - 已完成：Authenticated Ground Truth Evaluation（升级草案 Phase 0）。计划：`docs/plans/2026-07-13-authenticated-ground-truth-evaluation.md`；完成记录：`docs/modules/2026-07-13-authenticated-ground-truth-evaluation.md`。评测在 `AUTH_REQUIRED=true` 时会使用显式 `EVAL_AUTH_EMAIL` / `EVAL_AUTH_PASSWORD` 登录，并在整个批次复用一个会话；缺少凭据或登录失败会在执行 case 前明确阻断，不再产生误导性的 401 质量报告。用户提供的 50 条真实数据库问答已固化为 `eval/datasets/database_ground_truth_questions.jsonl`，报告新增结构化行结果的答案匹配状态、原因与匹配率；新增 `npm.cmd run eval:database-baseline`。验证：focused `14 passed, 1 warning`、后端全量 `223 passed, 1 warning`、前端构建通过。真实数据库基线尚未执行，原因是本机未配置专用评测凭据，命令已按设计明确阻断且未生成伪造报告。风险：需配置管理员评测账号才可采集 run trace；复杂多行/不可计算语义会在后续 Result Contract 阶段升级为结构化断言。模块提交 `f0dd341` 已推送至 `origin/main`。
 
 - 待审查：复合式数据分析 Agent 升级改造草案。计划：`docs/plans/2026-07-13-compound-data-agent-upgrade-draft.md`；文档交付记录：`docs/modules/2026-07-13-compound-data-agent-upgrade-draft.md`。草案综合 Semantic View/MDL、Trusted SQL、Knowledge Store、Query Checker/Inspect、Tool Memory 等成熟机制，规划 Semantic Layer V2、确定性 Clarification Policy、Verified Query 分级、Query Plan、独立 Inspector、`EXPLAIN`/探针验证、Result Contract、authenticated evaluation 和模型路由。推荐下一步只实施 Phase 0：恢复鉴权评测与可信基线；当前未修改业务代码、数据库、API、配置或前端。
