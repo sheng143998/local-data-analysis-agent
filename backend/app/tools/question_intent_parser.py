@@ -95,6 +95,18 @@ def parse_question_intent(
         return _finalize_intent(_heuristic_intent(question, [response.error_message or "LLM intent parser failed."]))
 
     parsed = _parse_model_intent(question, response)
+    if _should_recover_explicit_data_question(question, parsed):
+        # 模型没有保留任何候选却要求澄清时，保留用户明确提出的业务问题，交给受控检索与 Guard 继续判断。
+        return _finalize_intent(
+            parsed.model_copy(
+                update={
+                    "semantic_metrics": [question],
+                    "needs_clarification": False,
+                    "clarification": "",
+                    "warnings": [*parsed.warnings, "模型错误澄清已回退为原始业务候选。"],
+                }
+            )
+        )
     # 模型已提供未映射的自然语言候选时，不能让词表兜底覆盖它；
     # 否则“当前用户总数”会被泛化成“用户维度”，再次错误触发澄清。
     if (
@@ -177,12 +189,15 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
         confidence = min(confidence, 0.5)
 
     normalized = _build_normalized_question(question, metrics, dimensions, time_range)
-    needs_clarification = confidence < CONFIDENCE_THRESHOLD
+    explicit_data_question = _is_explicit_data_question(question)
+    needs_clarification = confidence < CONFIDENCE_THRESHOLD and not explicit_data_question
     return ParsedQuestionIntent(
         original_question=question,
         normalized_question=normalized,
         metrics=sorted(set(metrics)),
         dimensions=sorted(set(dimensions)),
+        # 模型不可用时，明确的对象和聚合请求仍应交给受控链路，不能因词表缺口重复追问用户。
+        semantic_metrics=[question] if explicit_data_question and not metrics else [],
         time_range=time_range,
         confidence=confidence,
         needs_clarification=needs_clarification,
@@ -291,6 +306,22 @@ def _looks_like_complex_metric_question(question: str) -> bool:
         if token in question
     )
     return conjunction_count > 0 and metric_hints >= 2
+
+
+def _should_recover_explicit_data_question(question: str, intent: ParsedQuestionIntent) -> bool:
+    """仅修复模型空候选的错误澄清，模糊对话仍必须向用户追问。"""
+    if not intent.needs_clarification:
+        return False
+    if intent.metrics or intent.dimensions or intent.semantic_metrics or intent.semantic_dimensions:
+        return False
+    return _is_explicit_data_question(question)
+
+
+def _is_explicit_data_question(question: str) -> bool:
+    """只识别用户已经给出对象和查询操作的问题，避免把概览型闲聊误作数据查询。"""
+    query_operations = ("多少", "总数", "总额", "平均", "最高", "最低", "前 ", "前", "最多", "最少", "日期", "类型", "数量", "率", "趋势", "分布")
+    business_objects = ("订单", "商品", "品类", "库存", "流量", "用户", "退款", "支付", "送达", "加购", "优惠券", "城市", "州")
+    return any(token in question for token in query_operations) and any(token in question for token in business_objects)
 
 
 def _candidate_values(payload: dict[str, Any], *field_names: str) -> list[str]:

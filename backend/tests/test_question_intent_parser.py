@@ -63,6 +63,57 @@ def test_parse_question_intent_asks_for_clarification_when_uncertain() -> None:
     assert "是否查询" in intent.clarification
 
 
+def test_parse_question_intent_recovers_explicit_query_from_empty_model_clarification() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"商品品类数",'
+                '"metrics":[],"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.2,"needs_clarification":true,'
+                '"clarification":"请补充指标"}'
+            ),
+            provider="cloud",
+            model="test",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("商品品类数是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is False
+    assert intent.semantic_metrics == ["商品品类数是多少？"]
+    assert "错误澄清" in intent.warnings[0]
+
+
+def test_parse_question_intent_recovers_when_model_omits_clarification_text() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"库存查询",'
+                '"metrics":[],"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.1,"needs_clarification":true}'
+            ),
+            provider="cloud",
+            model="test",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("最新快照总库存是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is False
+    assert intent.semantic_metrics == ["最新快照总库存是多少？"]
+
+
+def test_heuristic_parser_keeps_explicit_business_question_when_model_is_unavailable() -> None:
+    intent = parse_question_intent("商品品类数是多少？", model_enabled=False)
+
+    assert intent.needs_clarification is False
+    assert intent.semantic_metrics == ["商品品类数是多少？"]
+
+
 def test_parse_question_intent_keeps_model_generated_followup_clarification() -> None:
     adapter = FakeAdapter(
         ModelResponse(
