@@ -10,6 +10,10 @@ type FastApiErrorBody = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
+export function getApiBaseUrl() {
+  return API_BASE_URL;
+}
+
 export class ApiError extends Error {
   status: number;
   detail?: string;
@@ -26,7 +30,7 @@ function buildUrl(path: string) {
   return `${API_BASE_URL}${path}`;
 }
 
-function getCookie(name: string): string | undefined {
+export function getCookie(name: string): string | undefined {
   const prefix = `${encodeURIComponent(name)}=`;
   const item = document.cookie.split('; ').find((value) => value.startsWith(prefix));
   return item ? decodeURIComponent(item.slice(prefix.length)) : undefined;

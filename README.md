@@ -53,7 +53,7 @@ flowchart TD
 
 ## 当前能力
 
-- 聊天式数据问答：`POST /api/analyze` 已接入真实 PostgreSQL 查询链路。
+- 聊天式数据问答：`POST /api/analyze` 已接入真实 PostgreSQL 查询链路；ChatPage 默认使用 `POST /api/analyze/stream` 展示真实服务阶段和最终结果，支持浏览器取消，不伪造 token 打字效果。
 - 指标口径 CRUD：`GET/POST/PUT/DELETE /api/metrics` 已持久化到 `metric_definitions`。
 - Schema + Metric Retriever：从 `schema_metadata` 和 `metric_definitions` 召回分析上下文，已接入文本分数 + pgvector 语义候选的混合检索；向量不可用时自动退回文本检索；用户、流量、优惠券等业务主题会补充召回相关表字段。
 - RAG Rerank 与上下文压缩：粗召回后会基于指标、表、字段、时间意图进行规则重排，压缩 schema 上下文时优先保留指标必需字段、时间字段和 join key，并把 rerank 诊断写入开发者日志。

@@ -27,7 +27,7 @@
 - [x] 建立会话列表 cursor 分页和消息窗口分页 API，保持 owner 隔离和 Redis/PostgreSQL 回退。
 - [x] 将 ChatPage 改为 ChatGPT 风格 shell：会话搜索/分页、消息虚拟窗口、向上加载、稳定滚动锚点和响应式布局。
 - [x] 新增 `VisualizationSpec` 和真实 ECharts 结果组件，清理数据问答相关 Mock。
-- [ ] 新增 `POST /api/analyze/stream` 事件协议、取消处理和前端真实流式消费。
+- [x] 新增 `POST /api/analyze/stream` 事件协议、取消处理和前端真实流式消费。
 - [ ] 实现 Dialogue Router 和独立 `dialogue` 模型角色，统一使用现有会话和三层记忆。
 - [ ] 新增后端/前端/e2e/router/50-case 回归，逐模块写记录、提交并推送。
 

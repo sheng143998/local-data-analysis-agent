@@ -10,6 +10,7 @@
 
 - `GET /api/health`
 - `POST /api/analyze`
+- `POST /api/analyze/stream`
 - `GET /api/conversations`
 - `GET /api/conversations/{conversation_id}`
 - `POST /api/conversations/claim-development`
@@ -199,6 +200,27 @@
 - 内部 SQL Memory 分数、prompt、模型原始输出和工具调用原始 payload 不属于普通用户接口展示内容。
 - `rows` 不再固定为销售趋势字段；前端应按返回行的 key 动态生成表头，避免换表或新增查询列后无法展示。
 - 后端不接受模型生成的 ECharts option、颜色或图表类型。`visualization` 只从已确认的 Result Contract 和真实查询结果派生，不会影响 SQL、数值或自然语言结论。
+
+### `POST /api/analyze/stream`
+
+用途：以 Server-Sent Events（SSE）发送一次数据分析请求已进入的真实服务阶段，以及最终完整分析结果。请求体和认证边界与 `POST /api/analyze` 相同。
+
+响应头：`Content-Type: text/event-stream`、`Cache-Control: no-cache`、`X-Accel-Buffering: no`。
+
+事件契约：
+
+| 事件 | data | 说明 |
+| --- | --- | --- |
+| `stage` | `{ "name": string, "status": "running" }` | 服务真正进入的业务节点，例如加载会话、理解问题、合并补充信息、执行受控数据分析或保存会话结果。 |
+| `result` | `AnalyzeResponse` | 最终完整响应，字段与同步 `/analyze` 一致；前端在该事件后展示 SQL、图表和结果表。 |
+| `error` | `{ "status": number, "detail": string }` | 已建立 SSE 后发生的业务失败。不会携带 SQL、异常栈、prompt 或内部上下文。 |
+| `done` | `{}` | 本次事件序列结束。 |
+
+注意：
+
+- 当前数据分析 Agent 没有可验证的 token 级模型输出，因此不会发送模拟 `text_delta` 或把最终摘要拆分成假打字效果。
+- 未登录或请求体校验失败会在 SSE 建立前正常返回 `401` 或 `422` JSON。SSE 已建立后发生的失败以 `error` 后跟 `done` 表示，HTTP 状态仍为 `200`。
+- 浏览器取消只中断 SSE 读取；已开始的同步只读分析仍由既有 SQL Executor 超时和安全边界管理。不会为取消请求写入伪造的完成回答。
 
 ## 指标口径
 

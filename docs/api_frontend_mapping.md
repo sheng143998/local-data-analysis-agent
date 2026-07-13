@@ -11,7 +11,7 @@
 | 文件 | 作用 | 后端接口 |
 | --- | --- | --- |
 | `frontend/src/api/client.ts` | 统一请求入口、base URL、JSON 解析和 FastAPI 错误解析 | 所有前端业务 client 复用 |
-| `frontend/src/api/analysisClient.ts` | 数据问答 | `POST /api/analyze` |
+| `frontend/src/api/analysisClient.ts` | 数据问答与 SSE 消费 | `POST /api/analyze`、`POST /api/analyze/stream` |
 | `frontend/src/api/authClient.ts` | 登录态 | `POST /api/auth/login`、`POST /api/auth/register`、`POST /api/auth/logout`、`GET /api/auth/me`；后端还提供自身 session 的查看与撤销 |
 | `frontend/src/api/analysisClient.ts` | 会话恢复 | `GET /api/conversations` cursor 分页、`GET /api/conversations/{conversation_id}` 消息窗口分页 |
 | `frontend/src/api/userMemoryClient.ts` | 长期偏好 | `GET/DELETE /api/user-memories` |
@@ -29,7 +29,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000
 
 | 页面或组件 | 前端调用 | 后端接口 | 用途 |
 | --- | --- | --- | --- |
-| `frontend/src/pages/ChatPage.tsx` | `analyzeQuestion(question)` | `POST /api/analyze` | 用户输入业务问题后获取自然语言结论、SQL、表格和来源信息。 |
+| `frontend/src/pages/ChatPage.tsx` | `streamAnalyzeQuestion(question, conversationId, handlers, signal)` | `POST /api/analyze/stream` | 用户输入业务问题后消费真实服务阶段与最终结论、SQL、图表和结果表。 |
 | `frontend/src/components/metrics/MetricDefinitionCards.tsx` | `listMetrics()` | `GET /api/metrics` | 加载指标口径列表。 |
 | `frontend/src/components/metrics/MetricDefinitionCards.tsx` | `createMetric(payload)` | `POST /api/metrics` | 新增指标口径。 |
 | `frontend/src/components/metrics/MetricDefinitionCards.tsx` | `updateMetric(id, payload)` | `PUT /api/metrics/{metric_id}` | 编辑指标口径。 |
@@ -51,7 +51,7 @@ analyzeQuestion(question: string): Promise<AnalysisResponse>
 }
 ```
 
-后端接口：`POST /api/analyze`
+后端接口：`POST /api/analyze` 保留给同步调用；ChatPage 默认使用 `POST /api/analyze/stream`。
 
 ### 前端类型
 
@@ -153,6 +153,10 @@ export type VisualizationSpec = {
 
 `ChatPage` 只在当前分析响应同时包含真实 rows 和可用规格时调用 `ResultChart`。图表类型由后端 Result Contract 的确定性规则选择，前端不根据 Mock 数据或模型文本推测字段、数值和图表配置；历史消息当前只恢复摘要，因此不会伪造历史图表。
 
+### SSE 流式消费
+
+`streamAnalyzeQuestion()` 使用 `fetch` 的 `ReadableStream` 解析 POST SSE，并通过 `AbortSignal` 支持取消。ChatPage 仅把 `stage` 事件显示为当前真实服务节点，收到 `result` 后才替换为最终 `AnalysisResponse`。当前不消费或伪造 `text_delta`；服务端发出 `error` 时显示受控错误卡片，用户取消时移除未完成助手消息。
+
 ## 指标口径字段映射
 
 ### 前端类型
@@ -249,4 +253,5 @@ export type MetricPayload = Omit<MetricDefinition, 'id' | 'created_at' | 'update
 - `AuthProvider` 在应用启动时调用 `getCurrentUser()`；`ProtectedRoute` 在未登录时将 `/app/*` 跳转到 `/login`，并保留原始路径用于登录后恢复。
 - `apiRequest()` 使用 `credentials: 'include'`，并从 CSRF Cookie 读取 token 后为非 `GET` 请求设置 `X-CSRF-Token`。
 - `ChatPage` 保存分析响应返回的 `conversation_id`，后续提问复用该 ID；会话栏消费 `items/next_cursor`，消息区消费 `messages/has_more/next_before`，为后续虚拟列表和向上加载保留稳定契约。
+- `ChatPage` 现通过 POST SSE 显示真实分析服务阶段并支持浏览器取消。取消只能停止前端读取，无法强制终止已开始的同步数据库分析；SQL Executor 的只读和超时边界不变。
 - `ProfilePanel` 展示 active 长期偏好，并允许用户撤销偏好；偏好写入仍通过聊天中的明确“记住”指令完成。

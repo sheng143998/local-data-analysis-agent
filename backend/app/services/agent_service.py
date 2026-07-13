@@ -1,5 +1,6 @@
 import base64
 import json
+from collections.abc import Callable
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -38,22 +39,30 @@ class AgentService:
         self.conversation_store = conversation_store or get_conversation_store()
         self.long_term_memory_service = long_term_memory_service or LongTermMemoryService()
 
-    def analyze(self, payload: AnalyzeRequest, app_user_id: UUID | None = None) -> AnalyzeResponse:
+    def analyze(
+        self,
+        payload: AnalyzeRequest,
+        app_user_id: UUID | None = None,
+        on_stage: Callable[[dict[str, str]], None] | None = None,
+    ) -> AnalyzeResponse:
         question = payload.question.strip() or "最近 30 天销售额按天变化如何？"
+        _notify_stage(on_stage, "加载会话")
         state = self._load_or_create(payload.conversation_id, app_user_id, question)
         self._append_message(state, role="user", content=question)
         refresh_working_memory(state)
 
         if app_user_id is not None:
+            _notify_stage(on_stage, "检查长期偏好")
             memory_confirmation = self.long_term_memory_service.handle_explicit_preference(app_user_id, question, state.id)
             if memory_confirmation:
                 state.pending_clarification = None
                 state.status = "active"
                 state.current_analysis = CurrentAnalysis(original_question=question, stage="completed", updated_at=_now())
-                return self._finish(state, _memory_confirmation_response(question, memory_confirmation))
+                return self._finish(state, _memory_confirmation_response(question, memory_confirmation), on_stage=on_stage)
 
         intent: ParsedQuestionIntent | None = None
         if state.pending_clarification:
+            _notify_stage(on_stage, "合并补充信息")
             resolution = resolve_followup(question, state.pending_clarification)
             if resolution.decision == "cancel":
                 state.pending_clarification = None
@@ -64,11 +73,11 @@ class AgentService:
                     updated_at=_now(),
                 )
                 response = _cancelled_response(question)
-                return self._finish(state, response)
+                return self._finish(state, response, on_stage=on_stage)
             if resolution.decision == "still_pending":
                 state.pending_clarification = resolution.pending
                 response = _pending_response(question, state.pending_clarification.clarification if resolution.pending else "请补充需要查询的指标。")
-                return self._finish(state, response)
+                return self._finish(state, response, on_stage=on_stage)
             if resolution.decision == "new_question":
                 state.pending_clarification = None
                 state.status = "active"
@@ -76,11 +85,13 @@ class AgentService:
 
         long_term_context = self.long_term_memory_service.context_for(app_user_id, question)
         conversation_context = "\n\n".join(item for item in (long_term_context, build_working_context(state)) if item)
+        _notify_stage(on_stage, "理解问题")
         intent = intent or parse_question_intent(question, conversation_context=conversation_context)
         intent = apply_semantic_resolution(intent)
         intent = apply_clarification_policy(intent)
         intent = intent.model_copy(update={"query_plan": build_query_plan(intent).model_dump()})
         if intent.needs_clarification:
+            _notify_stage(on_stage, "等待补充信息")
             state.pending_clarification = pending_from_intent(intent)
             state.status = "waiting_for_clarification"
             state.current_analysis = CurrentAnalysis(
@@ -89,7 +100,7 @@ class AgentService:
                 stage="waiting_for_clarification",
                 updated_at=_now(),
             )
-            return self._finish(state, present_clarification_response(question, intent, latency_ms=0))
+            return self._finish(state, present_clarification_response(question, intent, latency_ms=0), on_stage=on_stage)
 
         state.pending_clarification = None
         state.status = "active"
@@ -99,13 +110,14 @@ class AgentService:
             stage="executing",
             updated_at=_now(),
         )
+        _notify_stage(on_stage, "执行受控数据分析")
         response = run_analysis_graph(intent.original_question, app_user_id=app_user_id, parsed_intent=intent)
         if not response.sql and response.source.security != "未生成 SQL，等待用户确认":
             state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
-            self._finish(state, _analysis_failure_response(question))
+            self._finish(state, _analysis_failure_response(question), on_stage=on_stage)
             raise AnalysisUnavailableError("分析服务暂时无法生成可执行查询，请稍后重试。")
         state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
-        return self._finish(state, response)
+        return self._finish(state, response, on_stage=on_stage)
 
     def list_conversations(
         self, app_user_id: UUID | None, limit: int = 20, cursor: str | None = None
@@ -146,7 +158,13 @@ class AgentService:
             raise HTTPException(status_code=404, detail="会话不存在")
         return state
 
-    def _finish(self, state: ConversationState, response: AnalyzeResponse) -> AnalyzeResponse:
+    def _finish(
+        self,
+        state: ConversationState,
+        response: AnalyzeResponse,
+        on_stage: Callable[[dict[str, str]], None] | None = None,
+    ) -> AnalyzeResponse:
+        _notify_stage(on_stage, "保存会话结果")
         response = response.model_copy(
             update={
                 "conversation_id": state.id,
@@ -213,6 +231,12 @@ def _analysis_failure_response(question: str) -> AnalyzeResponse:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _notify_stage(on_stage: Callable[[dict[str, str]], None] | None, name: str) -> None:
+    """仅通知已进入的真实业务节点，避免把展示文案伪装成模型流。"""
+    if on_stage is not None:
+        on_stage({"name": name, "status": "running"})
 
 
 def _encode_conversation_cursor(summary: ConversationSummary) -> str:

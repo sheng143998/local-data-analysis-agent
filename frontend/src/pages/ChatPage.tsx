@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ArchiveRestore,
@@ -12,12 +11,13 @@ import {
   Search,
   Send,
   Sparkles,
+  Square,
   Table2,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { SqlPanel } from '../components/data-qa/SqlPanel';
 import { ResultChart } from '../components/data-qa/ResultChart';
-import { analyzeQuestion, claimDevelopmentConversations, getConversation, listConversations } from '../api/analysisClient';
+import { claimDevelopmentConversations, getConversation, listConversations, streamAnalyzeQuestion } from '../api/analysisClient';
 import { ApiError } from '../api/client';
 import type { AnalysisResponse, AnalysisRow, AnalysisValue, ConversationDetail, ConversationMessage } from '../types/analysis';
 
@@ -171,7 +171,9 @@ export function ChatPage() {
   const [nextBefore, setNextBefore] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadingMoreSessions, setLoadingMoreSessions] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
 
   const messageVirtualizer = useVirtualizer({
     count: messages.length,
@@ -249,27 +251,6 @@ export function ChatPage() {
     }
   }, [loadingMoreSessions, sessionCursor]);
 
-  const mutation = useMutation({
-    mutationFn: (question: string) => analyzeQuestion(question, activeSession),
-    onSuccess: (data) => {
-      if (data.conversation_id) setActiveSession(data.conversation_id);
-      setMessages((current) => [
-        ...current.filter((item) => !item.streaming),
-        { id: `a-${Date.now()}`, role: 'assistant', text: data.summary, sql: data.sql || undefined, rows: data.rows, visualization: data.visualization },
-      ]);
-      setHasMoreMessages(false);
-      setNextBefore(null);
-      void refreshSessions();
-      scrollToLatest();
-    },
-    onError: (error) => {
-      const friendlyError = toChatError(error);
-      setMessages((current) => [...current.filter((item) => !item.streaming), { id: `e-${Date.now()}`, role: 'assistant', text: friendlyError.message, error: friendlyError }]);
-      void refreshSessions();
-      scrollToLatest();
-    },
-  });
-
   const claimHistory = async () => {
     try {
       await claimDevelopmentConversations();
@@ -288,18 +269,59 @@ export function ChatPage() {
     setDraft('');
   };
 
-  const run = () => {
+  const run = async () => {
     const question = draft.trim();
-    if (!question || mutation.isPending) return;
+    if (!question || isStreaming) return;
+    const assistantId = `a-${Date.now()}`;
+    const controller = new AbortController();
+    const conversationId = activeSession;
+    streamAbortRef.current = controller;
+    setIsStreaming(true);
     setDraft('');
     setMessages((current) => [
       ...current,
       { id: `u-${Date.now()}`, role: 'user', text: question },
-      { id: `a-${Date.now()}`, role: 'assistant', text: '正在处理...', streaming: true },
+      { id: assistantId, role: 'assistant', text: '正在连接分析服务...', streaming: true },
     ]);
-    mutation.mutate(question);
     scrollToLatest();
+    try {
+      await streamAnalyzeQuestion(question, conversationId, {
+        onStage: (stage) => {
+          setMessages((current) => current.map((item) => (
+            item.id === assistantId ? { ...item, text: `正在${stage.name}...`, streaming: true } : item
+          )));
+          scrollToLatest();
+        },
+        onResult: (data) => {
+          if (data.conversation_id) setActiveSession(data.conversation_id);
+          setMessages((current) => current.map((item) => (
+            item.id === assistantId
+              ? { ...item, text: data.summary, sql: data.sql || undefined, rows: data.rows, visualization: data.visualization, streaming: false }
+              : item
+          )));
+          setHasMoreMessages(false);
+          setNextBefore(null);
+          scrollToLatest();
+        },
+      }, controller.signal);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        setMessages((current) => current.filter((item) => item.id !== assistantId));
+      } else {
+        const friendlyError = toChatError(error);
+        setMessages((current) => current.map((item) => (
+          item.id === assistantId ? { ...item, text: friendlyError.message, error: friendlyError, streaming: false } : item
+        )));
+      }
+      scrollToLatest();
+    } finally {
+      if (streamAbortRef.current === controller) streamAbortRef.current = null;
+      setIsStreaming(false);
+      void refreshSessions();
+    }
   };
+
+  const cancelStream = () => streamAbortRef.current?.abort();
 
   const filteredSessions = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -439,14 +461,14 @@ export function ChatPage() {
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault();
-                  run();
+                  void run();
                 }
               }}
               className="min-h-12 max-h-40 flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-6 text-slate-800 outline-none"
               placeholder="输入问题"
             />
-            <button type="button" onClick={run} disabled={mutation.isPending || !draft.trim()} className="primary-btn h-10 w-10 shrink-0 p-0 bg-teal-700 hover:bg-teal-800" title="发送">
-              {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            <button type="button" onClick={isStreaming ? cancelStream : () => void run()} disabled={!isStreaming && !draft.trim()} className="primary-btn h-10 w-10 shrink-0 p-0 bg-teal-700 hover:bg-teal-800" title={isStreaming ? '取消分析' : '发送'}>
+              {isStreaming ? <Square className="h-4 w-4" /> : <Send className="h-4 w-4" />}
             </button>
           </div>
         </div>

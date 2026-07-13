@@ -203,6 +203,16 @@ curl -X POST http://localhost:8000/api/analyze \
   -d "{\"question\":\"最近 30 天销售额按天变化如何？\"}"
 ```
 
+### 数据问答 SSE
+
+```bash
+curl -N -X POST http://localhost:8000/api/analyze/stream \
+  -H "Content-Type: application/json" \
+  -d "{\"question\":\"最近 30 天销售额按天变化如何？\"}"
+```
+
+预期先收到一个或多个 `event: stage`，随后收到完整 `event: result` 和 `event: done`。当前不应收到模拟 `text_delta`；服务端运行时失败会以 `event: error` 后跟 `event: done` 返回。
+
 ### 指标列表
 
 ```bash
