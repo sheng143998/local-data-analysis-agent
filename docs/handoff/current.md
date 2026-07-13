@@ -2,21 +2,15 @@
 
 ## 当前状态
 
-- 已完成：空结果语义展示。计划：`docs/plans/2026-07-13-empty-result-presentation.md`；记录：`docs/modules/2026-07-13-empty-result-presentation.md`。成功空集、零值聚合与错误状态已被内部 Contract/response source 区分，空集不再被泛化为业务零。验证：Presenter/Contract `5 passed`；API 组合测试在 120 秒上限未完成。待提交/推送。
+- 进行中：Handoff State Consolidation。计划：`docs/plans/2026-07-13-handoff-state-consolidation.md`。仅清理已完成模块遗留的重复状态，明确当前可信评测报告与未提交评测工件；不修改应用或评测内容。
 
-- 进行中：空结果语义展示。计划：`docs/plans/2026-07-13-empty-result-presentation.md`。将成功空结果、成功零值和执行失败区分为内部 Result Contract 状态，并向既有 response source 增加可选状态字段；不修改 SQL 生成或安全执行边界。验证：Presenter/Result Contract 聚焦测试。
+- 当前已推送：`39e1b8e`（复杂语义契约/Query Plan）、`0b64e7c`（SQL EXPLAIN 预检）、`3caef13`（可信 SQL 指纹）、`219101c`（空结果语义展示）。各模块记录位于 `docs/modules/2026-07-13-*.md`。
 
-- 已完成：Trusted SQL Context Fingerprint。计划：`docs/plans/2026-07-13-trusted-sql-context-fingerprint.md`；记录：`docs/modules/2026-07-13-trusted-sql-context-fingerprint.md`。schema 与已解析契约指纹已保存在 SQL Memory 的既有 JSONB，缺失或失配的 verified 记录只能走 rewrite path。验证：Memory/Graph focused `47 passed`；全量测试与标准评测未重复运行，原因及相邻模块结果已记录。待提交/推送。
+- 可信 50-case 对照仍以 `eval/reports/post_upgrade_full_eval.json` 为准：执行 `31/50`、严格 `13/50`、答案 `14/48`。本机 `eval/reports/latest_eval_report.json` 是后续运行的标准 20 题工件（执行 `8/20`、严格 `6/20`），不替代该基线；`eval/reports/semantic_contract_v2_batch_002.json` 是未提交的认证第 11-20 题工件。
 
-- 进行中：Trusted SQL Context Fingerprint。计划：`docs/plans/2026-07-13-trusted-sql-context-fingerprint.md`。将使用既有 `sql_memories.filters` JSONB 持久化 schema 与 semantic-contract 指纹，避免无 migration 的重复字段；指纹缺失或失配的 verified SQL 必须降级为 rewrite path，仍经过 Inspector/Guard/Executor。验证：Memory/Graph 聚焦测试、后端全量与标准评测。
+- 当前主要风险：本地 `qwen2.5-coder:3b` 会产生空 SQL 或错误分组 SQL；安全链路已收紧，质量改进必须通过稳定的 authenticated 50-case 复测证明。后端全量/API 组合测试在本机 120 秒窗口内多次未完成，不能视为全绿。
 
-- 已完成：SQL EXPLAIN 执行前预检。计划：`docs/plans/2026-07-13-sql-explain-preflight.md`；记录：`docs/modules/2026-07-13-sql-explain-preflight.md`。Graph 已固定为 Guard 后预检成功才执行主查询；预检使用独立只读事务与超时，失败只允许有限修复，不得执行主查询。验证：focused `44 passed, 1 warning`；`eval:standard` 为 `8/20` 执行、`6/20` 严格，失败均发生在预检前的模型/意图路径。后端全量测试本轮未运行，上一模块在 120 秒上限未完成。待提交/推送。
-
-- 已完成：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`；记录：`docs/modules/2026-07-13-semantic-contract-coverage-v2.md`；评测：`eval/reports/semantic_contract_v2_batch_002.json`。`012` migration 为稳定复杂业务概念新增版本化定义，Query Plan 已继承已解析契约的度量、维度、排序、限制和结果形态，不保存固定 SQL。验证：migration 已应用、focused `24 passed`；认证第 11-20 题执行 `10/10`、严格/答案 `7/10`。后端全量测试在 120 秒上限未完成，尚未视为通过。待提交/推送前会隔离并行模块文件。
-
-- 进行中：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`。依据 authenticated 50-case 评测，为稳定的复杂业务概念补充版本化定义，并让 Query Plan 继承契约形态约束；不保存固定 SQL、不改变 Guard/只读执行边界。验证：Resolver/Planner/payload 聚焦测试、后端全量测试和已配置管理员账号的 authenticated 抽样评测。
-
-- 进行中（独立模块）：SQL EXPLAIN 执行前预检。计划：`docs/plans/2026-07-13-sql-explain-preflight.md`。在 Guard 放行后、主查询前执行 `EXPLAIN (FORMAT JSON)`；预检使用独立只读事务与超时，失败或超时一律不执行主查询。范围仅限 Guard/Executor/Graph 相邻路由与测试，不改 API、前端、migration、SQL Prompt 或模型路由。验证：focused SQL/Graph tests、后端全量、authenticated `eval:standard`。风险：增加数据库往返，且并行模块正修改 Graph，提交前需隔离本模块文件。
+- 下一步：为订单/支付状态分组与支付方式金额等稳定口径增加审核语义契约，完成后用完整 50-case 认证评测与模型路由对照验证；不通过固定 SQL 绕过模型、Inspector、Guard 或 Executor。
 
 - 已完成：Contract And Plan Prompt Enforcement Experiment（已撤回）。报告：`eval/reports/contract_plan_prompt_batch_001.json`；记录：`docs/modules/2026-07-13-contract-plan-prompt-enforcement.md`。Prompt 强约束导致 authenticated 前 10 条从 `7/10`、`3/10`、`3/10` 回归到 `6/10`、`2/10`、`2/10`，已从主链路撤回。结论：不以单次 Prompt 规则替代语义资产/Inspector。
 
