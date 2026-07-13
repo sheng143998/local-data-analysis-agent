@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
+from backend.app.core.model_routing import route_model
 from backend.app.core.model_adapter import ModelAdapter, ModelAdapterConfig, ModelMessage, ModelRequest, ModelResponse
 from backend.app.schemas.query_spec import QuerySpec
 from backend.app.tools.query_spec import DIMENSION_LABELS, METRIC_LABELS, build_query_spec
@@ -369,11 +370,12 @@ def _loads_json_object(content: str) -> dict[str, Any]:
 
 
 def _intent_model_adapter() -> ModelAdapter:
+    route = route_model("intent")
     return ModelAdapter(
         ModelAdapterConfig(
-            provider=settings.intent_model_provider,
-            base_url=settings.intent_model_base_url,
-            model=settings.intent_model_name,
+            provider=route.provider,
+            base_url=route.base_url,
+            model=route.model,
             api_key=settings.intent_model_api_key,
             timeout_seconds=settings.intent_model_timeout_seconds,
             max_retries=settings.intent_model_max_retries,

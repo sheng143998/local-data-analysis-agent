@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Model Routing Foundation（Phase 7 起始）。计划：`docs/plans/2026-07-13-model-routing-observability.md`；记录：`docs/modules/2026-07-13-model-routing-foundation.md`。任务角色到 provider/model/base URL 的集中路由已建立，意图解析已接入；不记录密钥或完整 prompt。验证：focused `22 passed`。待完成：SQL adapter/run trace 路由摘要和 benchmark 驱动模型比较。
+
+- 进行中：Model Routing And Observability（Phase 7）。计划：`docs/plans/2026-07-13-model-routing-observability.md`。将意图、SQL、展示任务与现有 provider/model 配置显式关联，并记录安全摘要；不更改 endpoint、不向未批准云端发送 SQL/schema。
+
 - 已完成：Result Contract And Presenter（Phase 6）。计划：`docs/plans/2026-07-13-result-contract-presenter.md`；记录：`docs/modules/2026-07-13-result-contract-presenter.md`。内部 Contract 已把 Query Plan、真实列角色、行、范围和告警交给 Presenter；展示优先使用已确认度量标签，对外 API 不变。验证：focused `36 passed`、API/Presenter `4 passed`、后端全量 `241 passed, 1 warning`。风险：前端尚未消费列角色，图表/结构化来源展示待 UI 专项。
 
 - 进行中：Result Contract And Presenter（Phase 6）。计划：`docs/plans/2026-07-13-result-contract-presenter.md`。将 Query Plan、执行列/行、范围和告警变为内部 Result Contract，Presenter 以真实形态生成摘要，不改公开 API。
