@@ -2,6 +2,10 @@
 
 ## 当前状态
 
+- 已完成：Contract And Plan Prompt Enforcement Experiment（已撤回）。报告：`eval/reports/contract_plan_prompt_batch_001.json`；记录：`docs/modules/2026-07-13-contract-plan-prompt-enforcement.md`。Prompt 强约束导致 authenticated 前 10 条从 `7/10`、`3/10`、`3/10` 回归到 `6/10`、`2/10`、`2/10`，已从主链路撤回。结论：不以单次 Prompt 规则替代语义资产/Inspector。
+
+- 进行中：Contract And Plan Prompt Enforcement。计划：`docs/plans/2026-07-13-contract-plan-prompt-enforcement.md`。完整 benchmark 显示无关 payments/context 约束与模型空 SQL 是主失败源；将按已绑定契约/Plan 收紧 Prompt 和 Inspector，不写固定 SQL、不放宽 Guard。
+
 - 已完成：Upgrade Full Benchmark。报告：`eval/reports/post_upgrade_full_eval.json`；记录：`docs/modules/2026-07-13-upgrade-full-benchmark.md`。相同 authenticated 50-case 真值集对比：执行成功 `28/50 -> 31/50`，严格成功 `11/50 -> 13/50`，答案匹配 `10/48 -> 14/48`。升级有可复现提升但远未达到质量门槛；下一步以失败分类扩展审核语义资产/verified SQL，并 benchmark SQL 模型。
 
 - 已完成：Entity Total Semantic Contracts。计划：`docs/plans/2026-07-13-entity-total-semantic-contracts.md`；记录：`docs/modules/2026-07-13-entity-total-semantic-contracts.md`；报告：`eval/reports/entity_contract_batch_001.json`。10 个基础实体契约已传入 SQL Prompt；前 10 条严格成功和答案匹配从 `2/10` 提升至 `3/10`，执行成功维持 `7/10`。无固定 SQL；复杂口径仍待进一步语义资产和模型评测。
