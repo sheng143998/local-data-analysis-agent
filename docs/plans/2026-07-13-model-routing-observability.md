@@ -17,9 +17,11 @@
 
 ## Implementation steps
 
-- [ ] 定义 routing contract。
-- [ ] 接入意图/SQL adapter 和 run trace。
-- [ ] 测试、全量验证、文档、commit、push。
+- [x] 定义 routing contract。
+- [x] 接入意图/SQL adapter 和 run trace。
+- [x] 完成 focused 验证、文档、commit、push。
+
+交付状态：意图、SQL 生成和 SQL 修复均通过显式任务角色路由；run trace 只保留 provider/model/latency 摘要。实现与验证已随 `fdcfcd1` 及此前模型路由提交推送。路由只提供基础设施，模型质量仍以 authenticated benchmark 为准。
 
 ## Validation plan
 

@@ -1,5 +1,11 @@
 ﻿# 当前 Handoff
 
+## 本轮升级交付状态
+
+- 复合数据 Agent 升级 Phase 0-7 已完成代码与文档交付：可信 authenticated 基线、Semantic Contract/Resolver、Clarification Policy、Trusted SQL、Query Plan/Context Pack、Inspector/Repair、Result Contract/Presenter 和 Model Routing/Observability 均已落地并推送。
+- 本轮新增提交：`fdcfcd1`（SQL Inspector/Repair + 交易状态语义契约并行集成）、`ef14aa0`、`5a65b26`、`d8ba195`、`7b7c9a0`（真值文本/元数据评测交付）、`f81ee39`（升级计划和 handoff 收口）。
+- 可信质量基线仍为 `eval/reports/post_upgrade_full_eval.json`：执行 `31/50`、严格 `13/50`、答案 `14/48`；这证明链路可追踪但尚未达到质量门槛。下一轮优先用稳定模型配置重跑 50 case 并按失败分类优化，不得以固定 SQL 绕过安全链路。
+
 ## SQL Inspector/Repair 质量专项（已完成，已提交并推送）
 
 - 任务计划：`docs/plans/2026-07-13-sql-repair-rule-contract.md`。
@@ -11,7 +17,7 @@
 
 ## 当前状态
 
-- 已完成（并行评测子任务）：Ground Truth Text Alignment And Authenticated Evaluation。计划：`docs/plans/2026-07-13-ground-truth-text-alignment.md`；记录：`docs/modules/2026-07-13-ground-truth-text-alignment.md`；对照报告：`eval/reports/ground_truth_text_alignment.json`。外部 `新建 文本文档.txt` 与 JSONL 真值集均为 50 条，问题/答案差异均为 0，4 条特殊结果模式一致。认证第 1 批 `ground_truth_current_batch_001.json` 已完成 `7/10` 执行、`3/10` 严格、`3/10` 答案匹配；`database_001` 返回 `99440` 对真值 `99441`，Guard 允许且 trace 为 `model_rewrite`，归类为语义/模型生成口径偏差，不是鉴权问题。未修改核心 graph、Prompt、Guard 或 Executor；提交 `ef14aa0`、`5a65b26` 已推送至 `origin/main`。
+- 已完成（并行评测子任务）：Ground Truth Text Alignment And Authenticated Evaluation。计划：`docs/plans/2026-07-13-ground-truth-text-alignment.md`；记录：`docs/modules/2026-07-13-ground-truth-text-alignment.md`；对照报告：`eval/reports/ground_truth_text_alignment.json`。外部 `新建 文本文档.txt` 与 JSONL 真值集均为 50 条，问题/答案差异均为 0，4 条特殊结果模式一致。认证第 1 批 `ground_truth_current_batch_001.json` 已完成 `7/10` 执行、`3/10` 严格、`3/10` 答案匹配；`database_001` 返回 `99440` 对真值 `99441`，Guard 允许且 trace 为 `model_rewrite`，归类为语义/模型生成口径偏差，不是鉴权问题。未修改核心 graph、Prompt、Guard 或 Executor；提交 `ef14aa0`、`5a65b26`、`d8ba195`、`7b7c9a0` 已推送至 `origin/main`。
 
 - 进行中：Handoff State Consolidation。计划：`docs/plans/2026-07-13-handoff-state-consolidation.md`。仅清理已完成模块遗留的重复状态，明确当前可信评测报告与未提交评测工件；不修改应用或评测内容。
 
