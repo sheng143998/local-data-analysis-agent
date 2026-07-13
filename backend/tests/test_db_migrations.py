@@ -58,3 +58,10 @@ def test_semantic_contract_versioning_declared() -> None:
     assert "CREATE TABLE IF NOT EXISTS semantic_contracts" in sql
     assert "UNIQUE (contract_key, version)" in sql
     assert "idx_semantic_contracts_key_status_version" in sql
+
+
+def test_complex_semantic_contract_seed_declares_business_definitions_only() -> None:
+    sql = (MIGRATION_DIR / "012_complex_semantic_contracts.sql").read_text(encoding="utf-8")
+    assert "category_sales_ranking" in sql
+    assert "late_delivery_order_total" in sql
+    assert "SELECT " not in sql.upper()

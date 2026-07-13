@@ -2,6 +2,12 @@
 
 ## 当前状态
 
+- 已完成：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`；记录：`docs/modules/2026-07-13-semantic-contract-coverage-v2.md`；评测：`eval/reports/semantic_contract_v2_batch_002.json`。`012` migration 为稳定复杂业务概念新增版本化定义，Query Plan 已继承已解析契约的度量、维度、排序、限制和结果形态，不保存固定 SQL。验证：migration 已应用、focused `24 passed`；认证第 11-20 题执行 `10/10`、严格/答案 `7/10`。后端全量测试在 120 秒上限未完成，尚未视为通过。待提交/推送前会隔离并行模块文件。
+
+- 进行中：Semantic Contract Coverage V2。计划：`docs/plans/2026-07-13-semantic-contract-coverage-v2.md`。依据 authenticated 50-case 评测，为稳定的复杂业务概念补充版本化定义，并让 Query Plan 继承契约形态约束；不保存固定 SQL、不改变 Guard/只读执行边界。验证：Resolver/Planner/payload 聚焦测试、后端全量测试和已配置管理员账号的 authenticated 抽样评测。
+
+- 进行中（独立模块）：SQL EXPLAIN 执行前预检。计划：`docs/plans/2026-07-13-sql-explain-preflight.md`。在 Guard 放行后、主查询前执行 `EXPLAIN (FORMAT JSON)`；预检使用独立只读事务与超时，失败或超时一律不执行主查询。范围仅限 Guard/Executor/Graph 相邻路由与测试，不改 API、前端、migration、SQL Prompt 或模型路由。验证：focused SQL/Graph tests、后端全量、authenticated `eval:standard`。风险：增加数据库往返，且并行模块正修改 Graph，提交前需隔离本模块文件。
+
 - 已完成：Contract And Plan Prompt Enforcement Experiment（已撤回）。报告：`eval/reports/contract_plan_prompt_batch_001.json`；记录：`docs/modules/2026-07-13-contract-plan-prompt-enforcement.md`。Prompt 强约束导致 authenticated 前 10 条从 `7/10`、`3/10`、`3/10` 回归到 `6/10`、`2/10`、`2/10`，已从主链路撤回。结论：不以单次 Prompt 规则替代语义资产/Inspector。
 
 - 进行中：Contract And Plan Prompt Enforcement。计划：`docs/plans/2026-07-13-contract-plan-prompt-enforcement.md`。完整 benchmark 显示无关 payments/context 约束与模型空 SQL 是主失败源；将按已绑定契约/Plan 收紧 Prompt 和 Inspector，不写固定 SQL、不放宽 Guard。

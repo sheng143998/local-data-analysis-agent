@@ -145,6 +145,35 @@ def test_build_sql_generation_payload_preserves_current_entity_total_semantics()
     assert any("严禁生成 orders.status" in requirement for requirement in payload["requirements"])
 
 
+def test_build_sql_generation_payload_preserves_resolved_contract_plan() -> None:
+    payload = build_sql_generation_payload(
+        "销售额最高的前 5 个品类是什么？",
+        _context(relationship_type="foreign_key"),
+        _plan(),
+        question_intent={
+            "original_question": "销售额最高的前 5 个品类是什么？",
+            "query_plan": {
+                "entities": ["order_items", "products"],
+                "measures": [{"name": "category_sales_amount", "operation": "sum"}],
+                "dimensions": ["category"],
+                "order_by": ["category_sales_amount DESC"],
+                "limit": 5,
+                "expected_row_shape": "ranking",
+            },
+            "resolved_contracts": [{
+                "contract_key": "category_sales_ranking",
+                "business_definition": "按商品品类汇总订单商品明细售价，并按销售额从高到低排行。",
+                "source_tables": ["order_items", "products"],
+                "source_fields": ["order_items.price", "products.category"],
+                "semantic_config": {"plan": {"limit": 5, "expected_row_shape": "ranking"}},
+            }],
+        },
+    )
+
+    assert payload["question_intent"]["query_plan"]["order_by"] == ["category_sales_amount DESC"]
+    assert payload["question_intent"]["resolved_contracts"][0]["contract_key"] == "category_sales_ranking"
+
+
 def test_build_sql_generation_payload_requires_explicit_time_predicate_and_repair_rules() -> None:
     payload = build_sql_generation_payload(
         "2017年卖了多少钱？",
