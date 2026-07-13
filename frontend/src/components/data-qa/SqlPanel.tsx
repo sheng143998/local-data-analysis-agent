@@ -1,16 +1,15 @@
 import { Check, ChevronsDownUp, ChevronsUpDown, Copy, Database, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { finalSql } from '../../data/mock';
 
 type SqlPanelProps = {
-  sql?: string;
+  sql: string;
   compact?: boolean;
   title?: string;
 };
 
 const LONG_SQL_THRESHOLD = 520;
 
-export function SqlPanel({ sql = finalSql, compact = false, title = 'SQL' }: SqlPanelProps) {
+export function SqlPanel({ sql, compact = false, title = 'SQL' }: SqlPanelProps) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const shouldCollapse = sql.length > LONG_SQL_THRESHOLD || sql.split('\n').length > 12;

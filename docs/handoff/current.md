@@ -5,6 +5,7 @@
 - 总计划：`docs/plans/2026-07-13-chat-experience-and-dialogue-agent-upgrade.md`。
 - 目标：消除前端业务 Mock、升级聊天页与长历史治理、接入真实流式输出和图表，并以安全 Dialogue Router 支持通用聊天、澄清、结果解释和 SQL 分析。
 - 已完成首个模块：会话列表/消息窗口分页。子计划：`docs/plans/2026-07-13-conversation-pagination.md`；记录：`docs/modules/2026-07-13-conversation-pagination.md`。`GET /api/conversations` 已改为 cursor page，详情接口支持 `limit/before` 消息窗口和 `has_more/next_before`；InMemory、Redis/PostgreSQL 回退、前端类型/client 与 API 文档已同步。验证：会话 focused `13 passed, 1 warning`、前端构建通过、`git diff --check` 通过。`bc6f076` 已推送至 `origin/main`。
+- 已完成模块：ChatGPT 风格聊天页与虚拟消息窗口。子计划：`docs/plans/2026-07-13-chat-page-virtualized-ui.md`；记录：`docs/modules/2026-07-13-chat-page-virtualized-ui.md`。聊天页已消费分页契约，加入动态高度虚拟列表、向上加载滚动锚点、会话分页/搜索、新会话状态和固定输入区；`SqlPanel` 已移除 Mock SQL 默认值。验证：前端构建、Vite HTTP 200、聊天路径无 Mock 引用、`git diff --check` 通过；`test:e2e` 被已启用鉴权的旧未登录 smoke 阻断，未作为通过结果。提交/push 待本模块收尾。
 - 安全边界：只有 `data_analysis` 可进入 Semantic Contract、Query Plan、Inspector、Guard 和只读 Executor；通用聊天默认不读取数据库、不发送完整 schema/SQL 到云端。
 - 验证：分页 focused pytest、后续前端 build/e2e、SSE contract/router eval 和 authenticated 50-case 对照。每个模块通过后独立提交推送。
 
