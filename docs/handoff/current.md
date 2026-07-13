@@ -4,6 +4,8 @@
 
 - 已完成：Evaluator Admin Configuration And First Database Batch。已创建本机专用管理员评测账号，随机凭据仅写入未跟踪 `backend/.env`，没有修改既有管理员密码，也没有提交凭据。`npm.cmd run eval:database-baseline -- --start 0 --limit 10 --report eval/reports/database_batch_001.json` 已完成：执行成功 `5/10`、严格成功 `2/10`、答案匹配 `2/10`、平均 `26,234ms/case`。完整 50 case 需要继续运行 `start=10/20/30/40` 五个独立批次并核对 coverage；当前低成功率是语义/SQL 生成质量基线，不能当作鉴权失败。
 
+- 已完成：Full Database Ground Truth Baseline。完整 50 case 已通过 authenticated runner 执行并写入 `eval/reports/latest_eval_report.json`：执行成功 `28/50`（`56.00%`）、严格成功 `11/50`（`22.00%`）、答案匹配 `10/48`（`20.83%`）、平均 `26,707ms/case`。该基线确认评测账号与管理员 trace 可用，也明确当前首要质量缺口是 SQL 生成/语义口径，而非鉴权；后续每个 Phase 1+ 模块需与此报告对比。
+
 - 已完成：Semantic Contract Data Foundation（Phase 1）。计划：`docs/plans/2026-07-13-semantic-contract-data-foundation.md`；完成记录：`docs/modules/2026-07-13-semantic-contract-data-foundation.md`。`semantic_contracts` 已通过 `contract_key + version` 保留指标、维度、实体和关系的历史口径；repository 默认读取最高启用版本且只允许新增版本，不修改现有 Graph、QuerySpec、Guard 或只读 Executor。真实 PostgreSQL 已应用 migration `008`。验证：focused `9 passed`、后端全量 `228 passed, 1 warning`。后续将按 Resolver 集成设计接入运行链路，未知但明确概念仍保留开放式 schema/模型路径。
 
 - 已完成（并行子任务）：可恢复分批评测。计划：`docs/plans/2026-07-13-evaluation-resumable-batches.md`；记录：`docs/modules/2026-07-13-evaluation-resumable-batches.md`。runner 支持 `--start`、`--limit` 和独立 `--report`，报告包含数据集总量、选择范围、已运行 case ID 与完整性标记；非法参数会在模型执行前阻断，鉴权及质量定义未变。验证：`.venv` 聚焦测试 `17 passed, 1 warning`，CLI 帮助通过。风险：每个分批报告仅代表该批，主线汇总完整 50 题前必须核对 case ID 覆盖；本子模块不单独提交/推送，由主线集成。

@@ -24,6 +24,7 @@ npm.cmd run eval:database-baseline -- --start 10 --limit 10 --report eval/report
 - `$env:PYTHONPATH='.'; .\.venv\Scripts\python.exe -m pytest backend/tests/test_eval_runner.py -q`：`17 passed, 1 warning`。
 - `.\.venv\Scripts\python.exe eval/scripts/run_eval.py --help`：通过，显示 `--start`、`--limit`、`--report`。
 - `npm.cmd run eval:database-baseline -- --start 0 --limit 10 --report eval/reports/database_batch_001.json`：真实管理员评测账号已登录；首批执行成功 `5/10`、严格成功 `2/10`、结果值匹配 `2/10`，平均 `26,234ms/case`。该报告只覆盖 `database_001` 至 `database_010`，不代表完整 50 题结果。
+- 完整 `npm.cmd run eval:database-baseline` 已完成并更新 `eval/reports/latest_eval_report.json`：执行成功 `28/50`、严格成功 `11/50`、答案匹配 `10/48`、平均 `26,707ms/case`。该报告是后续语义层、Planner 与 Inspector 改造的起始基线。
 
 ## 风险与后续
 
