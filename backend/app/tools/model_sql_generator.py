@@ -2,7 +2,8 @@ import json
 import re
 from typing import Any
 
-from backend.app.core.model_adapter import ModelAdapter, ModelMessage, ModelRequest, ModelResponse
+from backend.app.core.model_adapter import ModelAdapter, ModelAdapterConfig, ModelMessage, ModelRequest, ModelResponse
+from backend.app.core.model_routing import route_model
 from backend.app.schemas.memories import SqlReusePlan
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_generation import GeneratedSql
@@ -21,7 +22,14 @@ def generate_sql_with_model(
     question_intent: dict[str, Any] | None = None,
 ) -> GeneratedSql:
     """通过统一 ModelAdapter 生成 SQL 文本，但不执行 SQL。"""
-    model_adapter = adapter or ModelAdapter()
+    route = route_model("sql_repair" if repair_context else "sql_generation")
+    model_adapter = adapter or ModelAdapter(
+        ModelAdapterConfig(
+            provider=route.provider,
+            base_url=route.base_url,
+            model=route.model,
+        )
+    )
     messages = build_sql_generation_messages(
         question,
         retrieval_context,

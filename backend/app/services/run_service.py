@@ -62,6 +62,7 @@ def _build_debug_summary(run: QueryRunDetail) -> dict[str, Any]:
             "warning_count": _safe_int(generation.get("warning_count")),
             "warnings": _string_list(generation.get("warnings")),
             "context_table_coverage": generation.get("context_table_coverage") or {},
+            "model_route": generation.get("model_route") if isinstance(generation.get("model_route"), dict) else {},
         },
         "intent_validation": {
             "decision": str(intent_verification.get("decision") or ""),
