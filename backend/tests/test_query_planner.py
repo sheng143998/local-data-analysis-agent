@@ -65,3 +65,8 @@ def test_query_plan_inherits_payment_status_filter_from_contract() -> None:
     assert plan.dimensions == ["payment_type"]
     assert plan.filters == ["payments.status = 'paid'"]
     assert plan.expected_row_shape == "grouped"
+
+
+def test_query_plan_discards_top_n_language_from_business_filters() -> None:
+    intent = ParsedQuestionIntent(original_question="订单商品数最多的前5个品类", normalized_question="订单商品数最多的前5个品类", filters=["前5个"], query_spec=QuerySpec(top_n=5, requires_order_by=True))
+    assert build_query_plan(intent).filters == []

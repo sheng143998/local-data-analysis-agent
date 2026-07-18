@@ -313,7 +313,8 @@ def _format_value(column: str | None, value: Any) -> str:
 
 def _format_number(column: str | None, value: float) -> str:
     if column and _is_rate_column(column):
-        return f"{value:.2f}%"
+        # 业务规则：数据库比例按 0 到 1 返回，界面与摘要统一转换为百分数。
+        return f"{value * 100:.2f}%"
     if column and _is_money_column(column):
         return f"¥ {value:,.0f}"
     if abs(value) >= 1000:

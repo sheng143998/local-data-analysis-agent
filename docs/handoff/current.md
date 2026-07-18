@@ -1,5 +1,11 @@
 ﻿# 当前 Handoff
 
+## Top N、成本与比率合同修复（进行中）
+
+- 计划：`docs/plans/2026-07-18-topn-cost-rate-contract-fix.md`。
+- 目标：修复 `database_022` Top N 被误作 filter、`028` 成本合同缺失、`035` 比率格式和 `043` 复购严格口径问题；不要求用户手动补充指标。
+- 验证：Planner/Inspector/Presenter focused tests 与真实 `013/022/028/035/043` 对照；不提交评测报告。
+
 ## 批量评测耗时与日志可观测性（进行中）
 
 - 计划：`docs/plans/2026-07-18-batch-evaluation-observability.md`。

@@ -24,7 +24,7 @@ def build_query_plan(intent: ParsedQuestionIntent) -> QueryPlan:
         measures=measures,
         dimensions=dimensions,
         # 业务规则：契约声明的默认过滤器只进入结构化计划，仍由模型、Inspector、Guard 和 Executor 共同校验。
-        filters=list(dict.fromkeys([*intent.filters, *contract_plan["filters"]])),
+        filters=list(dict.fromkeys([*(_business_filters(intent.filters)), *contract_plan["filters"]])),
         time_filter=spec.time_filter,
         order_by=contract_plan["order_by"] or (dimensions if spec.requires_order_by else []),
         limit=spec.top_n or contract_plan["limit"],
@@ -105,3 +105,9 @@ def _operation(metric: str) -> str:
     if metric.endswith("_count"):
         return "count"
     return "sum"
+
+
+def _business_filters(filters: list[str]) -> list[str]:
+    """业务规则：排行、Top N 与时间粒度属于 Query Plan 结构，绝不能作为 WHERE 过滤传给 Inspector。"""
+    structural = ("前", "top", "最高", "最低", "最多", "最少", "排行", "排名", "按月", "按天", "趋势", "分布")
+    return [item for item in filters if item and not any(token in str(item).lower() for token in structural)]
