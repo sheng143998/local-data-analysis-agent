@@ -529,7 +529,7 @@ def test_select_generated_sql_uses_model_first_for_single_order_count() -> None:
     assert adapter.calls == 1
 
 
-def test_validate_generated_sql_uses_fallback_only_after_failed_repair() -> None:
+def test_validate_generated_sql_stops_after_failed_repair_without_fixed_sql() -> None:
     state = _validate_generated_sql_intent_node(
         {
             "question": "当前订单总数是多少？",
@@ -553,9 +553,9 @@ def test_validate_generated_sql_uses_fallback_only_after_failed_repair() -> None
         }
     )
 
-    assert state["generated_sql"].path == "query_spec_fallback"
-    assert "pay.status = 'paid'" in state["selected_sql"]
-    assert state["sql_intent_verification"]["decision"] == "accept"
+    assert state["generated_sql"].path == "model_error"
+    assert state["selected_sql"] == ""
+    assert state["sql_intent_verification"]["decision"] == "reject"
 
 
 def test_validate_generated_sql_keeps_first_empty_result_for_controlled_repair() -> None:

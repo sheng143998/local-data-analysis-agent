@@ -1,4 +1,4 @@
-from backend.app.schemas.query_plan import QueryMeasure, QueryPlan
+from backend.app.schemas.query_plan import QueryContractConstraint, QueryMeasure, QueryPlan
 from backend.app.tools.question_intent_parser import ParsedQuestionIntent
 
 
@@ -31,7 +31,27 @@ def build_query_plan(intent: ParsedQuestionIntent) -> QueryPlan:
         expected_columns=expected_columns,
         expected_row_shape=expected_row_shape,
         contract_keys=[str(contract.get("contract_key")) for contract in contracts if contract.get("contract_key")],
+        contract_constraints=_contract_constraints(contracts),
     )
+
+
+def _contract_constraints(contracts: list[dict]) -> list[QueryContractConstraint]:
+    """业务规则：只把已审核契约的来源和聚合约束交给 SQL，不生成固定 SQL。"""
+    constraints: list[QueryContractConstraint] = []
+    for contract in contracts:
+        key = str(contract.get("contract_key") or "").strip()
+        if not key:
+            continue
+        constraints.append(
+            QueryContractConstraint(
+                contract_key=key,
+                display_name=str(contract.get("display_name") or ""),
+                aggregation=str(contract.get("aggregation") or ""),
+                source_tables=[str(table) for table in contract.get("source_tables", []) if table],
+                source_fields=[str(field) for field in contract.get("source_fields", []) if field],
+            )
+        )
+    return constraints
 
 
 def _merge_contract_plan(contracts: list[dict]) -> dict:

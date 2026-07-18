@@ -174,6 +174,7 @@ def build_sql_generation_payload(
             "以 query_plan 的 entities、measures、dimensions、filters、order_by、limit 和 expected_row_shape 为本次查询的必需约束",
             "query_plan.entities 中的表必须实际参与查询；allowed_tables 中未被计划要求的表只是候选上下文，不要仅因其存在而 JOIN",
             "每个 query_plan.measures 只计算一次，并使用稳定的输出别名；每个 query_plan.dimensions 必须与聚合粒度一致",
+            "query_plan.contract_constraints 是已审核的业务口径：必须使用其中 source_tables/source_fields，并采用 aggregation 指定的聚合方式；无法满足时不要编造替代口径。",
             "排行必须同时选择维度和度量、按 query_plan.order_by 排序并遵守 query_plan.limit",
             "只能使用 allowed_tables 和 schema_fields 中出现的字段",
             "跨表查询优先使用 table_relationships 中的高置信关系",
@@ -196,6 +197,7 @@ def build_sql_generation_payload(
         "required_filters": query_plan["filters"],
         "required_output_columns": query_plan["expected_columns"],
         "expected_row_shape": query_plan["expected_row_shape"],
+        "contract_constraints": query_plan["contract_constraints"],
         "optional_context_tables": [
             table for table in retrieval_context.tables if table not in query_plan["entities"]
         ],
@@ -344,6 +346,11 @@ def _inspector_repair_rules(issues: Any) -> list[str]:
         "missing_measure": "补齐 Query Plan 中缺失的度量，每个度量只计算一次并使用稳定输出别名。",
         "missing_dimension": "补齐 Query Plan 中缺失的维度，并让 SELECT 与 GROUP BY 保持相同粒度。",
         "missing_output": "补齐 Query Plan 要求的输出列和别名，不要用 SELECT *。",
+        "invalid_order": "修正 ORDER BY 的字段和方向，使其与 Query Plan 精确一致；最高、最多、前 N 使用 DESC。",
+        "invalid_limit": "把 LIMIT 改为 Query Plan 指定的精确数量，不要使用通用默认 LIMIT。",
+        "missing_filter": "补齐 Query Plan 已确认的业务过滤，保持相同字段和值，不得改写业务状态口径。",
+        "contract_source_field": "使用合同要求的实体字段完成指标计算，不能以其他表、字段或 COUNT(*) 替代已确认口径。",
+        "contract_aggregation": "按合同要求使用正确聚合方式，并在最终 SELECT 中输出对应指标别名。",
     }
     for issue in issues:
         if isinstance(issue, dict):
@@ -392,6 +399,7 @@ def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any
             "limit": None,
             "expected_columns": [],
             "expected_row_shape": "unknown",
+            "contract_constraints": [],
         }
     raw = question_intent.get("query_plan")
     if not isinstance(raw, dict):
@@ -412,4 +420,15 @@ def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any
         "limit": raw.get("limit") if isinstance(raw.get("limit"), int) else None,
         "expected_columns": _string_list(raw.get("expected_columns")),
         "expected_row_shape": str(raw.get("expected_row_shape") or "unknown"),
+        "contract_constraints": [
+            {
+                "contract_key": str(item.get("contract_key") or ""),
+                "display_name": str(item.get("display_name") or ""),
+                "aggregation": str(item.get("aggregation") or ""),
+                "source_tables": _string_list(item.get("source_tables")),
+                "source_fields": _string_list(item.get("source_fields")),
+            }
+            for item in raw.get("contract_constraints", [])
+            if isinstance(item, dict) and item.get("contract_key")
+        ],
     }

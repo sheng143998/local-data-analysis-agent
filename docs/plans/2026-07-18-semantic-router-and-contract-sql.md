@@ -25,9 +25,9 @@
 - [x] 调研并记录公开结构化分类与语义层实践，确认安全边界。
 - [x] 实现 Router 语义分类、确定性复核与模型不可用回退，补 focused 测试和 10 条分类测试。
 - [x] 记录 Router 模块、更新 handoff，提交并推送。
-- [ ] 强化 Query Plan/Inspector 的合同覆盖校验，移除固定 SQL fallback，补 focused 测试。
-- [ ] 运行历史失败 case 与稳定随机 5 条真实评测，记录结果和环境限制。
-- [ ] 记录合同 SQL 模块、更新 handoff、提交并推送。
+- [x] 强化 Query Plan/Inspector 的合同覆盖校验，移除固定 SQL fallback，补 focused 测试。
+- [x] 运行历史失败 case 与稳定随机 5 条真实评测，记录结果和环境限制。
+- [x] 记录合同 SQL 模块、更新 handoff、提交并推送。
 
 ## Validation plan
 

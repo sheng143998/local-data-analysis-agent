@@ -382,27 +382,9 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
         "generated_sql": generated_sql.model_copy(update={"warnings": warnings}),
         "node_timings": _add_node_timing(state, "sql_intent_validation", started),
     }
-    # 空 SQL 与无效 SQL 均只允许一次受控修复，第二次失败后才进入 Guard 终止。
+    # 空 SQL 与无效 SQL 均只允许一次受控修复，第二次失败后严格终止，禁止固定业务 SQL 兜底。
     cannot_repair = state.get("repair_attempts", 0) >= 1
     if verification["decision"] == "reject" and cannot_repair:
-        fallback_sql = _single_order_count_fallback(state.get("question_intent"))
-        if fallback_sql:
-            fallback_verification = _verify_generated_sql_intent(
-                question=state["question"],
-                retrieval_context=state["retrieval_context"],
-                sql=fallback_sql,
-                question_intent=state.get("question_intent"),
-            )
-            if fallback_verification["decision"] == "accept":
-                fallback_warning = "模型生成与修复未满足 QuerySpec，已使用受控订单数 fallback。"
-                updates["sql_intent_verification"] = fallback_verification
-                updates["generated_sql"] = GeneratedSql(
-                    path="query_spec_fallback",
-                    sql=fallback_sql,
-                    warnings=[*warnings, fallback_warning],
-                )
-                updates["selected_sql"] = fallback_sql
-                return updates
         updates["generated_sql"] = generated_sql.model_copy(
             update={
                 "path": "model_error",
@@ -837,40 +819,6 @@ def _select_generated_sql(
         )
 
     return model_result.model_copy(update={"warnings": warnings})
-
-
-def _single_order_count_fallback(question_intent: dict[str, Any] | None) -> str:
-    """只覆盖无维度的已支付订单数，避免小模型在明确口径上反复生成错误 SQL。"""
-    query_spec = _query_spec_from_intent(question_intent)
-    if query_spec is None or query_spec.metrics != ["order_count"]:
-        return ""
-    if query_spec.dimensions or query_spec.top_n or query_spec.requires_order_by:
-        return ""
-
-    filters = [
-        "EXISTS (",
-        "  SELECT 1",
-        "  FROM payments pay",
-        "  WHERE pay.order_id = o.id",
-        "    AND pay.status = 'paid'",
-        ")",
-    ]
-    if query_spec.time_start and query_spec.time_end:
-        filters.extend(
-            [
-                f"AND o.created_at >= DATE '{query_spec.time_start}'",
-                f"AND o.created_at < DATE '{query_spec.time_end}'",
-            ]
-        )
-    return "\n".join(
-        [
-            "SELECT COUNT(DISTINCT o.id) AS order_count",
-            "FROM orders o",
-            "WHERE " + filters[0],
-            *filters[1:],
-            "LIMIT 1",
-        ]
-    )
 
 
 def _select_generated_sql_compat(**kwargs) -> GeneratedSql:

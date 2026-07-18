@@ -9,7 +9,6 @@ SqlGenerationPath = Literal[
     "model_generate",
     "model_rewrite",
     "model_repair",
-    "query_spec_fallback",
     "model_error",
     "unsupported",
 ]

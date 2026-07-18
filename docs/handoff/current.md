@@ -8,7 +8,8 @@
 - 当前已知问题：`dialogue_router.py` 当前仅按数据关键词分流，会将“如何提升用户体验”等普通问题误入数据分析；`analysis_graph.py` 仍有 `_single_order_count_fallback`，与不写死 SQL 的主链路目标不一致。本轮会移除该主链路 fallback。
 - 验证：Router focused tests、10 条固定意图样本、合同 SQL focused tests、上轮 50 case 中答案/严格失败样本及稳定随机 5 条；报告仅保留为本地工件，不提交。
 - 联网调研：已获取 Snowflake Semantic Views 与 dbt Semantic Layer 官方资料；ChatGPT 内部实现未公开，因此只采用结构化输出、置信度、保守回退与语义层这些可验证模式。
-- 已完成 Router 子模块：`docs/modules/2026-07-18-semantic-dialogue-router.md`。规则关键词路由已替换为安全规则优先、受限语义模型、确定性数据证据复核和保守回退；Router 不传 schema/SQL/rows。验证：focused `23 passed`，云端 `qwen3.7-plus` 的 10 条中文样本 `10/10`，模型分类 9 条、确定性结果解释 1 条。Router 8 秒超时不足，已调为 20 秒；此前 `Arrearage` 与后续读超时均已作为外部服务状态记录。提交推送待本模块的下一步 Git 操作完成。
+- 已完成 Router 子模块：`docs/modules/2026-07-18-semantic-dialogue-router.md`。规则关键词路由已替换为安全规则优先、受限语义模型、确定性数据证据复核和保守回退；Router 不传 schema/SQL/rows。验证：focused `23 passed`，云端 `qwen3.7-plus` 的 10 条中文样本 `10/10`，模型分类 9 条、确定性结果解释 1 条。Router 8 秒超时不足，已调为 20 秒；此前 `Arrearage` 与后续读超时均已作为外部服务状态记录。交付：`71202bd` 已推送。
+- 已完成合同 SQL 子模块：`docs/modules/2026-07-18-contract-sql-enforcement.md`。Query Plan 已携带合同字段/聚合约束，Inspector 在 Guard 前拒绝合同来源、聚合、过滤、输出、排序和 Top N 不一致 SQL；固定订单数 fallback 已移除。focused `61 passed`、compileall 和 diff 检查通过。首次目标评测为 `11/29` 执行、`3/29` 严格、`4/28` 答案，17 条受云端 503 影响；第二次目标评测 30 分钟超时且无报告，评测 checkpoint 是下一优先事项。提交推送待本模块 Git 操作完成。
 
 ## ChatGPT 体验与通用对话 Agent 升级（进行中）
 

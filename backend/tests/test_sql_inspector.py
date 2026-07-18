@@ -41,3 +41,57 @@ def test_inspector_does_not_treat_unrelated_where_as_time_filter() -> None:
 
     assert [issue.category for issue in issues] == ["time_range"]
     assert ">= 起点" in issues[0].repair_rule
+
+
+def test_inspector_rejects_contract_field_aggregation_filter_and_shape_mismatch() -> None:
+    issues = inspect_query_plan(
+        "SELECT p.payment_type, COUNT(p.id) AS payment_method_paid_amount "
+        "FROM payments p WHERE p.status = 'pending' GROUP BY p.payment_type "
+        "ORDER BY payment_method_paid_amount ASC LIMIT 30",
+        {
+            "entities": ["payments"],
+            "filters": ["payments.status = 'paid'"],
+            "order_by": ["payment_method_paid_amount DESC"],
+            "limit": 5,
+            "expected_columns": ["payment_method", "payment_method_paid_amount"],
+            "expected_row_shape": "ranking",
+            "contract_constraints": [
+                {
+                    "contract_key": "payment_method_paid_amount",
+                    "display_name": "各支付方式已支付金额",
+                    "aggregation": "sum",
+                    "source_fields": ["payments.payment_type", "payments.amount", "payments.status"],
+                }
+            ],
+        },
+    )
+
+    assert {issue.category for issue in issues} == {
+        "contract_source_field", "contract_aggregation", "missing_filter", "missing_output", "invalid_order", "invalid_limit"
+    }
+
+
+def test_inspector_accepts_sql_that_matches_contract_formula_and_result_shape() -> None:
+    issues = inspect_query_plan(
+        "SELECT p.payment_type AS payment_method, SUM(p.amount) AS payment_method_paid_amount "
+        "FROM payments p WHERE p.status = 'paid' GROUP BY p.payment_type "
+        "ORDER BY payment_method_paid_amount DESC LIMIT 5",
+        {
+            "entities": ["payments"],
+            "filters": ["payments.status = 'paid'"],
+            "order_by": ["payment_method_paid_amount DESC"],
+            "limit": 5,
+            "expected_columns": ["payment_method", "payment_method_paid_amount"],
+            "expected_row_shape": "ranking",
+            "contract_constraints": [
+                {
+                    "contract_key": "payment_method_paid_amount",
+                    "display_name": "各支付方式已支付金额",
+                    "aggregation": "sum",
+                    "source_fields": ["payments.payment_type", "payments.amount", "payments.status"],
+                }
+            ],
+        },
+    )
+
+    assert issues == []
