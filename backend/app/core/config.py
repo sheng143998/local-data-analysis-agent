@@ -80,6 +80,16 @@ class Settings(BaseModel):
     intent_model_max_retries: int = Field(
         default_factory=lambda: int(os.getenv("INTENT_MODEL_MAX_RETRIES", os.getenv("MODEL_MAX_RETRIES", "1")))
     )
+    router_model_enabled: bool = Field(
+        default_factory=lambda: _env_bool("ROUTER_MODEL_ENABLED", default=_env_bool("INTENT_PARSER_ENABLED", default=True))
+    )
+    router_model_timeout_seconds: float = Field(
+        # 业务规则：路由只允许一次模型调用，但云端冷启动可能超过 8 秒；超时后仍会安全降级。
+        default_factory=lambda: float(os.getenv("ROUTER_MODEL_TIMEOUT_SECONDS", "20"))
+    )
+    router_model_max_retries: int = Field(
+        default_factory=lambda: int(os.getenv("ROUTER_MODEL_MAX_RETRIES", "0"))
+    )
     dialogue_model_enabled: bool = Field(default_factory=lambda: _env_bool("DIALOGUE_MODEL_ENABLED", default=False))
     dialogue_model_provider: str = Field(default_factory=lambda: os.getenv("DIALOGUE_MODEL_PROVIDER", ""))
     dialogue_model_base_url: str = Field(default_factory=lambda: os.getenv("DIALOGUE_MODEL_BASE_URL", ""))

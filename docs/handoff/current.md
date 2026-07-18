@@ -1,5 +1,15 @@
 ﻿# 当前 Handoff
 
+## 语义 Router 与合同 SQL 强制改造（进行中）
+
+- 计划：`docs/plans/2026-07-18-semantic-router-and-contract-sql.md`。
+- 目标：以安全规则优先、受限语义分类、确定性复核和保守降级替换单关键词 Router 误路由；将已确认 Semantic Contract/Query Plan 转成 SQL 生成后的阻断性业务口径校验。
+- 范围：Router 不传 schema/SQL/rows；危险和待澄清状态仍由确定性规则优先；SQL 不满足合同只可有限 Repair 或失败，不得以固定业务 SQL 绕过模型与安全链路。
+- 当前已知问题：`dialogue_router.py` 当前仅按数据关键词分流，会将“如何提升用户体验”等普通问题误入数据分析；`analysis_graph.py` 仍有 `_single_order_count_fallback`，与不写死 SQL 的主链路目标不一致。本轮会移除该主链路 fallback。
+- 验证：Router focused tests、10 条固定意图样本、合同 SQL focused tests、上轮 50 case 中答案/严格失败样本及稳定随机 5 条；报告仅保留为本地工件，不提交。
+- 联网调研：已获取 Snowflake Semantic Views 与 dbt Semantic Layer 官方资料；ChatGPT 内部实现未公开，因此只采用结构化输出、置信度、保守回退与语义层这些可验证模式。
+- 已完成 Router 子模块：`docs/modules/2026-07-18-semantic-dialogue-router.md`。规则关键词路由已替换为安全规则优先、受限语义模型、确定性数据证据复核和保守回退；Router 不传 schema/SQL/rows。验证：focused `23 passed`，云端 `qwen3.7-plus` 的 10 条中文样本 `10/10`，模型分类 9 条、确定性结果解释 1 条。Router 8 秒超时不足，已调为 20 秒；此前 `Arrearage` 与后续读超时均已作为外部服务状态记录。提交推送待本模块的下一步 Git 操作完成。
+
 ## ChatGPT 体验与通用对话 Agent 升级（进行中）
 
 - 总计划：`docs/plans/2026-07-13-chat-experience-and-dialogue-agent-upgrade.md`。
