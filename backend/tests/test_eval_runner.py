@@ -13,6 +13,7 @@ from eval.scripts.run_eval import (
     run_cases,
     select_case_batch,
     summarize_results,
+    _performance_summary,
 )
 from pathlib import Path
 
@@ -422,6 +423,8 @@ def test_build_run_trace_summary_from_tool_calls() -> None:
         "node_timings_ms": {"sql_generation": 12},
         "total_latency_ms": 30,
         "slowest_node": {"name": "sql_generation", "latency_ms": 12},
+        "model_route": {},
+        "repair_attempts": 0,
     }
 
 
@@ -516,3 +519,16 @@ def test_summary_groups_assertion_failures_by_table_category_and_path() -> None:
         ],
         "case_ids": ["user_1", "funnel_1", "funnel_2"],
     }
+
+
+def test_performance_summary_separates_graph_and_unattributed_time() -> None:
+    results = run_cases(
+        [EvalCase("timing", "性能", "问题", [], [])],
+        lambda _: (200, {"path": "cold_path", "sql": "SELECT 1", "source": {"security": "SQL Guard", "returnedRows": 1}, "_eval_run_trace_summary": {"node_timings_ms": {"sql_generation": 30, "sql_execution": 20}, "slowest_node": {"name": "sql_generation"}}}),
+    )
+    summary = _performance_summary(results)
+
+    assert summary["stages_ms"]["graph_known"]["total"] == 50
+    assert summary["stages_ms"]["api_total"]["count"] == 1
+    assert summary["stages_ms"]["unattributed"]["total"] == 0
+    assert summary["slowest_node_counts"] == [{"name": "sql_generation", "count": 1}]

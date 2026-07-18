@@ -303,6 +303,7 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         "failures": [asdict(result) for result in results if not result.ok],
         "assertion_failures": [asdict(result) for result in assertion_failures],
         "assertion_failure_summary": _assertion_failure_summary(assertion_failures),
+        "performance_summary": _performance_summary(results),
         "cases": [asdict(result) for result in results],
     }
 
@@ -540,10 +541,59 @@ def _build_run_trace_summary(run_detail: dict[str, Any]) -> dict[str, Any]:
         "node_timings_ms": timings.get("node_timings_ms") if isinstance(timings.get("node_timings_ms"), dict) else {},
         "total_latency_ms": _safe_int(timings.get("total_latency_ms")),
         "slowest_node": timings.get("slowest_node") if isinstance(timings.get("slowest_node"), dict) else {},
+        "model_route": generation.get("model_route") if isinstance(generation.get("model_route"), dict) else {},
+        "repair_attempts": _safe_int(generation.get("intent_verification", {}).get("repair_attempts")) if isinstance(generation.get("intent_verification"), dict) else 0,
     }
     if isinstance(context_table_coverage, dict) and context_table_coverage:
         summary["context_table_coverage"] = context_table_coverage
     return summary
+
+
+def _performance_summary(results: list[EvalCaseResult]) -> dict[str, Any]:
+    """仅汇总已记录的真实耗时；未归因部分明确保留给 Router/会话/网络等边界。"""
+    stages: dict[str, list[int]] = {"api_total": [], "graph_known": [], "unattributed": []}
+    slowest: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    for result in results:
+        api_total = max(0, result.latency_ms)
+        stages["api_total"].append(api_total)
+        trace = result.run_trace_summary
+        timings = trace.get("node_timings_ms") if isinstance(trace.get("node_timings_ms"), dict) else {}
+        graph_known = 0
+        for name, value in timings.items():
+            try:
+                latency = max(0, int(value))
+            except (TypeError, ValueError):
+                continue
+            stages.setdefault(str(name), []).append(latency)
+            graph_known += latency
+        stages["graph_known"].append(graph_known)
+        stages["unattributed"].append(max(0, api_total - graph_known))
+        node = trace.get("slowest_node") if isinstance(trace.get("slowest_node"), dict) else {}
+        node_name = str(node.get("name") or "unknown")
+        slowest[node_name] = slowest.get(node_name, 0) + 1
+        status = "execution_success" if result.ok else f"http_{result.status_code}"
+        status_counts[status] = status_counts.get(status, 0) + 1
+    return {
+        "stages_ms": {name: _latency_stats(values) for name, values in sorted(stages.items())},
+        "slowest_node_counts": _sorted_count_items(slowest),
+        "execution_status_counts": _sorted_count_items(status_counts),
+    }
+
+
+def _latency_stats(values: list[int]) -> dict[str, int]:
+    if not values:
+        return {"count": 0, "total": 0, "avg": 0, "p50": 0, "p95": 0, "max": 0}
+    ordered = sorted(values)
+    return {
+        "count": len(ordered), "total": sum(ordered), "avg": round(sum(ordered) / len(ordered)),
+        "p50": ordered[_percentile_index(len(ordered), 0.5)],
+        "p95": ordered[_percentile_index(len(ordered), 0.95)], "max": ordered[-1],
+    }
+
+
+def _percentile_index(size: int, percentile: float) -> int:
+    return max(0, min(size - 1, int((size - 1) * percentile + 0.5)))
 
 
 def _output_payload(tools: dict[str, Any], tool_name: str) -> dict[str, Any]:

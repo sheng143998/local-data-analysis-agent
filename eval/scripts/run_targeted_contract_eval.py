@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import random
 import sys
+from dataclasses import asdict
 from argparse import ArgumentParser
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +16,7 @@ sys.path.insert(0, str(ROOT))
 
 from eval.scripts.run_eval import (  # noqa: E402
     EvalCase,
+    EvalCaseResult,
     create_test_client_analyzer,
     load_database_ground_truth_cases,
     run_cases,
@@ -32,6 +34,7 @@ def main() -> None:
     parser.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--random-count", type=int, default=5)
+    parser.add_argument("--resume", action="store_true", help="从同一报告的逐 case checkpoint 恢复")
     args = parser.parse_args()
 
     baseline = _load_baseline(args.baseline)
@@ -42,10 +45,7 @@ def main() -> None:
     selected_ids = list(dict.fromkeys([*failed_ids, *random_ids]))
     selected_cases: list[EvalCase] = [all_cases[case_id] for case_id in selected_ids if case_id in all_cases]
 
-    analyzer = create_test_client_analyzer()
-    results = run_cases(selected_cases, analyzer)
-    report = summarize_results(results)
-    report["selection"] = {
+    selection = {
         "baseline": str(args.baseline),
         "baseline_strict_failure_ids": failed_ids,
         "stable_random_seed": RANDOM_SEED,
@@ -53,9 +53,19 @@ def main() -> None:
         "selected_case_ids": selected_ids,
         "selected_case_count": len(selected_cases),
     }
-    report["generated_at"] = datetime.now(timezone.utc).isoformat()
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    completed = _load_checkpoint(args.report, selected_ids) if args.resume else {}
+    analyzer = create_test_client_analyzer()
+    for index, case in enumerate(selected_cases, start=1):
+        if case.id in completed:
+            print(f"[{index}/{len(selected_cases)}] {case.id} checkpoint 已存在，跳过")
+            continue
+        result = run_cases([case], analyzer)[0]
+        completed[case.id] = result
+        _write_checkpoint(args.report, list(completed.values()), selection, completed_case_count=len(completed), complete=False)
+        slowest = result.run_trace_summary.get("slowest_node", {})
+        print(f"[{index}/{len(selected_cases)}] {case.id} http={result.status_code} latency={result.latency_ms}ms slowest={slowest}")
+    results = [completed[case.id] for case in selected_cases if case.id in completed]
+    report = _write_checkpoint(args.report, results, selection, completed_case_count=len(results), complete=True)
     print(
         f"targeted eval completed: {report['success_count']}/{report['total']} ok, "
         f"strict={report['strict_success_count']}/{report['total']}, "
@@ -70,6 +80,24 @@ def _load_baseline(path: Path) -> dict:
     if not isinstance(cases, list):
         raise SystemExit(f"baseline 报告缺少 cases：{path}")
     return payload
+
+
+def _load_checkpoint(path: Path, selected_ids: list[str]) -> dict[str, EvalCaseResult]:
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return {str(item["id"]): EvalCaseResult(**item) for item in payload.get("cases", []) if isinstance(item, dict) and item.get("id") in selected_ids}
+
+
+def _write_checkpoint(path: Path, results: list[EvalCaseResult], selection: dict, *, completed_case_count: int, complete: bool) -> dict:
+    report = summarize_results(results)
+    report["selection"] = selection
+    report["checkpoint"] = {"status": "completed" if complete else "running", "completed_case_count": completed_case_count, "updated_at": datetime.now(timezone.utc).isoformat()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.replace(path)
+    return report
 
 
 if __name__ == "__main__":

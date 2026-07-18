@@ -1,5 +1,13 @@
 ﻿# 当前 Handoff
 
+## 批量评测耗时与日志可观测性（进行中）
+
+- 计划：`docs/plans/2026-07-18-batch-evaluation-observability.md`。
+- 目标：解决 29 条长批评测超时后报告不落盘的问题，为每个 case 保留 API 总耗时、Graph 节点耗时、模型/Repair 摘要、最慢节点和失败分类，并支持 checkpoint 恢复。
+- 范围：顺序执行不改为并发；不记录 prompt、密钥、原始模型输出或敏感结果行；不改 SQL 安全和业务口径。
+- 验证：eval runner focused tests、替身 analyzer 小批 checkpoint/resume 验证、diff 检查；真实报告继续仅为本地工件。
+- 已完成：`docs/modules/2026-07-18-batch-evaluation-observability.md`。批量报告新增 API/Graph/未归因耗时和节点 p50/p95 聚合，目标评测每 case 原子 checkpoint 并支持 `--resume`。验证：eval runner `18 passed, 1 warning`、eval scripts compileall 和 diff 检查通过。提交推送待本模块 Git 操作完成。
+
 ## 语义 Router 与合同 SQL 强制改造（进行中）
 
 - 计划：`docs/plans/2026-07-18-semantic-router-and-contract-sql.md`。
