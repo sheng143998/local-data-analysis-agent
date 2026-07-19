@@ -114,6 +114,13 @@ def test_heuristic_parser_keeps_explicit_business_question_when_model_is_unavail
     assert intent.semantic_metrics == ["商品品类数是多少？"]
 
 
+def test_heuristic_parser_treats_product_category_as_category_not_product() -> None:
+    intent = parse_question_intent("订单商品数量最多的前 10 个商品品类是什么？", model_enabled=False)
+
+    assert "category" in intent.dimensions
+    assert "product" not in intent.dimensions
+
+
 def test_parse_question_intent_keeps_model_generated_followup_clarification() -> None:
     adapter = FakeAdapter(
         ModelResponse(

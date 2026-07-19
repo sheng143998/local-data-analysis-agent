@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 
 from backend.app.db.repositories.semantic_contract_repository import SemanticContractRepository
@@ -20,7 +21,7 @@ class SemanticResolver:
     def resolve(self, intent: ParsedQuestionIntent) -> SemanticResolution:
         candidates = _candidate_texts(intent)
         matched = [contract for contract in self.repository.list_enabled() if _matches(contract, candidates)]
-        unique = _unique_latest(matched)
+        unique = _apply_replacements(_unique_latest(matched))
         conflicts = _conflicts(unique)
         return SemanticResolution(contracts=unique, conflicts=conflicts)
 
@@ -45,7 +46,11 @@ def _candidate_texts(intent: ParsedQuestionIntent) -> list[str]:
 
 def _matches(contract: SemanticContract, candidates: list[str]) -> bool:
     names = [contract.contract_key, contract.display_name, *contract.synonyms]
-    return any(_key(name) and _key(name) in _key(candidate) for name in names for candidate in candidates)
+    if not any(_key(name) and _key(name) in _key(candidate) for name in names for candidate in candidates):
+        return False
+    required_terms = contract.semantic_config.get("required_question_terms", [])
+    candidate_text = _key(" ".join(candidates))
+    return all(_key(term) in candidate_text for term in required_terms if _key(term))
 
 
 def _unique_latest(contracts: list[SemanticContract]) -> list[SemanticContract]:
@@ -55,6 +60,17 @@ def _unique_latest(contracts: list[SemanticContract]) -> list[SemanticContract]:
         if previous is None or contract.version > previous.version:
             latest[contract.contract_key] = contract
     return sorted(latest.values(), key=lambda item: (item.contract_type, item.contract_key))
+
+
+def _apply_replacements(contracts: list[SemanticContract]) -> list[SemanticContract]:
+    """更具体的复合口径替代其覆盖的泛化口径，避免来源字段彼此冲突。"""
+    replaced = {
+        str(contract_key)
+        for contract in contracts
+        for contract_key in contract.semantic_config.get("replaces_contract_keys", [])
+        if contract_key
+    }
+    return [contract for contract in contracts if contract.contract_key not in replaced]
 
 
 def _conflicts(contracts: list[SemanticContract]) -> list[SemanticContract]:
@@ -82,4 +98,6 @@ def _contract_summary(contract: SemanticContract) -> dict:
 
 
 def _key(value: str) -> str:
-    return "".join(str(value).lower().split()).replace("_", "").replace("-", "")
+    key = "".join(str(value).lower().split()).replace("_", "").replace("-", "")
+    key = re.sub(r"前\d+个?", "", key)
+    return key.replace("商品品类", "品类")

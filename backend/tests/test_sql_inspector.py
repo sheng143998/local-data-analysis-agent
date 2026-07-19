@@ -95,3 +95,36 @@ def test_inspector_accepts_sql_that_matches_contract_formula_and_result_shape() 
     )
 
     assert issues == []
+
+
+def test_inspector_accepts_paid_category_item_sales_ranking() -> None:
+    issues = inspect_query_plan(
+        "SELECT COALESCE(pr.category, 'uncategorized') AS category, "
+        "COUNT(oi.id) AS order_item_count, SUM(oi.price) AS sales_amount "
+        "FROM orders o JOIN order_items oi ON oi.order_id = o.id "
+        "JOIN products pr ON pr.id = oi.product_id "
+        "WHERE EXISTS (SELECT 1 FROM payments pay "
+        "WHERE pay.order_id = o.id AND pay.status = 'paid') "
+        "GROUP BY COALESCE(pr.category, 'uncategorized') "
+        "ORDER BY order_item_count DESC LIMIT 10",
+        {
+            "entities": ["orders", "payments", "order_items", "products"],
+            "filters": ["payments.status = 'paid'"],
+            "order_by": ["order_item_count DESC"],
+            "limit": 10,
+            "expected_columns": ["category", "order_item_count", "sales_amount"],
+            "expected_row_shape": "ranking",
+            "contract_constraints": [{
+                "contract_key": "category_item_sales_ranking",
+                "display_name": "品类订单商品数与销售额排行",
+                "aggregation": "sum",
+                "source_fields": [
+                    "orders.id", "payments.order_id", "payments.status",
+                    "order_items.id", "order_items.order_id", "order_items.price",
+                    "order_items.product_id", "products.id", "products.category",
+                ],
+            }],
+        },
+    )
+
+    assert issues == []

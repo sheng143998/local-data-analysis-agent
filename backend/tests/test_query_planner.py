@@ -102,3 +102,38 @@ def test_query_plan_binds_executable_paid_order_month_contract() -> None:
         "order_count": "order_count",
     }
     assert {"month", "sales_amount", "order_count"} <= set(plan.expected_columns)
+
+
+def test_query_plan_normalizes_category_synonyms_for_item_sales_ranking() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="订单商品数量最多的前 10 个商品品类是什么？展示品类、订单商品数量和销售额。",
+        normalized_question="订单商品数量最多的前 10 个商品品类",
+        semantic_dimensions=["商品品类", "品类", "类目", "分类"],
+        query_spec=QuerySpec(top_n=10, requires_order_by=True),
+        resolved_contracts=[{
+            "contract_key": "category_item_sales_ranking",
+            "source_tables": ["orders", "payments", "order_items", "products"],
+            "source_fields": ["order_items.id", "order_items.price", "products.category"],
+            "aggregation": "sum",
+            "semantic_config": {"plan": {
+                "measures": [
+                    {"name": "order_item_count", "operation": "count"},
+                    {"name": "sales_amount", "operation": "sum"},
+                ],
+                "dimensions": ["category"],
+                "filters": ["payments.status = 'paid'"],
+                "order_by": ["order_item_count DESC"],
+                "expected_columns": ["category", "order_item_count", "sales_amount"],
+                "expected_row_shape": "ranking",
+            }},
+        }],
+    )
+
+    plan = build_query_plan(intent)
+
+    assert plan.dimensions == ["category"]
+    assert plan.order_by == ["order_item_count DESC"]
+    assert plan.limit == 10
+    assert plan.execution_contract.canonical_filters == ["payments.status = 'paid'"]
+    assert plan.execution_contract.aggregation_grain == "order"
+    assert set(plan.expected_columns) == {"category", "order_item_count", "sales_amount"}

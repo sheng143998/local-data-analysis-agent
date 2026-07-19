@@ -106,6 +106,7 @@ def _unique_measures(measures: list[QueryMeasure]) -> list[QueryMeasure]:
 
 def _merge_dimensions(dimensions: list[str]) -> list[str]:
     """业务规则：把模型中文候选统一为 QuerySpec 技术维度，避免重复分组和别名误判。"""
+    dimensions = [_canonical_dimension(dimension) for dimension in dimensions]
     aliases = {
         "payment_method": "payment_type",
         "按天": "date",
@@ -123,6 +124,10 @@ def _merge_dimensions(dimensions: list[str]) -> list[str]:
         "优惠券": "coupon",
     }
     return list(dict.fromkeys(aliases.get(str(dimension), str(dimension)) for dimension in dimensions if dimension))
+
+
+def _canonical_dimension(value: str) -> str:
+    return "category" if str(value) in {"商品品类", "类目", "分类", "category"} else str(value)
 
 
 def _operation(metric: str) -> str:
@@ -150,12 +155,15 @@ def _build_execution_contract(
 ) -> QueryExecutionContract:
     """把已确认的业务意图收敛为模型可直接映射的查询约束，不生成 SQL。"""
     metric_names = {measure.name for measure in measures}
+    has_paid_filter = any("payments.status = 'paid'" in item.lower() for item in filters)
     paid_order_scope = (
         "orders" in entities
         and "payments" in entities
         and bool(metric_names & {"sales_amount", "order_count", "avg_order_value"})
         and any(token in intent.original_question for token in ("已支付", "支付成功", "已付款", "成交"))
     )
+    if has_paid_filter and "orders" in entities and "payments" in entities:
+        paid_order_scope = True
     time_field = _time_field(intent, entities)
     time_predicate = intent.query_spec.time_filter.replace("{time_field}", time_field) if time_field else ""
     canonical_filters = [item for item in filters if not _is_paid_order_filter(item)]

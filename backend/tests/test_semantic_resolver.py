@@ -72,3 +72,25 @@ def test_resolver_binds_payment_method_paid_amount_contract_without_clarificatio
     assert resolved.needs_clarification is False
     assert resolved.resolved_contracts[0]["contract_key"] == "payment_method_paid_amount"
     assert resolved.resolved_contracts[0]["semantic_config"]["plan"]["filters"] == ["payments.status = 'paid'"]
+
+
+def test_resolver_uses_specific_category_item_sales_contract_instead_of_generic_sales() -> None:
+    generic_sales = _contract("sales_amount", "销售额", synonyms=["销售额"])
+    item_count = _contract("category_item_count_ranking", "品类订单商品数排行", synonyms=["订单商品数量最多"])
+    composite = _contract(
+        "category_item_sales_ranking",
+        "品类订单商品数与销售额排行",
+        synonyms=["订单商品数量最多的品类"],
+        config={
+            "required_question_terms": ["订单商品", "销售额"],
+            "replaces_contract_keys": ["sales_amount", "category_item_count_ranking"],
+        },
+    )
+    intent = ParsedQuestionIntent(
+        original_question="订单商品数量最多的前 10 个商品品类是什么？展示品类、订单商品数量和销售额。",
+        normalized_question="订单商品数量最多的前 10 个商品品类",
+    )
+
+    resolved = apply_semantic_resolution(intent, SemanticResolver(_Repository([generic_sales, item_count, composite])))
+
+    assert [contract["contract_key"] for contract in resolved.resolved_contracts] == ["category_item_sales_ranking"]

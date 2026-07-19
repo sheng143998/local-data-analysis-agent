@@ -180,6 +180,11 @@ def _heuristic_intent(question: str, warnings: list[str] | None = None) -> Parse
         if any(token.lower() in lowered for token in tokens):
             dimensions.append(dimension)
 
+    if "商品品类" in question:
+        dimensions = [dimension for dimension in dimensions if dimension != "product"]
+        if "category" not in dimensions:
+            dimensions.append("category")
+
     time_range = _heuristic_time_range(question)
     vague = _looks_vague(question)
     confidence = 0.8 if metrics else 0.45 if dimensions else 0.25
