@@ -38,6 +38,7 @@ class EvalCase:
     expected_answer: str = ""
     expected_result_tokens: list[str] = field(default_factory=list)
     result_match_mode: str = "tokens"
+    expected_rows: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,8 @@ class EvalCaseResult:
     actual_answer: str = ""
     answer_match: bool | None = None
     answer_mismatch: str = ""
+    row_match: bool | None = None
+    row_mismatch: str = ""
     run_id: str | None = None
     run_detail_path: str = ""
     run_trace_summary: dict[str, Any] = field(default_factory=dict)
@@ -96,6 +99,7 @@ def load_cases(path: Path = DATASET_PATH) -> list[EvalCase]:
                 expected_answer=str(payload.get("expected_answer") or ""),
                 expected_result_tokens=list(payload.get("expected_result_tokens") or []),
                 result_match_mode=str(payload.get("result_match_mode") or "tokens"),
+                expected_rows=list(payload.get("expected_rows") or []),
             )
         )
     return cases
@@ -185,12 +189,14 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             forbidden_match = len(forbidden_keyword_hits) == 0
             actual_answer = _serialize_rows(body.get("rows"))
             answer_match, answer_mismatch = _match_expected_answer(case, body.get("rows"))
+            row_match, row_mismatch = _match_expected_rows(case, body.get("rows"))
             strict_ok = (
                 ok
                 and table_match
                 and keyword_match
                 and forbidden_match
                 and (answer_match is not False)
+                and (row_match is not False)
             )
             results.append(
                 EvalCaseResult(
@@ -218,6 +224,8 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
                     actual_answer=actual_answer,
                     answer_match=answer_match,
                     answer_mismatch=answer_mismatch,
+                    row_match=row_match,
+                    row_mismatch=row_mismatch,
                     run_id=run_id,
                     run_detail_path=run_detail_path,
                     run_trace_summary=run_trace_summary,
@@ -272,6 +280,8 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
     forbidden_match_count = sum(1 for result in results if result.forbidden_match)
     answer_checked_results = [result for result in results if result.answer_match is not None]
     answer_match_count = sum(1 for result in answer_checked_results if result.answer_match)
+    row_checked_results = [result for result in results if result.row_match is not None]
+    row_match_count = sum(1 for result in row_checked_results if result.row_match)
     path_counts: dict[str, int] = {}
     for result in results:
         path_counts[result.path] = path_counts.get(result.path, 0) + 1
@@ -294,6 +304,13 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         "answer_checked_count": len(answer_checked_results),
         "answer_match_count": answer_match_count,
         "answer_match_rate": _rate(answer_match_count, len(answer_checked_results)),
+        "row_checked_count": len(row_checked_results),
+        "row_match_count": row_match_count,
+        "row_match_rate": _rate(row_match_count, len(row_checked_results)),
+        "semantic_accuracy_rate": _rate(
+            sum(1 for result in results if result.strict_ok and (result.answer_match is not None or result.row_match is not None)),
+            sum(1 for result in results if result.answer_match is not None or result.row_match is not None),
+        ),
         "memory_hit_rate": _rate(memory_hit_count, total),
         "reuse_success_rate": _rate(reuse_success_count, total),
         "average_latency_ms": round(
@@ -442,6 +459,27 @@ def _match_expected_answer(case: EvalCase, rows: Any) -> tuple[bool | None, str]
     if not missing:
         return True, ""
     return False, f"未匹配期望结果片段：{'；'.join(missing)}"
+
+
+def _match_expected_rows(case: EvalCase, rows: Any) -> tuple[bool | None, str]:
+    if not case.expected_rows:
+        return None, ""
+    if not isinstance(rows, list):
+        return False, "接口未返回行结果"
+    if len(rows) < len(case.expected_rows):
+        return False, f"返回行数不足：期望至少 {len(case.expected_rows)} 行，实际 {len(rows)} 行"
+    for index, expected in enumerate(case.expected_rows):
+        actual = rows[index] if isinstance(rows[index], dict) else {}
+        if not isinstance(expected, dict):
+            return False, f"参考行 {index + 1} 格式无效"
+        mismatches = [
+            key
+            for key, value in expected.items()
+            if key not in actual or _normalize_answer(str(actual[key])) != _normalize_answer(str(value))
+        ]
+        if mismatches:
+            return False, f"第 {index + 1} 行字段不匹配：{', '.join(mismatches)}"
+    return True, ""
 
 
 def _serialize_rows(rows: Any) -> str:

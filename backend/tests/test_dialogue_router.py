@@ -50,6 +50,17 @@ def test_explicit_data_question_enters_existing_analysis_graph(monkeypatch) -> N
     assert response.sql == "SELECT 1"
 
 
+def test_explicit_data_question_bypasses_router_model() -> None:
+    state = ConversationState(id=uuid4(), title="测试", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    adapter = FakeRouterAdapter('{"role":"general_chat","confidence":0.99,"reason":"不应调用"}')
+
+    decision = route_dialogue("2017 年已支付订单数是多少？", state, adapter=adapter)
+
+    assert decision.role == "data_analysis"
+    assert decision.source == "deterministic"
+    assert adapter.requests == []
+
+
 def test_result_explanation_uses_saved_summary_without_graph(monkeypatch) -> None:
     monkeypatch.setattr(settings, "router_model_enabled", False)
     monkeypatch.setattr(agent_service, "run_analysis_graph", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("不应查询")))

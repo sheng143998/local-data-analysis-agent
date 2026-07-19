@@ -61,6 +61,13 @@ def route_dialogue(
     if _is_result_explanation_request(question, state, evidence) and not evidence["direct_analysis"]:
         return DialogueDecision(role="explain_result", reason="用户引用已完成的分析并请求解释")
 
+    if evidence["direct_analysis"]:
+        return DialogueDecision(
+            role="data_analysis",
+            reason="用户已给出明确的数据对象和查询操作，直接进入受控分析链路",
+            source="deterministic",
+        )
+
     model_decision = _classify_with_model(
         question,
         state,

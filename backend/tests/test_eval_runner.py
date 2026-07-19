@@ -231,6 +231,33 @@ def test_run_cases_compares_structured_rows_against_ground_truth_tokens() -> Non
     assert report["answer_match_rate"] == 1
 
 
+def test_run_cases_compares_expected_rows_in_order() -> None:
+    case = EvalCase(
+        id="row_accuracy_001",
+        category="结构化准确率",
+        question="品类排行",
+        expected_tables=["products"],
+        expected_keywords=["SELECT"],
+        expected_rows=[{"category": "cama_mesa_banho", "order_item_count": 11115}],
+    )
+
+    result = run_cases(
+        [case],
+        lambda _: (200, {
+            "path": "cold_path", "sql": "SELECT category FROM products",
+            "rows": [{"category": "cama_mesa_banho", "order_item_count": 11115}],
+            "source": {"security": "只读 SELECT，已通过 SQL Guard", "returnedRows": 1},
+        }),
+    )[0]
+
+    assert result.row_match is True
+    assert result.strict_ok is True
+    report = summarize_results([result])
+    assert report["row_checked_count"] == 1
+    assert report["row_match_rate"] == 1
+    assert report["semantic_accuracy_rate"] == 1
+
+
 def test_summary_separates_execution_success_from_assertion_match() -> None:
     cases = [
         EvalCase(
