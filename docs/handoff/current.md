@@ -5,7 +5,7 @@
 - 计划：`docs/plans/2026-07-19-sequential-hundred-query-validation.md`；完成记录：`docs/modules/2026-07-19-sequential-hundred-query-validation.md`。
 - 已完成：十个多表业务模式各十个参数变体，严格顺序执行 `100/100` 通过；每条均经过 Inspector、Guard、EXPLAIN 和只读执行，并原子写入本地 checkpoint。平均 `365.9ms`，最大 `712ms`。
 - 范围：新增本地验证器、focused tests 和逐条报告；`eval/reports/sequential_hundred_query_validation.json` 为本地工件，不提交。
-- 边界：不以云端模型调用作为 100 条确定性 SQL 验证的前提，不向主链路添加固定 SQL 或放宽安全边界；提交与推送结果待本模块 Git 操作完成后补充。
+- 边界：不以云端模型调用作为 100 条确定性 SQL 验证的前提，不向主链路添加固定 SQL 或放宽安全边界；`a61010a`（`新增百条顺序查询验证`）已推送至 `origin/main`。
 
 ## 十个多表查询逐条验证（已完成）
 
