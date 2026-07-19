@@ -4,7 +4,7 @@
 
 - 计划：`docs/plans/2026-07-19-sql-generation-speed-benchmark.md`；完成记录：`docs/modules/2026-07-19-sql-generation-speed-benchmark.md`。
 - 已完成：Prompt Context Pack 裁剪因 SQL 生成变慢已回退；最小 SQL JSON 输出契约保留。三条多表 accuracy smoke 仍为 `3/3` strict/row match，SQL 生成平均从 `21.1s` 降至 `19.0s`，API 平均从 `42.4s` 降至 `38.9s`。
-- 边界：未减少 Inspector、Guard、EXPLAIN 或只读执行；最终回归、提交与推送待本模块 Git 操作完成。
+- 边界：未减少 Inspector、Guard、EXPLAIN 或只读执行；最终回归 `81 passed, 1 warning`、前端构建和差异检查通过；`762c53a`（`优化SQL生成响应速度`）已推送至 `origin/main`。
 
 ## SQL 准确率与路由延迟优化（已完成）
 
