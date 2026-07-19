@@ -41,6 +41,31 @@ def test_visualization_spec_uses_line_for_time_dimension() -> None:
     assert visualization.x_field == "order_date"
     assert visualization.y_fields == ["sales_amount"]
     assert visualization.unit == "currency"
+    assert visualization.field_labels == {"order_date": "日期", "sales_amount": "销售额"}
+    assert visualization.field_units == {"sales_amount": "currency"}
+
+
+def test_visualization_spec_labels_monthly_sales_and_order_count_for_separate_axes() -> None:
+    contract = build_result_contract(
+        "2017 年每个月已支付订单的销售额和订单数分别是多少？",
+        SqlExecutionResult(
+            status="success",
+            columns=["month", "order_count", "sales_amount"],
+            rows=[
+                {"month": "2017-01-01T00:00:00+08:00", "order_count": 800, "sales_amount": 138488.04},
+                {"month": "2017-02-01T00:00:00+08:00", "order_count": 1780, "sales_amount": 291908.01},
+            ],
+            row_count=2,
+        ),
+        {"dimensions": ["month"], "measures": [{"name": "sales_amount"}, {"name": "order_count"}]},
+        [],
+    )
+
+    visualization = build_visualization_spec(contract)
+
+    assert visualization.title == "订单数、销售额趋势"
+    assert visualization.field_labels == {"month": "月份", "order_count": "订单数", "sales_amount": "销售额"}
+    assert visualization.field_units == {"order_count": "number", "sales_amount": "currency"}
 
 
 def test_visualization_spec_uses_pie_only_for_small_non_rate_composition() -> None:

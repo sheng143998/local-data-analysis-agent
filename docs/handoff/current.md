@@ -1,5 +1,12 @@
 ﻿# 当前 Handoff
 
+## 图表业务标签与量纲坐标轴修复（已完成）
+
+- 计划：`docs/plans/2026-07-19-visualization-business-labels-and-axes.md`。
+- 完成记录：`docs/modules/2026-07-19-visualization-business-labels-and-axes.md`。
+- 已完成：图表使用确定性业务字段标签；销售额与订单数按货币/数量分轴，月度图标题为“订单数、销售额趋势”，时间轴不展示 ISO 时区文本。
+- 验证：Result Contract 与 Presenter `11 passed`、前端构建通过；真实月度查询契约包含月份/订单数/销售额标签和 number/currency 单位。
+
 ## 聊天子视图与结果排序展示修复（已完成）
 
 - 计划：`docs/plans/2026-07-19-chat-subpage-and-result-ordering.md`。

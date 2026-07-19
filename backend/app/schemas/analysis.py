@@ -57,6 +57,8 @@ class VisualizationSpec(BaseModel):
     x_field: str | None = None
     y_fields: list[str] = Field(default_factory=list)
     unit: Literal["number", "currency", "percent"] = "number"
+    field_labels: dict[str, str] = Field(default_factory=dict)
+    field_units: dict[str, Literal["number", "currency", "percent"]] = Field(default_factory=dict)
     reason: str = "当前结果不适合图表展示"
 
 

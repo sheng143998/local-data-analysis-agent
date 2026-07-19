@@ -28,6 +28,8 @@ export type VisualizationSpec = {
   x_field: string | null;
   y_fields: string[];
   unit: 'number' | 'currency' | 'percent';
+  field_labels: Record<string, string>;
+  field_units: Record<string, 'number' | 'currency' | 'percent'>;
   reason: string;
 };
 

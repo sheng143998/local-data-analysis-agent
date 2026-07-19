@@ -31,13 +31,26 @@ def build_visualization_spec(contract: ResultContract) -> VisualizationSpec:
     if not dimension or not numeric:
         return VisualizationSpec(reason="缺少可识别的维度列或数值列，不展示图表")
     unit = _unit_for(numeric[0])
+    fields = [dimension, *numeric[:2]]
+    labels = {field: _field_label(field) for field in fields}
+    units = {field: _unit_for(field) for field in numeric[:2]}
     lowered = dimension.lower()
     if "date" in lowered or "month" in lowered:
-        return VisualizationSpec(kind="line", title="趋势", x_field=dimension, y_fields=numeric[:2], unit=unit, reason="时间维度使用趋势图")
+        measure_labels = "、".join(labels[field] for field in numeric[:2])
+        return VisualizationSpec(
+            kind="line", title=f"{measure_labels}趋势", x_field=dimension, y_fields=numeric[:2], unit=unit,
+            field_labels=labels, field_units=units, reason="时间维度使用趋势图",
+        )
     if contract.row_count <= 8 and len(numeric) == 1 and unit != "percent" and any(token in lowered for token in ("status", "method", "source", "type")):
-        return VisualizationSpec(kind="pie", title="构成", x_field=dimension, y_fields=numeric[:1], unit=unit, reason="有限类别的非比例构成使用环形图")
+        return VisualizationSpec(
+            kind="pie", title=f"{labels[numeric[0]]}构成", x_field=dimension, y_fields=numeric[:1], unit=unit,
+            field_labels=labels, field_units=units, reason="有限类别的非比例构成使用环形图",
+        )
     if contract.row_count <= 30:
-        return VisualizationSpec(kind="bar", title="排行", x_field=dimension, y_fields=numeric[:1], unit=unit, reason="类别维度使用柱状图")
+        return VisualizationSpec(
+            kind="bar", title=f"{labels[numeric[0]]}对比", x_field=dimension, y_fields=numeric[:1], unit=unit,
+            field_labels=labels, field_units=units, reason="类别维度使用柱状图",
+        )
     return VisualizationSpec(reason="类别过多，保留结果表以便查看完整数据")
 
 
@@ -69,3 +82,31 @@ def _unit_for(column: str) -> str:
     if any(token in lowered for token in ("sales", "amount", "price", "revenue", "gmv", "value")):
         return "currency"
     return "number"
+
+
+def _field_label(field: str) -> str:
+    """业务展示只使用审核字段标签；未知字段保守地转为可读文本。"""
+    labels = {
+        "order_date": "日期",
+        "order_month": "月份",
+        "month": "月份",
+        "daily_sales": "销售额",
+        "sales_amount": "销售额",
+        "total_amount": "销售额",
+        "order_count": "订单数",
+        "avg_order_value": "平均客单价",
+        "refund_rate": "退款率",
+        "success_rate": "支付成功率",
+        "failure_rate": "支付失败率",
+        "gross_margin": "毛利率",
+        "repeat_rate": "复购率",
+        "category": "品类",
+        "category_label": "品类",
+        "product": "商品",
+        "product_label": "商品",
+        "city": "城市",
+        "city_label": "城市",
+        "payment_method": "支付方式",
+        "payment_method_label": "支付方式",
+    }
+    return labels.get(field, field.replace("_", " "))

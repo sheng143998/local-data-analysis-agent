@@ -22,43 +22,78 @@ function axisFormatter(unit: VisualizationSpec['unit']) {
   return (value: unknown) => Number(value).toLocaleString();
 }
 
+function displayLabel(field: string, visualization: VisualizationSpec) {
+  return visualization.field_labels[field] ?? field.replaceAll('_', ' ');
+}
+
+function displayDimension(value: AnalysisRow[string], field: string) {
+  const text = String(value ?? '--');
+  if (/^\d{4}-\d{2}-\d{2}T/.test(text)) return field.includes('month') ? text.slice(0, 7) : text.slice(0, 10);
+  return text;
+}
+
+function fieldUnit(field: string, visualization: VisualizationSpec): VisualizationSpec['unit'] {
+  return visualization.field_units[field] ?? visualization.unit;
+}
+
+function unitLabel(unit: VisualizationSpec['unit']) {
+  if (unit === 'currency') return '金额';
+  if (unit === 'percent') return '比例';
+  return '数量';
+}
+
 export function ResultChart({ rows, visualization }: ResultChartProps) {
   const option = useMemo<EChartsOption | null>(() => {
     if (visualization.kind === 'none' || !visualization.x_field || !visualization.y_fields.length) return null;
-    const labels = rows.map((row) => String(row[visualization.x_field!] ?? '--'));
+    const labels = rows.map((row) => displayDimension(row[visualization.x_field!], visualization.x_field!));
     const valueField = visualization.y_fields[0];
+    const valueUnit = fieldUnit(valueField, visualization);
     if (visualization.kind === 'pie') {
       return {
         animationDuration: 360,
         color: colors,
-        tooltip: { trigger: 'item', valueFormatter: axisFormatter(visualization.unit) },
+        tooltip: { trigger: 'item', valueFormatter: axisFormatter(valueUnit) },
         legend: { type: 'scroll', bottom: 0 },
         series: [{
           type: 'pie',
           radius: ['42%', '70%'],
+          name: displayLabel(valueField, visualization),
           data: rows.map((row, index) => ({ name: labels[index], value: numericValue(row[valueField]) ?? 0 })),
           label: { formatter: '{b}: {d}%' },
         }],
       };
     }
     const chartKind: 'line' | 'bar' = visualization.kind === 'line' ? 'line' : 'bar';
+    const units = Array.from(new Set(visualization.y_fields.map((field) => fieldUnit(field, visualization))));
     const series = visualization.y_fields.map((field, index) => ({
-      name: field.replaceAll('_', ' '),
+      name: displayLabel(field, visualization),
       type: chartKind,
+      yAxisIndex: units.indexOf(fieldUnit(field, visualization)),
       data: rows.map((row) => numericValue(row[field])),
       smooth: chartKind === 'line',
       showSymbol: chartKind === 'line' ? false : undefined,
       itemStyle: { color: colors[index % colors.length] },
       lineStyle: { width: 2.5 },
       barMaxWidth: 36,
+      tooltip: { valueFormatter: axisFormatter(fieldUnit(field, visualization)) },
     }));
+    const yAxis = units.map((unit, index) => {
+      const fields = visualization.y_fields.filter((field) => fieldUnit(field, visualization) === unit);
+      return {
+        type: 'value' as const,
+        name: fields.length === 1 ? displayLabel(fields[0], visualization) : unitLabel(unit),
+        position: index === 0 ? 'left' as const : 'right' as const,
+        axisLabel: { formatter: axisFormatter(unit) },
+        splitLine: { show: index === 0 },
+      };
+    });
     return {
       animationDuration: 360,
       color: colors,
-      tooltip: { trigger: 'axis', valueFormatter: axisFormatter(visualization.unit) },
-      grid: { left: 56, right: 24, top: 34, bottom: 46, containLabel: true },
+      tooltip: { trigger: 'axis' },
+      grid: { left: 56, right: units.length > 1 ? 72 : 24, top: 34, bottom: 46, containLabel: true },
       xAxis: { type: 'category', data: labels, axisLabel: { interval: 'auto', hideOverlap: true } },
-      yAxis: { type: 'value', axisLabel: { formatter: axisFormatter(visualization.unit) } },
+      yAxis,
       series,
     };
   }, [rows, visualization]);

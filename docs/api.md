@@ -153,6 +153,8 @@
     "x_field": "order_date",
     "y_fields": ["daily_sales"],
     "unit": "currency",
+    "field_labels": {"order_date": "日期", "daily_sales": "销售额"},
+    "field_units": {"daily_sales": "currency"},
     "reason": "时间维度使用趋势图"
   }
 }
@@ -182,6 +184,8 @@
 | `x_field` | string/null | 真实 `rows` 中用于维度轴或环形图标签的字段。 |
 | `y_fields` | string[] | 真实 `rows` 中的数值字段，最多由当前展示组件使用前两个。 |
 | `unit` | string | `number`、`currency` 或 `percent`，用于坐标轴和提示格式化。 |
+| `field_labels` | object | 字段到业务展示标签的确定性映射，例如 `sales_amount -> 销售额`；前端不得直接把数据库别名作为图例。 |
+| `field_units` | object | 每个数值字段的 `number`、`currency` 或 `percent` 单位。前端按单位拆分异量纲的坐标轴。 |
 | `reason` | string | 后端确定性选择该展示形式或放弃图表的业务原因。 |
 
 `path` 取值说明：
