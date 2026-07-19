@@ -263,7 +263,7 @@ def _system_prompt() -> str:
             "禁止 SELECT *，禁止 DDL/DML，禁止多语句。",
             "SQL 必须显式选择字段，并尽量添加 LIMIT。",
             "只输出 JSON，不要输出 Markdown。",
-            'JSON 格式：{"sql":"SELECT ...","reasoning":"...","tables":["..."],"metrics":["..."],"warnings":[]}',
+            'JSON 格式：{"sql":"SELECT ...","warnings":[]}',
         ]
     )
 
