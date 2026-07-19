@@ -5,7 +5,7 @@
 - 计划：`docs/plans/2026-07-19-nested-payment-contract-inspector-fix.md`；完成记录：`docs/modules/2026-07-19-nested-payment-contract-inspector-fix.md`。
 - 已完成：Inspector 现在识别局部单表支付子查询中的无前缀字段，Planner 不再把升降序文本作为 WHERE 过滤。首次安全去重候选不再被误拦截或诱导为直接 Join payments。
 - 验证：focused `56 passed`；真实 API 原问题返回 HTTP `200`，Guard 放行、只读执行成功并返回 10 行，首行 `cama_mesa_banho` 为 `11115` 件、销售额 `1036988.68`。
-- 风险：外部 SQL 模型超时或空响应仍会安全失败；提交与推送结果待本模块 Git 操作完成后补充。
+- 风险：外部 SQL 模型超时或空响应仍会安全失败；`b78246d`（`修复支付子查询合同校验`）已推送至 `origin/main`。
 
 ## 综合 Agent 两百条测试用例（已完成）
 
