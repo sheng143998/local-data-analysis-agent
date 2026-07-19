@@ -353,6 +353,7 @@ def test_generate_sql_with_model_returns_generated_sql() -> None:
     assert "SUM(o.total_amount)" in result.sql
     assert result.model_provider == "local"
     assert result.model_name == "test-model"
+    assert adapter.requests[0].max_tokens == 1200
     assert adapter.requests[0].response_format == {"type": "json_object"}
 
 

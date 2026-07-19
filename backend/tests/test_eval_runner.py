@@ -8,14 +8,18 @@ from eval.scripts.run_eval import (
     authenticate_evaluation_client,
     build_batch_metadata,
     load_cases,
+    load_checkpoint,
     load_database_ground_truth_cases,
     load_regression_cases,
     run_cases,
+    run_cases_with_checkpoint,
     select_case_batch,
     summarize_results,
+    write_checkpoint,
     _performance_summary,
 )
 from pathlib import Path
+from uuid import uuid4
 
 
 class _FakeLoginResponse:
@@ -256,6 +260,56 @@ def test_run_cases_compares_expected_rows_in_order() -> None:
     assert report["row_checked_count"] == 1
     assert report["row_match_rate"] == 1
     assert report["semantic_accuracy_rate"] == 1
+
+
+def _checkpoint_test_path() -> Path:
+    return Path.cwd() / "eval" / "reports" / f".checkpoint-test-{uuid4()}.json"
+
+
+def test_checkpoint_resume_runs_only_missing_cases() -> None:
+    cases = [
+        EvalCase("checkpoint_1", "断点", "问题 1", ["orders"], ["SELECT"]),
+        EvalCase("checkpoint_2", "断点", "问题 2", ["orders"], ["SELECT"]),
+    ]
+    checkpoint_path = _checkpoint_test_path()
+    first_result = run_cases(
+        [cases[0]],
+        lambda _: (200, {"sql": "SELECT 1", "source": {"security": "SQL Guard"}}),
+    )
+    write_checkpoint(cases, first_result, checkpoint_path)
+    calls: list[str] = []
+
+    def analyze(question: str):
+        calls.append(question)
+        return 200, {"sql": "SELECT 1", "source": {"security": "SQL Guard"}}
+
+    try:
+        results = run_cases_with_checkpoint(cases, analyze, checkpoint_path, resume=True)
+
+        assert calls == ["问题 2"]
+        assert [result.id for result in results] == ["checkpoint_1", "checkpoint_2"]
+        assert [result.id for result in load_checkpoint(cases, checkpoint_path)] == [
+            "checkpoint_1",
+            "checkpoint_2",
+        ]
+    finally:
+        checkpoint_path.unlink(missing_ok=True)
+
+
+def test_checkpoint_rejects_different_case_order() -> None:
+    cases = [EvalCase("checkpoint_1", "断点", "问题", [], [])]
+    checkpoint_path = _checkpoint_test_path()
+    write_checkpoint(cases, [], checkpoint_path)
+
+    try:
+        try:
+            load_checkpoint([EvalCase("another", "断点", "问题", [], [])], checkpoint_path)
+        except EvaluationConfigurationError as exc:
+            assert "不一致" in str(exc)
+        else:
+            raise AssertionError("不同数据集不可复用 checkpoint")
+    finally:
+        checkpoint_path.unlink(missing_ok=True)
 
 
 def test_summary_separates_execution_success_from_assertion_match() -> None:

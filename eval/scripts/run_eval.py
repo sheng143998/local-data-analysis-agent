@@ -25,6 +25,7 @@ DATASET_PATH = ROOT / "eval" / "datasets" / "standard_questions.jsonl"
 REGRESSION_DATASET_PATH = ROOT / "eval" / "datasets" / "regression_questions.jsonl"
 DATABASE_GROUND_TRUTH_DATASET_PATH = ROOT / "eval" / "datasets" / "database_ground_truth_questions.jsonl"
 REPORT_PATH = ROOT / "eval" / "reports" / "latest_eval_report.json"
+CHECKPOINT_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -326,8 +327,88 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
 
 
 def write_report(report: dict[str, Any], path: Path = REPORT_PATH) -> None:
+    _write_json_atomic(report, path)
+
+
+def _write_json_atomic(payload: dict[str, Any], path: Path) -> None:
+    """评测进程被中断时，保留上一份完整 JSON，不能留下半份报告。"""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    temporary_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    temporary_path.replace(path)
+
+
+def _checkpoint_payload(cases: list[EvalCase], results: list[EvalCaseResult]) -> dict[str, Any]:
+    return {
+        "version": CHECKPOINT_VERSION,
+        "case_ids": [case.id for case in cases],
+        "completed_results": [asdict(result) for result in results],
+    }
+
+
+def write_checkpoint(
+    cases: list[EvalCase],
+    results: list[EvalCaseResult],
+    path: Path,
+) -> None:
+    """每条案例完成后立即写入断点，长耗时模型评测可从已完成案例继续。"""
+    _write_json_atomic(_checkpoint_payload(cases, results), path)
+
+
+def load_checkpoint(cases: list[EvalCase], path: Path) -> list[EvalCaseResult]:
+    if not path.exists():
+        raise EvaluationConfigurationError(f"--resume 指定的 checkpoint 不存在：{path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise EvaluationConfigurationError(f"checkpoint JSON 损坏：{path}") from exc
+    if not isinstance(payload, dict) or payload.get("version") != CHECKPOINT_VERSION:
+        raise EvaluationConfigurationError(f"checkpoint 版本不兼容：{path}")
+    case_ids = [case.id for case in cases]
+    if payload.get("case_ids") != case_ids:
+        raise EvaluationConfigurationError("checkpoint 与当前评测案例不一致，禁止混合恢复")
+    completed = payload.get("completed_results")
+    if not isinstance(completed, list):
+        raise EvaluationConfigurationError("checkpoint 缺少 completed_results")
+    valid_ids = set(case_ids)
+    results: list[EvalCaseResult] = []
+    seen_ids: set[str] = set()
+    for item in completed:
+        if not isinstance(item, dict) or str(item.get("id") or "") not in valid_ids:
+            raise EvaluationConfigurationError("checkpoint 包含未知案例结果")
+        result_id = str(item["id"])
+        if result_id in seen_ids:
+            raise EvaluationConfigurationError("checkpoint 包含重复案例结果")
+        try:
+            results.append(EvalCaseResult(**item))
+        except TypeError as exc:
+            raise EvaluationConfigurationError("checkpoint 结果字段不完整或不兼容") from exc
+        seen_ids.add(result_id)
+    result_by_id = {result.id: result for result in results}
+    return [result_by_id[case.id] for case in cases if case.id in result_by_id]
+
+
+def run_cases_with_checkpoint(
+    cases: list[EvalCase],
+    analyze: AnalyzeFunc,
+    checkpoint_path: Path,
+    *,
+    resume: bool = False,
+) -> list[EvalCaseResult]:
+    """严格顺序执行；每条结束后更新断点，恢复时不重跑已完成案例。"""
+    completed = load_checkpoint(cases, checkpoint_path) if resume else []
+    completed_by_id = {result.id: result for result in completed}
+    for case in cases:
+        if case.id in completed_by_id:
+            continue
+        result = run_cases([case], analyze)[0]
+        completed_by_id[case.id] = result
+        ordered_results = [completed_by_id[item.id] for item in cases if item.id in completed_by_id]
+        write_checkpoint(cases, ordered_results, checkpoint_path)
+    return [completed_by_id[case.id] for case in cases]
 
 
 def analyze_with_test_client(question: str) -> tuple[int, dict[str, Any]]:
@@ -405,6 +486,17 @@ def main() -> None:
         default=REPORT_PATH,
         help="本批报告输出路径；分批运行时应为不同批次指定不同路径",
     )
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="逐条原子 checkpoint 路径；默认随报告生成 .checkpoint.json 文件",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="从 checkpoint 恢复，仅执行尚未完成的案例",
+    )
     args = parser.parse_args()
     all_cases = load_cases(args.dataset)
     try:
@@ -415,7 +507,16 @@ def main() -> None:
         analyze = create_test_client_analyzer()
     except EvaluationConfigurationError as exc:
         raise SystemExit(f"eval blocked: {exc}") from exc
-    results = run_cases(cases, analyze)
+    checkpoint_path = args.checkpoint or args.report.with_suffix(".checkpoint.json")
+    try:
+        results = run_cases_with_checkpoint(
+            cases,
+            analyze,
+            checkpoint_path,
+            resume=args.resume,
+        )
+    except EvaluationConfigurationError as exc:
+        raise SystemExit(f"eval blocked: {exc}") from exc
     report = summarize_results(results)
     report["dataset"] = build_batch_metadata(
         args.dataset,
