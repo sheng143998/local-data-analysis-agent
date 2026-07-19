@@ -62,6 +62,8 @@ def _build_debug_summary(run: QueryRunDetail) -> dict[str, Any]:
             "warning_count": _safe_int(generation.get("warning_count")),
             "warnings": _string_list(generation.get("warnings")),
             "context_table_coverage": generation.get("context_table_coverage") or {},
+            # 管理员运行详情可查看候选 SQL，普通聊天响应与运行列表不返回该调试信息。
+            "sql_candidates": _sql_candidates(generation.get("sql_candidates")),
             "model_route": generation.get("model_route") if isinstance(generation.get("model_route"), dict) else {},
         },
         "intent_validation": {
@@ -104,6 +106,24 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if item is not None]
+
+
+def _sql_candidates(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    candidates: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        candidates.append(
+            {
+                "stage": str(item.get("stage") or ""),
+                "path": str(item.get("path") or ""),
+                "sql": str(item.get("sql") or ""),
+                "warning_count": _safe_int(item.get("warning_count")),
+            }
+        )
+    return candidates
 
 
 def _safe_int(value: Any) -> int:

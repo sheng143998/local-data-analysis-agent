@@ -126,7 +126,7 @@ class AgentService:
         if not response.sql and response.source.security != "未生成 SQL，等待用户确认":
             state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
             self._finish(state, _analysis_failure_response(question), on_stage=on_stage)
-            raise AnalysisUnavailableError("分析服务暂时无法生成可执行查询，请稍后重试。")
+            raise AnalysisUnavailableError("模型未生成满足已确认业务口径的安全查询，系统未执行数据库。")
         state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
         return self._finish(state, response, on_stage=on_stage)
 

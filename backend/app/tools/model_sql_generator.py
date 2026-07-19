@@ -198,22 +198,34 @@ def build_sql_generation_payload(
         "required_output_columns": query_plan["expected_columns"],
         "expected_row_shape": query_plan["expected_row_shape"],
         "contract_constraints": query_plan["contract_constraints"],
+        "execution_contract": query_plan["execution_contract"],
         "optional_context_tables": [
             table for table in retrieval_context.tables if table not in query_plan["entities"]
         ],
     }
-    time_filter = _intent_time_filter(question_intent)
+    execution_contract = query_plan["execution_contract"]
+    if any(execution_contract.values()):
+        payload["requirements"].append(
+            "execution_contract 是本次查询不可变更的业务执行合同：必须使用指定时间字段、时间谓词、分组表达式、规范过滤、关联策略、聚合粒度和输出别名；不得以近似字段或通用口径替代。"
+        )
+    time_filter = str(execution_contract.get("time_predicate") or _intent_time_filter(question_intent)).strip()
     if time_filter:
         payload["time_constraint"] = {
             "required_predicate": time_filter,
-            "rule": "必须使用完整半开区间；起点使用 >=，终点使用 <，不得只写 IS NOT NULL、EXTRACT 或单侧日期条件。",
+            "rule": "必须使用完整半开区间；起点使用 >=，终点使用 <。time_field 已在 execution_contract 中绑定，不得保留占位符或改用其他时间字段。",
         }
         payload["requirements"].append(
-            f"当前问题有明确时间范围，SQL WHERE 必须包含：{time_filter}；将 {{time_field}} 替换为相关的已允许时间字段，优先 orders.created_at。"
+            (
+                f"当前问题有明确时间范围，SQL WHERE 必须包含：{time_filter}；"
+                "time_field 已由 execution_contract 绑定，不得替换为其他字段。"
+                if execution_contract.get("time_predicate")
+                else f"当前问题有明确时间范围，SQL WHERE 必须包含：{time_filter}；将 {{time_field}} 替换为相关的已允许时间字段。"
+            )
         )
     if repair_context:
         payload["repair_context"] = repair_context
         repair_rules = _repair_rules(repair_context)
+        repair_rules.extend(_execution_contract_repair_rules(execution_contract))
         payload["repair_rules"] = repair_rules
         payload["requirements"].extend(
             [
@@ -331,6 +343,31 @@ def _repair_rules(repair_context: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(rule for rule in rules if str(rule).strip()))
 
 
+def _execution_contract_repair_rules(contract: dict[str, Any]) -> list[str]:
+    """把已确认的执行合同转成 Repair 的直接动作，避免模型重新猜测口径。"""
+    rules: list[str] = []
+    time_predicate = str(contract.get("time_predicate") or "").strip()
+    group_expression = str(contract.get("time_group_expression") or "").strip()
+    filters = _string_list(contract.get("canonical_filters"))
+    join_strategy = _string_list(contract.get("join_strategy"))
+    grain = str(contract.get("aggregation_grain") or "").strip()
+    aliases = contract.get("output_aliases") if isinstance(contract.get("output_aliases"), dict) else {}
+    if time_predicate:
+        rules.append(f"WHERE 必须包含时间条件：{time_predicate}。")
+    if group_expression:
+        rules.append(f"SELECT 和 GROUP BY 必须使用时间分组表达式 {group_expression}，并输出其技术别名。")
+    if filters:
+        rules.append(f"WHERE 必须保留规范业务过滤：{'；'.join(filters)}。")
+    if join_strategy:
+        rules.append(f"必须遵守关联和去重策略：{' '.join(join_strategy)}")
+    if grain:
+        rules.append(f"所有金额和订单数计算必须保持 {grain} 粒度，不能被关联表行数放大。")
+    if aliases:
+        pairs = ", ".join(f"{key} -> {value}" for key, value in aliases.items())
+        rules.append(f"最终 SELECT 必须输出稳定技术别名：{pairs}。")
+    return rules
+
+
 def _inspector_repair_rules(issues: Any) -> list[str]:
     """把 Inspector 类别转换为可复制指令；未知类别保持保守，不猜测业务公式。"""
     if not isinstance(issues, list):
@@ -400,6 +437,7 @@ def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any
             "expected_columns": [],
             "expected_row_shape": "unknown",
             "contract_constraints": [],
+            "execution_contract": {},
         }
     raw = question_intent.get("query_plan")
     if not isinstance(raw, dict):
@@ -431,4 +469,20 @@ def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any
             for item in raw.get("contract_constraints", [])
             if isinstance(item, dict) and item.get("contract_key")
         ],
+        "execution_contract": _compact_execution_contract(raw.get("execution_contract")),
+    }
+
+
+def _compact_execution_contract(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    aliases = value.get("output_aliases")
+    return {
+        "time_field": str(value.get("time_field") or ""),
+        "time_predicate": str(value.get("time_predicate") or ""),
+        "time_group_expression": str(value.get("time_group_expression") or ""),
+        "canonical_filters": _string_list(value.get("canonical_filters")),
+        "join_strategy": _string_list(value.get("join_strategy")),
+        "aggregation_grain": str(value.get("aggregation_grain") or ""),
+        "output_aliases": {str(key): str(item) for key, item in aliases.items()} if isinstance(aliases, dict) else {},
     }

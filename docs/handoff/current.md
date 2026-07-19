@@ -1,5 +1,12 @@
 ﻿# 当前 Handoff
 
+## 可执行 Query Plan 与失败诊断修复（已完成）
+
+- 计划：`docs/plans/2026-07-19-executable-query-plan-and-failure-diagnostics.md`。
+- 完成记录：`docs/modules/2026-07-19-executable-query-plan-and-failure-diagnostics.md`。
+- 已完成：Query Plan 增加可执行合同，按月已支付订单问题绑定时间列、支付谓词、订单粒度去重策略和技术别名；生成/Repair 直接消费合同。管理员运行详情可见候选 SQL 最小摘要；503 前端文案不再错误要求用户重新描述已充分的问题。
+- 验证：focused `65 passed`、前端生产构建通过；真实认证运行 `3fb6119c-efe4-444b-8727-9d5f904f1dd7` Guard 放行、执行成功、返回 12 行。全量后端集成仍受云端模型非确定性影响，详见模块记录。
+
 ## 本地管理员账号创建（已完成）
 
 - 计划：`docs/plans/2026-07-19-local-admin-account-reset.md`。

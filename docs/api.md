@@ -387,7 +387,7 @@
 | 工具 | 典型字段 | 说明 |
 | --- | --- | --- |
 | `context_builder.build_retrieval_context` | `metric_count`, `schema_column_count`, `relationship_count`, `tables`, `fields_sample` | 本次上下文召回规模和字段样例。 |
-| `analysis_graph.select_generated_sql` | `generation_path`, `has_sql`, `warning_count`, `warnings` | SQL 生成路径和 warning 摘要。 |
+| `analysis_graph.select_generated_sql` | `generation_path`, `has_sql`, `warning_count`, `warnings`, `sql_candidates` | SQL 生成路径和 warning 摘要；`sql_candidates` 仅在管理员运行详情中提供首次生成和 Repair 的候选 SQL，不包含模型推理或 Prompt。 |
 | `sql_validation_tools.guard_sql` | `guard_status`, `warning_count`, `warnings`, `error_count`, `errors` | SQL Guard 放行状态和诊断摘要。 |
 
 ### `GET /api/runs`

@@ -70,3 +70,35 @@ def test_query_plan_inherits_payment_status_filter_from_contract() -> None:
 def test_query_plan_discards_top_n_language_from_business_filters() -> None:
     intent = ParsedQuestionIntent(original_question="订单商品数最多的前5个品类", normalized_question="订单商品数最多的前5个品类", filters=["前5个"], query_spec=QuerySpec(top_n=5, requires_order_by=True))
     assert build_query_plan(intent).filters == []
+
+
+def test_query_plan_binds_executable_paid_order_month_contract() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="2017 年每个月已支付订单的销售额和订单数分别是多少？按月份升序展示。",
+        normalized_question="查询2017年每个月已支付订单的销售额和订单数",
+        semantic_dimensions=["月份", "每月"],
+        filters=["已支付订单"],
+        query_spec=QuerySpec(
+            metrics=["sales_amount", "order_count"],
+            dimensions=["month"],
+            time_filter="{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+            required_table_groups=[["orders", "payments"]],
+        ),
+    )
+
+    plan = build_query_plan(intent)
+
+    assert plan.dimensions == ["month"]
+    assert plan.time_filter == "orders.purchase_at >= DATE '2017-01-01' AND orders.purchase_at < DATE '2018-01-01'"
+    assert plan.execution_contract.time_field == "orders.purchase_at"
+    assert plan.execution_contract.time_group_expression == "DATE_TRUNC('month', orders.purchase_at)"
+    assert plan.execution_contract.canonical_filters == ["payments.status = 'paid'"]
+    assert plan.filters == ["payments.status = 'paid'"]
+    assert plan.execution_contract.aggregation_grain == "order"
+    assert len(plan.execution_contract.join_strategy) == 2
+    assert plan.execution_contract.output_aliases == {
+        "month": "month",
+        "sales_amount": "sales_amount",
+        "order_count": "order_count",
+    }
+    assert {"month", "sales_amount", "order_count"} <= set(plan.expected_columns)

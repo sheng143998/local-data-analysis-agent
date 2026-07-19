@@ -264,6 +264,46 @@ def test_build_sql_generation_payload_forwards_inspector_rules_by_category() -> 
     assert any("不得猜测业务公式" in rule for rule in payload["repair_rules"])
 
 
+def test_build_sql_generation_payload_promotes_executable_plan_to_generation_and_repair_rules() -> None:
+    intent = {
+        "query_plan": {
+            "entities": ["orders", "payments"],
+            "measures": [
+                {"name": "sales_amount", "operation": "sum"},
+                {"name": "order_count", "operation": "count"},
+            ],
+            "dimensions": ["month"],
+            "expected_columns": ["month", "sales_amount", "order_count"],
+            "execution_contract": {
+                "time_field": "orders.purchase_at",
+                "time_predicate": "orders.purchase_at >= DATE '2017-01-01' AND orders.purchase_at < DATE '2018-01-01'",
+                "time_group_expression": "DATE_TRUNC('month', orders.purchase_at)",
+                "canonical_filters": ["payments.status = 'paid'"],
+                "join_strategy": ["先从 payments 中按 payments.order_id 去重筛选 payments.status = 'paid' 的订单。"],
+                "aggregation_grain": "order",
+                "output_aliases": {"month": "month", "sales_amount": "sales_amount", "order_count": "order_count"},
+            },
+        }
+    }
+
+    payload = build_sql_generation_payload(
+        "2017 年每个月已支付订单的销售额和订单数分别是多少？",
+        _context(),
+        _plan(),
+        repair_context={"intent_errors": ["模型 SQL 时间粒度不匹配"]},
+        question_intent=intent,
+    )
+
+    contract = payload["generation_contract"]["execution_contract"]
+    assert contract["time_field"] == "orders.purchase_at"
+    assert contract["canonical_filters"] == ["payments.status = 'paid'"]
+    assert contract["aggregation_grain"] == "order"
+    assert any("execution_contract" in rule for rule in payload["requirements"])
+    assert any("DATE_TRUNC('month', orders.purchase_at)" in rule for rule in payload["repair_rules"])
+    assert any("payments.status = 'paid'" in rule for rule in payload["repair_rules"])
+    assert any("稳定技术别名" in rule for rule in payload["repair_rules"])
+
+
 def test_parse_model_sql_response_extracts_json_sql() -> None:
     response = ModelResponse(
         ok=True,

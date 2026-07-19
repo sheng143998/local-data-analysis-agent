@@ -61,6 +61,7 @@ class AnalysisGraphState(TypedDict, total=False):
     execution_repair_attempts: int
     generated_sql: GeneratedSql
     selected_sql: str
+    sql_candidates: list[dict[str, Any]]
     guard: SqlGuardResult
     explain: SqlExplainResult
     execution: SqlExecutionResult
@@ -342,6 +343,7 @@ def _generate_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     return {
         "generated_sql": generated_sql,
         "selected_sql": selected_sql,
+        "sql_candidates": [_sql_candidate("generation", generated_sql)],
         "reuse_plan": reuse_plan,
         "repair_attempts": 0,
         "execution_repair_attempts": 0,
@@ -435,6 +437,7 @@ def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     return {
         "generated_sql": repaired_sql.model_copy(update={"warnings": warnings}),
         "selected_sql": repaired_sql.sql,
+        "sql_candidates": [*state.get("sql_candidates", []), _sql_candidate("repair", repaired_sql)],
         "repair_attempts": state.get("repair_attempts", 0) + 1,
         "execution_repair_attempts": (
             state.get("execution_repair_attempts", 0) + 1
@@ -587,6 +590,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
         model_name=generated_sql.model_name,
         model_latency_ms=generated_sql.model_latency_ms,
         generated_sql_text=selected_sql,
+        sql_candidates=state.get("sql_candidates", []),
         updated_memory_id=state["updated_memory_id"],
         error_message=execution.error_message or "; ".join(guard.errors) or None,
         metric_count=len(retrieval_context.metrics),
@@ -626,6 +630,7 @@ def _log_analysis_run(
     model_name: str = "",
     model_latency_ms: int = 0,
     generated_sql_text: str,
+    sql_candidates: list[dict[str, Any]],
     error_message: str | None,
     metric_count: int,
     schema_column_count: int,
@@ -711,6 +716,8 @@ def _log_analysis_run(
                 generated_sql_text,
                 context_tables,
             ),
+            # 候选 SQL 仅落在既有管理员运行详情中，便于定位模型与 Repair 偏差；不记录推理或原始模型文本。
+            "sql_candidates": sql_candidates,
             "model_route": {
                     "provider": model_provider,
                     "model": model_name,
@@ -781,6 +788,16 @@ def _log_analysis_run(
         status="success",
         latency_ms=latency_ms,
     )
+
+
+def _sql_candidate(stage: str, generated: GeneratedSql) -> dict[str, Any]:
+    """保留可审计 SQL 候选的最小诊断字段，避免记录模型推理和 Prompt。"""
+    return {
+        "stage": stage,
+        "path": generated.path,
+        "sql": generated.sql,
+        "warning_count": len(generated.warnings),
+    }
 
 
 def _select_generated_sql(

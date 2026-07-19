@@ -97,7 +97,8 @@ function formatCellValue(column: string, value: AnalysisValue) {
 function toChatError(error: unknown): ChatError {
   if (error instanceof ApiError) {
     if (error.status === 0) return { message: '暂时连不上本地分析服务，请确认后端服务已启动后再试。', status: error.status, detail: error.detail ?? error.message };
-    if (error.status >= 500) return { message: '分析服务暂时没有完成这次查询，请稍后重试或换一个更具体的问题。', status: error.status, detail: error.detail ?? error.message };
+    if (error.status === 503) return { message: '模型未生成符合已确认业务口径的安全查询，系统未执行数据库。请稍后重试。', status: error.status, detail: error.detail ?? error.message };
+    if (error.status >= 500) return { message: '分析服务暂时没有完成这次查询，请稍后重试。', status: error.status, detail: error.detail ?? error.message };
     return { message: error.message || '这次问题没有通过校验，请调整问题后再试。', status: error.status, detail: error.detail };
   }
   return { message: '分析过程被中断了，请稍后重试。' };
