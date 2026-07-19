@@ -5,7 +5,7 @@
 - 计划：`docs/plans/2026-07-19-ten-multitable-query-validation.md`；完成记录：`docs/modules/2026-07-19-ten-multitable-query-validation.md`。
 - 已完成：十条查询均顺序单独验证，9 条通过 Inspector、Guard、EXPLAIN 与只读执行；第 3 条模型链路因云端双次读取超时失败，但受合同约束 SQL 通过完整确定性验证。修复“已支付”等短过滤词未规范化和 Guard 误拦截 `COUNT(*)` 两项问题。
 - 验证：相关 focused `85 passed`、前端构建和差异检查通过；评测 JSON 仅为本地工件。
-- 风险：云端 SQL 模型仍可能超时或返回空 SQL，详见模块报告；提交与推送结果待本模块 Git 操作完成后补充。
+- 风险：云端 SQL 模型仍可能超时或返回空 SQL，详见模块报告；`074d390`（`验证并修复多表查询链路`）已推送至 `origin/main`。
 
 ## 品类订单商品数与销售额排行失败修复（已完成）
 
