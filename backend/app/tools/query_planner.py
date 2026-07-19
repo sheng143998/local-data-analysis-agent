@@ -142,7 +142,7 @@ def _operation(metric: str) -> str:
 
 def _business_filters(filters: list[str]) -> list[str]:
     """业务规则：排行、Top N 与时间粒度属于 Query Plan 结构，绝不能作为 WHERE 过滤传给 Inspector。"""
-    structural = ("前", "top", "最高", "最低", "最多", "最少", "排行", "排名", "按月", "按天", "趋势", "分布")
+    structural = ("前", "top", "最高", "最低", "最多", "最少", "排行", "排名", "升序", "降序", "排序", "按月", "按天", "趋势", "分布")
     return [item for item in filters if item and not any(token in str(item).lower() for token in structural)]
 
 

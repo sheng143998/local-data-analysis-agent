@@ -194,7 +194,6 @@ def _referenced_fields(
     tables: set[str],
 ) -> set[str]:
     fields: set[str] = set()
-    lowered_tables = {table.lower() for table in tables}
     for column in expression.find_all(exp.Column):
         if not column.name or column.name == "*":
             continue
@@ -202,10 +201,29 @@ def _referenced_fields(
             table = aliases.get(column.table.lower(), column.table.lower())
             fields.add(f"{table}.{column.name.lower()}")
             continue
-        # 无表前缀只在单表查询中才可无歧义映射为合同字段。
-        if len(lowered_tables) == 1:
-            fields.add(f"{next(iter(lowered_tables))}.{column.name.lower()}")
+        # 无表前缀只在其所属 SELECT 的局部单表作用域内才可无歧义映射。
+        # 例如支付去重子查询 `SELECT DISTINCT order_id FROM payments WHERE status = 'paid'`。
+        local_tables = _local_select_tables(column)
+        if len(local_tables) == 1:
+            fields.add(f"{next(iter(local_tables))}.{column.name.lower()}")
     return fields
+
+
+def _local_select_tables(column: exp.Column) -> set[str]:
+    current = column.parent
+    while current is not None and not isinstance(current, exp.Select):
+        current = current.parent
+    if not isinstance(current, exp.Select):
+        return set()
+
+    tables: set[str] = set()
+    from_clause = current.args.get("from_")
+    if isinstance(from_clause, exp.From) and isinstance(from_clause.this, exp.Table) and from_clause.this.name:
+        tables.add(from_clause.this.name.lower())
+    for join in current.args.get("joins") or []:
+        if isinstance(join, exp.Join) and isinstance(join.this, exp.Table) and join.this.name:
+            tables.add(join.this.name.lower())
+    return tables
 
 
 def _has_aggregation(expression: exp.Expression, aggregation: str) -> bool:
@@ -244,6 +262,9 @@ def _has_required_filter(
             if not isinstance(column, exp.Column) or not isinstance(literal, exp.Literal):
                 continue
             actual_table = aliases.get((column.table or "").lower(), (column.table or "").lower())
+            if not actual_table:
+                local_tables = _local_select_tables(column)
+                actual_table = next(iter(local_tables)) if len(local_tables) == 1 else ""
             if actual_table == table_name and column.name.lower() == column_name and str(literal.this).lower() == value.lower():
                 return True
     return False

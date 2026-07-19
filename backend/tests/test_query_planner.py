@@ -72,6 +72,16 @@ def test_query_plan_discards_top_n_language_from_business_filters() -> None:
     assert build_query_plan(intent).filters == []
 
 
+def test_query_plan_discards_sort_direction_language_from_business_filters() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="按订单商品数量降序展示商品品类",
+        normalized_question="按订单商品数量降序展示商品品类",
+        filters=["按订单商品数量降序"],
+    )
+
+    assert build_query_plan(intent).filters == []
+
+
 def test_query_plan_binds_executable_paid_order_month_contract() -> None:
     intent = ParsedQuestionIntent(
         original_question="2017 年每个月已支付订单的销售额和订单数分别是多少？按月份升序展示。",

@@ -128,3 +128,32 @@ def test_inspector_accepts_paid_category_item_sales_ranking() -> None:
     )
 
     assert issues == []
+
+
+def test_inspector_accepts_deduplicated_paid_subquery_for_contract_fields() -> None:
+    issues = inspect_query_plan(
+        "SELECT p.category AS category, COUNT(oi.id) AS order_item_count, SUM(oi.price) AS sales_amount "
+        "FROM order_items oi JOIN orders o ON o.id = oi.order_id "
+        "JOIN products p ON p.id = oi.product_id "
+        "JOIN (SELECT DISTINCT order_id FROM payments WHERE status = 'paid') paid ON paid.order_id = o.id "
+        "GROUP BY p.category ORDER BY order_item_count DESC LIMIT 10",
+        {
+            "entities": ["orders", "payments", "order_items", "products"],
+            "filters": ["payments.status = 'paid'"],
+            "order_by": ["order_item_count DESC"],
+            "limit": 10,
+            "expected_columns": ["category", "order_item_count", "sales_amount"],
+            "expected_row_shape": "ranking",
+            "contract_constraints": [{
+                "contract_key": "category_item_sales_ranking",
+                "display_name": "品类订单商品数与销售额排行",
+                "aggregation": "sum",
+                "source_fields": [
+                    "payments.order_id", "payments.status", "order_items.id", "order_items.price",
+                    "order_items.order_id", "order_items.product_id", "products.id", "products.category",
+                ],
+            }],
+        },
+    )
+
+    assert issues == []
