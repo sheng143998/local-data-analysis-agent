@@ -1,5 +1,12 @@
 ﻿# 当前 Handoff
 
+## 本地管理员账号创建（已完成）
+
+- 计划：`docs/plans/2026-07-19-local-admin-account-reset.md`。
+- 完成记录：`docs/modules/2026-07-19-local-admin-account-reset.md`。
+- 已创建：本地开发管理员显示名为 `admin`，登录邮箱为 `admin@example.com`。接口要求标准邮箱，故不使用 `admin@localhost`。
+- 验证：现有登录接口认证成功且返回 `admin` 角色；不在文档、日志或提交中记录密码或密码哈希。
+
 ## 通用对话模型本地配置（进行中）
 
 - 计划：`docs/plans/2026-07-19-dialogue-model-local-config.md`。
