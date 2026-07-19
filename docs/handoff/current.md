@@ -5,7 +5,7 @@
 - 计划：`docs/plans/2026-07-19-sql-accuracy-and-router-latency.md`；完成记录：`docs/modules/2026-07-19-sql-accuracy-and-router-latency.md`。
 - 已完成：Eval 支持结构化参考行比较，新增三条多表 accuracy smoke；明确数据请求跳过 Router 模型。真实 smoke `3/3` 严格和参考行匹配。
 - 性能：端到端平均 `42.4s`，SQL 生成平均 `21.1s`，数据库执行仅 `0.18s`；下一瓶颈是意图/SQL 模型与上下文，不是数据库。
-- 验证：Eval/Router focused `28 passed, 1 warning`，真实 accuracy smoke `3/3`；前端构建和差异检查待最终提交前执行。
+- 验证：最终 Eval/Router/Inspector/Planner focused `44 passed, 1 warning`，真实 accuracy smoke `3/3`，前端构建和差异检查通过；`31b1243`（`提升SQL准确率评测与路由速度`）已推送至 `origin/main`。
 
 ## 支付子查询合同校验修复（已完成）
 
