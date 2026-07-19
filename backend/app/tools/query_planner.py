@@ -227,4 +227,4 @@ def _output_aliases(metric_names: set[str], dimensions: list[str]) -> dict[str, 
 
 def _is_paid_order_filter(value: str) -> bool:
     text = str(value).strip().lower()
-    return text in {"已支付订单", "支付成功订单", "已付款订单", "成交订单"}
+    return text in {"已支付", "支付成功", "已付款", "成交", "已支付订单", "支付成功订单", "已付款订单", "成交订单"}

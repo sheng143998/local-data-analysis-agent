@@ -104,6 +104,24 @@ def test_query_plan_binds_executable_paid_order_month_contract() -> None:
     assert {"month", "sales_amount", "order_count"} <= set(plan.expected_columns)
 
 
+def test_query_plan_canonicalizes_short_paid_filter() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="2017 年已支付订单数是多少？",
+        normalized_question="2017 年已支付订单数",
+        filters=["已支付"],
+        query_spec=QuerySpec(
+            metrics=["order_count"],
+            time_filter="{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+            required_table_groups=[["orders", "payments"]],
+        ),
+    )
+
+    plan = build_query_plan(intent)
+
+    assert plan.filters == ["payments.status = 'paid'"]
+    assert plan.execution_contract.canonical_filters == ["payments.status = 'paid'"]
+
+
 def test_query_plan_normalizes_category_synonyms_for_item_sales_ranking() -> None:
     intent = ParsedQuestionIntent(
         original_question="订单商品数量最多的前 10 个商品品类是什么？展示品类、订单商品数量和销售额。",

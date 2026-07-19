@@ -20,6 +20,12 @@ def test_validate_blocks_select_star() -> None:
     assert "禁止使用 SELECT *" in result.errors[0]
 
 
+def test_validate_allows_count_star_aggregation() -> None:
+    result = validate_sql(SqlValidationRequest(sql="SELECT COUNT(*) AS order_count FROM orders LIMIT 1"))
+
+    assert result.is_valid is True
+
+
 def test_guard_blocks_write_sql() -> None:
     result = guard_sql("DELETE FROM orders WHERE id = '1'")
     assert result.allowed is False

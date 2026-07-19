@@ -159,7 +159,12 @@ def _cte_names(expression: exp.Expression) -> set[str]:
 
 
 def _has_select_star(expression: exp.Expression) -> bool:
-    return any(isinstance(item, exp.Star) for item in expression.find_all(exp.Star))
+    for item in expression.find_all(exp.Star):
+        # COUNT(*) 是聚合参数，不会暴露未声明字段；仅拒绝投影列表中的 * 或 table.*。
+        if isinstance(item.parent, exp.Count):
+            continue
+        return True
+    return False
 
 
 def _blocked_functions(expression: exp.Expression) -> list[str]:
