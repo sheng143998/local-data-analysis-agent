@@ -1,5 +1,11 @@
 ﻿# 当前 Handoff
 
+## 通用对话模型本地配置（进行中）
+
+- 计划：`docs/plans/2026-07-19-dialogue-model-local-config.md`。
+- 范围：仅向 Git 忽略的 `backend/.env` 添加 `DIALOGUE_MODEL_*` 占位项，默认关闭，由用户填写 provider、endpoint、模型和 Key；不改应用代码或 SQL 链路。
+- 已完成：`docs/modules/2026-07-19-dialogue-model-local-config.md`。本地配置占位项已添加，Settings 读取验证通过，`.env` 受 Git 忽略保护；不提交本地配置或密钥。提交推送待本模块 Git 操作完成。
+
 ## Top N、成本与比率合同修复（进行中）
 
 - 计划：`docs/plans/2026-07-18-topn-cost-rate-contract-fix.md`。
