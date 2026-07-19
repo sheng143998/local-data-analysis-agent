@@ -1,11 +1,12 @@
 ﻿# 当前 Handoff
 
-## SQL 生成速度二十样本基准优化（进行中）
+## SQL 生成速度二十样本基准优化（已完成）
 
 - 计划：`docs/plans/2026-07-19-sql-speed-20-sample-benchmark.md`。
 - 目标：建立至少 20 条结构化参考结果样本，逐项评估 SQL 生成速度优化；准确率下降或速度无收益的改动自动回退。
 - 基准：`20/20` 顺序完成，严格成功率 `35%`、行匹配率 `40%`；SQL 生成 p50/p95 为 `17.35s/45.03s`，修复 p50 为 `40.73s`，数据库执行平均仅 `0.26s`。报告为本地工件 `eval/reports/sql_accuracy_20_checkpointed_baseline_20260719.json`。
 - 实验结论：单独将最大输出降至 `700` token 后，严格/行匹配率仍为 `35%/40%`，但 SQL 生成平均由 `22.89s` 升至 `27.01s`、端到端平均由 `57.32s` 升至 `67.48s`，已回退到 `1200`。该实验报告为本地工件 `eval/reports/sql_accuracy_20_max_tokens_700_20260719.json`。
+- 交付：`50accc1`（`支持SQL评测断点恢复`）已推送至 `origin/main`；完成记录为 `docs/modules/2026-07-19-sql-speed-20-sample-benchmark.md`。
 
 ## SQL 生成速度基准优化（已完成）
 
