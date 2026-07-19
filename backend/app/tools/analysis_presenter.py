@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from datetime import date, datetime
+import re
 from typing import Any
 
 from backend.app.schemas.analysis import AnalyzeResponse, VisualizationSpec
@@ -36,7 +38,8 @@ def present_sales_trend_result(
             **_error_payload(question, sql, execution, latency_ms, retrieval_context, reuse_plan)
         )
 
-    rows = list(reversed(execution.rows))
+    # 业务规则：结果行必须保留 Executor 的 SQL ORDER BY 顺序，Presenter 只能格式化，不能重排业务结果。
+    rows = list(execution.rows)
 
     period_label = _period_label(sql)
     main_metric_label = _contract_metric_label(result_contract) or _main_metric_label(question)
@@ -129,7 +132,16 @@ def present_clarification_response(
 
 
 def _to_response_row(row: dict) -> dict:
-    return {str(key): value for key, value in row.items()}
+    return {str(key): _to_response_value(value) for key, value in row.items()}
+
+
+def _to_response_value(value: Any) -> Any:
+    # API 契约只传递 JSON 基础类型；数据库时间对象在此处序列化，业务排序保持不变。
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return value
 
 
 def _build_result_profile(
@@ -282,6 +294,7 @@ def _column_label(column: str | None) -> str:
     labels = {
         "order_date": "日期",
         "order_month": "月份",
+        "month": "月份",
         "daily_sales": "销售额",
         "sales_amount": "销售额",
         "total_amount": "销售额",
@@ -327,7 +340,15 @@ def _format_number(column: str | None, value: float) -> str:
 def _display_value(value: Any) -> str:
     if value is None:
         return "无"
-    return str(value)
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = str(value)
+    # PostgreSQL 时间维度可能经 API 序列化为 ISO 文本；摘要不应展示时区和零点时间。
+    if re.match(r"^\d{4}-\d{2}-\d{2}T", text):
+        return text[:10]
+    return text
 
 
 def _is_numeric_value(value: Any) -> bool:

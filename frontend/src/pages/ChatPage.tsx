@@ -87,7 +87,13 @@ function isNumericLike(value: AnalysisValue) {
 function formatCellValue(column: string, value: AnalysisValue) {
   if (value === null || value === undefined || value === '') return '--';
   if (typeof value === 'boolean') return value ? '是' : '否';
-  if (typeof value !== 'number') return String(value);
+  if (typeof value !== 'number') {
+    const text = String(value);
+    if ((column.includes('date') || column.includes('month')) && /^\d{4}-\d{2}-\d{2}T/.test(text)) {
+      return column.includes('month') ? text.slice(0, 7) : text.slice(0, 10);
+    }
+    return text;
+  }
   if (column.includes('rate') || column.includes('margin')) return `${value.toFixed(2)}%`;
   if (column.includes('sales') || column.includes('amount') || column.includes('value')) return `¥${Math.round(value).toLocaleString()}`;
   if (Number.isInteger(value)) return value.toLocaleString();
@@ -136,7 +142,7 @@ function ResultTable({ rows }: { rows: AnalysisRow[] }) {
       <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
         <Table2 className="h-4 w-4 text-teal-600" /> 查询结果
       </div>
-      <div className="overflow-x-auto">
+      <div className="max-h-80 overflow-auto">
         <table className="w-full min-w-[620px] text-sm">
           <thead className="bg-slate-50 text-left text-xs text-slate-500">
             <tr>
@@ -157,6 +163,31 @@ function ResultTable({ rows }: { rows: AnalysisRow[] }) {
         </table>
       </div>
     </div>
+  );
+}
+
+function AnalysisDetails({ sql, rows, visualization }: Pick<ChatItem, 'sql' | 'rows' | 'visualization'>) {
+  const [open, setOpen] = useState(false);
+  if (!sql && !rows?.length) return null;
+  return (
+    <section className="overflow-hidden border border-slate-200 bg-slate-50/70" style={{ borderRadius: 8 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-800 hover:bg-slate-100"
+        aria-expanded={open}
+      >
+        <span>查询详情{rows?.length ? ` (${rows.length} 行)` : ''}</span>
+        {open ? <ChevronUp className="h-4 w-4 text-teal-700" /> : <ChevronDown className="h-4 w-4 text-teal-700" />}
+      </button>
+      {open ? (
+        <div className="max-h-[min(62vh,720px)] space-y-4 overflow-y-auto border-t border-slate-200 p-4">
+          {sql ? <SqlPanel sql={sql} compact title="已执行 SQL" /> : null}
+          {rows?.length && visualization ? <ResultChart rows={rows} visualization={visualization} /> : null}
+          {rows?.length ? <ResultTable rows={rows.slice(0, 30)} /> : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -336,7 +367,7 @@ export function ChatPage() {
   );
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-126px)] max-w-[1440px] overflow-hidden border border-slate-200 bg-white shadow-sm" style={{ borderRadius: 8 }}>
+    <div className="mx-auto flex h-[calc(100dvh-120px)] max-w-[1440px] overflow-hidden border border-slate-200 bg-white shadow-sm md:h-[calc(100dvh-136px)]" style={{ borderRadius: 8 }}>
       <aside className="flex w-[280px] shrink-0 flex-col border-r border-slate-200 bg-slate-50/80 max-md:hidden">
         <div className="space-y-3 border-b border-slate-200 p-3">
           <button type="button" onClick={startNewChat} className="primary-btn w-full justify-start bg-teal-700 hover:bg-teal-800">
@@ -379,7 +410,7 @@ export function ChatPage() {
         </div>
       </aside>
 
-      <section className="flex min-w-0 flex-1 flex-col bg-white">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-4">
           <div className="flex min-w-0 items-center gap-2">
             <MessageSquareText className="h-4 w-4 shrink-0 text-teal-700" />
@@ -427,9 +458,7 @@ export function ChatPage() {
                               {message.streaming ? <span className="inline-flex items-center gap-2 text-slate-500"><Loader2 className="h-4 w-4 animate-spin text-teal-700" /> {message.text}</span> : message.text}
                             </div>
                           )}
-                          {message.sql ? <SqlPanel sql={message.sql} compact title="已执行 SQL" /> : null}
-                          {message.rows?.length && message.visualization ? <ResultChart rows={message.rows} visualization={message.visualization} /> : null}
-                          {message.rows?.length ? <ResultTable rows={message.rows.slice(0, 30)} /> : null}
+                          <AnalysisDetails sql={message.sql} rows={message.rows} visualization={message.visualization} />
                         </div>
                       </div>
                     )}

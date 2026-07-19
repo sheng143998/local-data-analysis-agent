@@ -1,5 +1,12 @@
 ﻿# 当前 Handoff
 
+## 聊天子视图与结果排序展示修复（已完成）
+
+- 计划：`docs/plans/2026-07-19-chat-subpage-and-result-ordering.md`。
+- 完成记录：`docs/modules/2026-07-19-chat-subpage-and-result-ordering.md`。
+- 已完成：聊天工作区改为视口受控的独立滚动子视图，SQL/图表/表格默认折叠为查询详情；Presenter 保留 SQL 排序并压缩日期显示。
+- 验证：Presenter `5 passed`、前端构建通过；真实月度查询摘要首行修正为 2017-01 / 800。自动化浏览器无法访问宿主机本地端口，UI 截图验证待本机浏览器确认；Vite 已启动于 `http://127.0.0.1:5173`。
+
 ## 可执行 Query Plan 与失败诊断修复（已完成）
 
 - 计划：`docs/plans/2026-07-19-executable-query-plan-and-failure-diagnostics.md`。

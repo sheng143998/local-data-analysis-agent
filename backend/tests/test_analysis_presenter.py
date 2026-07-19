@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from backend.app.schemas.sql_execution import SqlExecutionResult
 from backend.app.tools.analysis_presenter import present_sales_trend_result
 from backend.app.tools.result_contract_builder import build_result_contract
@@ -27,7 +29,7 @@ def test_presenter_builds_summary_and_metrics_from_generic_rows() -> None:
     assert "返回 2 行结果" in response.summary
     assert "traffic source" in response.summary
     assert "conversion rate" in response.summary
-    assert response.rows[0]["traffic_source"] == "广告"
+    assert response.rows[0]["traffic_source"] == "搜索"
     metric_labels = [metric.label for metric in response.metrics]
     assert "返回行数" in metric_labels
     assert "conversion rate" in metric_labels
@@ -86,4 +88,29 @@ def test_presenter_exposes_deterministic_visualization_from_result_contract() ->
 
     assert response.visualization.kind == "line"
     assert response.visualization.x_field == "order_date"
-    assert response.rows[0]["order_date"] == "2017-01-01"
+    assert response.rows[0]["order_date"] == "2017-01-02"
+
+
+def test_presenter_preserves_monthly_sql_order_and_formats_summary_date() -> None:
+    execution = SqlExecutionResult(
+        status="success",
+        columns=["month", "order_count", "sales_amount"],
+        rows=[
+            {"month": datetime(2017, 1, 1, tzinfo=timezone.utc), "order_count": 800, "sales_amount": 138488.04},
+            {"month": datetime(2017, 12, 1, tzinfo=timezone.utc), "order_count": 5673, "sales_amount": 878401.48},
+        ],
+        row_count=2,
+        latency_ms=1,
+    )
+
+    response = present_sales_trend_result(
+        "2017 年每个月已支付订单的销售额和订单数分别是多少？",
+        "SELECT DATE_TRUNC('MONTH', o.purchase_at) AS month FROM orders o ORDER BY month ASC",
+        execution,
+        [],
+        1,
+    )
+
+    assert response.rows[0]["month"] == "2017-01-01T00:00:00+00:00"
+    assert "首行月份为 2017-01-01" in response.summary
+    assert "2017-12-01" in response.source.range
