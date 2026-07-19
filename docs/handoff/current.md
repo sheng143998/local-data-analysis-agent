@@ -6,7 +6,7 @@
 - 已完成：新增 `category_item_sales_ranking` 合同，已支付订单内按商品品类统计订单商品数和订单商品明细销售额；特异合同替代泛化销售额/商品数合同。“商品品类 / 品类 / 类目 / 分类”统一为 `category`，不会再要求额外 `product` 输出。
 - 验证：Resolver/Planner/Inspector/Graph focused `71 passed`；迁移 `015` 已应用；真实本地只读目标 SQL 通过 Inspector、Guard 和 EXPLAIN，执行成功返回 10 行；前端构建通过。
 - 风险：云端 SQL 模型仍可能超时、返回空 `sql` 或非 JSON；此时系统仍会安全失败，需后续独立改善模型可用性，不得使用固定 SQL 绕过链路。
-- 交付：提交与推送结果待本模块 Git 操作完成后补充。
+- 交付：`46cd7a6`（`修复品类商品排行合同`）已推送至 `origin/main`。
 
 ## 图表业务标签与量纲坐标轴修复（已完成）
 
