@@ -30,6 +30,7 @@ from backend.app.tools.sql_memory_tools import (
 )
 from backend.app.tools.sql_execution_tools import execute_guarded_sql, explain_guarded_sql
 from backend.app.tools.sql_validation_tools import guard_sql
+from backend.app.tools.vector_retrieval import embed_question
 from backend.app.tools.sql_inspector import inspect_query_plan
 from backend.app.tools.result_contract_builder import build_result_contract
 
@@ -51,6 +52,7 @@ class AnalysisGraphState(TypedDict, total=False):
     question_intent: dict[str, Any]
     node_timings: dict[str, int]
     started: float
+    question_vector: list[float]
     retrieval_context: RetrievalContext
     metric_names: list[str]
     memory_candidates: list[Any]
@@ -171,13 +173,18 @@ def _slowest_node(timings: dict[str, int]) -> dict[str, Any]:
 def _retrieve_context_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
     question = state["question"]
+    # 问题只 embed 一次：同一向量供指标召回、schema 召回、SQL Memory 召回与记忆写入复用，
+    # 避免同一问题触发 3~4 次远程 embedding 调用。
+    question_vector = embed_question(question)
     retrieval_context = build_retrieval_context(
         question,
         semantic_contracts=state.get("question_intent", {}).get("resolved_contracts", []),
         query_plan=state.get("question_intent", {}).get("query_plan", {}),
+        question_vector=question_vector,
     )
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     return {
+        "question_vector": question_vector,
         "retrieval_context": retrieval_context,
         "metric_names": metric_names,
         "node_timings": _add_node_timing(state, "context_retrieval", started),
@@ -200,6 +207,7 @@ def _plan_memory_reuse_node(state: AnalysisGraphState) -> AnalysisGraphState:
         tables=sorted(set(retrieval_context.tables) | set(query_spec.required_tables if query_spec else [])),
         required_tables=query_spec.required_tables if query_spec else None,
         context_fingerprints=context_fingerprints,
+        question_vector=state.get("question_vector"),
     )
     reuse_plan = plan_sql_reuse(memory_candidates)
     return {
@@ -227,7 +235,7 @@ def _route_generated_sql_intent(state: AnalysisGraphState) -> str:
     verification = state.get("sql_intent_verification", {})
     if verification.get("decision") == "accept":
         return "guard_sql"
-    # 首次空 SQL 也需要一次 Repair Prompt，避免格式性漏字段直接中断数据分析。
+    # 业务语义诊断只驱动一次修复；最终是否可执行由 Guard、EXPLAIN 和只读 Executor 决定。
     if state.get("repair_attempts", 0) < 1:
         return "repair_model_sql"
     return "guard_sql"
@@ -305,7 +313,8 @@ def _verify_memory_sql(
         retrieval_context=retrieval_context,
         sql=sql,
         subject="候选 SQL",
-        include_context_metrics=True,
+        # SQL Memory 仅按已确认的 QuerySpec 复用，召回指标只是生成参考，不能阻断已审核 SQL。
+        include_context_metrics=False,
         question_intent=question_intent,
     )
     if reuse_plan.path_type != "fast_path":
@@ -319,7 +328,7 @@ def _verify_memory_sql(
         "required": _sql_intent_required(
             question,
             retrieval_context,
-            include_context_metrics=True,
+            include_context_metrics=False,
             question_intent=question_intent,
         ),
         "observed": _sql_features(sql),
@@ -373,7 +382,12 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
     if inspector_issues:
         verification["warnings"] = [*verification["warnings"], *(issue.message for issue in inspector_issues)]
         verification["inspector_issues"] = [issue.__dict__ for issue in inspector_issues]
-        verification["decision"] = "reject"
+    # Inspector 和意图检查描述目标口径，不把等价 SQL 写法升级为最终阻断条件。
+    # 空 SQL 仍会在 Guard 被拒绝；有 SQL 时给一次 Repair，随后交给安全执行链路裁决。
+    has_sql = bool(state.get("selected_sql", "").strip())
+    verification["decision"] = (
+        "reject" if not has_sql else "accept" if not verification["warnings"] else "repair"
+    )
     warnings = [*generated_sql.warnings]
     for warning in verification["warnings"]:
         if warning not in warnings:
@@ -382,17 +396,13 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
     updates: AnalysisGraphState = {
         "sql_intent_verification": verification,
         "generated_sql": generated_sql.model_copy(update={"warnings": warnings}),
+        "selected_sql": state.get("selected_sql", ""),
         "node_timings": _add_node_timing(state, "sql_intent_validation", started),
     }
-    # 空 SQL 与无效 SQL 均只允许一次受控修复，第二次失败后严格终止，禁止固定业务 SQL 兜底。
-    cannot_repair = state.get("repair_attempts", 0) >= 1
-    if verification["decision"] == "reject" and cannot_repair:
+    # 空响应不是 SQL 的等价写法；一次 Repair 仍为空时保持安全失败，不能进入 Guard/Executor。
+    if not has_sql and state.get("repair_attempts", 0) >= 1:
         updates["generated_sql"] = generated_sql.model_copy(
-            update={
-                "path": "model_error",
-                "sql": "",
-                "warnings": warnings,
-            }
+            update={"path": "model_error", "sql": "", "warnings": warnings}
         )
         updates["selected_sql"] = ""
     return updates
@@ -525,6 +535,7 @@ def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
                 state["retrieval_context"],
                 state.get("question_intent", {}).get("resolved_contracts", []),
             ),
+            question_vector=state.get("question_vector"),
         )
         updated_memory_id = updated_memory.id
     return {
@@ -661,133 +672,126 @@ def _log_analysis_run(
         memory_id=memory_id,
         error_message=error_message,
     )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="sql_memory_tools.retrieve_sql_memory",
-        input_payload={"question": question},
-        output_payload={"candidate_count": memory_candidate_count},
-        status="success",
-        latency_ms=node_timings.get("memory_retrieval_and_plan", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="sql_memory_tools.plan_sql_reuse",
-        input_payload={"candidate_count": memory_candidate_count},
-        output_payload={
-            "path_type": reuse_plan.path_type,
-            "reuse_type": reuse_plan.reuse_type,
-            "memory_hit": reuse_plan.memory_hit,
-            "score": reuse_plan.score,
+    tool_calls: list[dict[str, Any]] = [
+        {
+            "tool_name": "sql_memory_tools.retrieve_sql_memory",
+            "input_payload": {"question": question},
+            "output_payload": {"candidate_count": memory_candidate_count},
+            "status": "success",
+            "latency_ms": node_timings.get("memory_retrieval_and_plan", 0),
         },
-        status="success",
-        latency_ms=node_timings.get("memory_retrieval_and_plan", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="context_builder.build_retrieval_context",
-        input_payload={"question": question},
-        output_payload={
-            "metric_count": metric_count,
-            "schema_column_count": schema_column_count,
-            "relationship_count": relationship_count,
-            "tables": context_tables,
-            "fields_sample": context_fields[:20],
-            "rerank_diagnostics": rerank_diagnostics,
-        },
-        status="success",
-        latency_ms=node_timings.get("context_retrieval", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="analysis_graph.select_generated_sql",
-        input_payload={"path_type": reuse_plan.path_type},
-        output_payload={
-            "generation_path": generation_path,
-            "has_sql": bool(generated_sql_text),
-            "warning_count": len(generation_warnings),
-            "warnings": generation_warnings[:5],
-            "intent_verification": {
-                "decision": intent_verification.get("decision"),
-                "warning_count": len(intent_verification.get("warnings", [])),
-                "warnings": intent_verification.get("warnings", [])[:5],
-                "repair_attempts": repair_attempts,
+        {
+            "tool_name": "sql_memory_tools.plan_sql_reuse",
+            "input_payload": {"candidate_count": memory_candidate_count},
+            "output_payload": {
+                "path_type": reuse_plan.path_type,
+                "reuse_type": reuse_plan.reuse_type,
+                "memory_hit": reuse_plan.memory_hit,
+                "score": reuse_plan.score,
             },
-            "context_table_coverage": _context_table_coverage(
-                generated_sql_text,
-                context_tables,
-            ),
-            # 候选 SQL 仅落在既有管理员运行详情中，便于定位模型与 Repair 偏差；不记录推理或原始模型文本。
-            "sql_candidates": sql_candidates,
-            "model_route": {
+            "status": "success",
+            "latency_ms": node_timings.get("memory_retrieval_and_plan", 0),
+        },
+        {
+            "tool_name": "context_builder.build_retrieval_context",
+            "input_payload": {"question": question},
+            "output_payload": {
+                "metric_count": metric_count,
+                "schema_column_count": schema_column_count,
+                "relationship_count": relationship_count,
+                "tables": context_tables,
+                "fields_sample": context_fields[:20],
+                "rerank_diagnostics": rerank_diagnostics,
+            },
+            "status": "success",
+            "latency_ms": node_timings.get("context_retrieval", 0),
+        },
+        {
+            "tool_name": "analysis_graph.select_generated_sql",
+            "input_payload": {"path_type": reuse_plan.path_type},
+            "output_payload": {
+                "generation_path": generation_path,
+                "has_sql": bool(generated_sql_text),
+                "warning_count": len(generation_warnings),
+                "warnings": generation_warnings[:5],
+                "intent_verification": {
+                    "decision": intent_verification.get("decision"),
+                    "warning_count": len(intent_verification.get("warnings", [])),
+                    "warnings": intent_verification.get("warnings", [])[:5],
+                    "repair_attempts": repair_attempts,
+                },
+                "context_table_coverage": _context_table_coverage(
+                    generated_sql_text,
+                    context_tables,
+                ),
+                # 候选 SQL 仅落在既有管理员运行详情中，便于定位模型与 Repair 偏差；不记录推理或原始模型文本。
+                "sql_candidates": sql_candidates,
+                "model_route": {
                     "provider": model_provider,
                     "model": model_name,
                     "latency_ms": model_latency_ms,
+                },
             },
+            "status": "success",
+            "latency_ms": node_timings.get("sql_generation", 0),
         },
-        status="success",
-        latency_ms=node_timings.get("sql_generation", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="sql_validation_tools.guard_sql",
-        input_payload={"max_rows": 30},
-        output_payload={
-            "guard_status": guard_status,
-            "warning_count": len(guard_warnings),
-            "warnings": guard_warnings[:5],
-            "error_count": len(guard_errors),
-            "errors": guard_errors[:5],
+        {
+            "tool_name": "sql_validation_tools.guard_sql",
+            "input_payload": {"max_rows": 30},
+            "output_payload": {
+                "guard_status": guard_status,
+                "warning_count": len(guard_warnings),
+                "warnings": guard_warnings[:5],
+                "error_count": len(guard_errors),
+                "errors": guard_errors[:5],
+            },
+            "status": "success" if guard_status == "allowed" else "blocked",
+            "latency_ms": node_timings.get("sql_guard", 0),
         },
-        status="success" if guard_status == "allowed" else "blocked",
-        latency_ms=node_timings.get("sql_guard", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="sql_execution_tools.explain_guarded_sql",
-        input_payload={"guard_status": guard_status},
-        output_payload={
-            "explain_status": explain.status if explain else "skipped",
-            "error_category": explain.error_category if explain else None,
+        {
+            "tool_name": "sql_execution_tools.explain_guarded_sql",
+            "input_payload": {"guard_status": guard_status},
+            "output_payload": {
+                "explain_status": explain.status if explain else "skipped",
+                "error_category": explain.error_category if explain else None,
+            },
+            "status": explain.status if explain else "skipped",
+            "latency_ms": node_timings.get("sql_explain", 0),
         },
-        status=explain.status if explain else "skipped",
-        latency_ms=node_timings.get("sql_explain", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="sql_execution_tools.execute_guarded_sql",
-        input_payload={"guard_status": guard_status},
-        output_payload={"execution_status": execution_status, "row_count": row_count},
-        status=execution_status,
-        latency_ms=node_timings.get("sql_execution", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="analysis_presenter.present_sales_trend_result",
-        input_payload={"row_count": row_count},
-        output_payload={"response_status": "success" if not error_message else "error"},
-        status="success" if not error_message else "error",
-        latency_ms=node_timings.get("present_result", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="sql_memory_tools.upsert_successful_sql_memory",
-        input_payload={"memory_hit": memory_hit},
-        output_payload={"updated_memory_id": str(updated_memory_id) if updated_memory_id else None},
-        status="success" if updated_memory_id else "skipped",
-        latency_ms=node_timings.get("memory_update", 0),
-    )
-    logger.log_tool_call(
-        query_run_id=run.id,
-        tool_name="analysis_graph.pipeline_timings",
-        input_payload={"question": question},
-        output_payload={
-            "node_timings_ms": node_timings,
-            "total_latency_ms": latency_ms,
-            "slowest_node": _slowest_node(node_timings),
+        {
+            "tool_name": "sql_execution_tools.execute_guarded_sql",
+            "input_payload": {"guard_status": guard_status},
+            "output_payload": {"execution_status": execution_status, "row_count": row_count},
+            "status": execution_status,
+            "latency_ms": node_timings.get("sql_execution", 0),
         },
-        status="success",
-        latency_ms=latency_ms,
-    )
+        {
+            "tool_name": "analysis_presenter.present_sales_trend_result",
+            "input_payload": {"row_count": row_count},
+            "output_payload": {"response_status": "success" if not error_message else "error"},
+            "status": "success" if not error_message else "error",
+            "latency_ms": node_timings.get("present_result", 0),
+        },
+        {
+            "tool_name": "sql_memory_tools.upsert_successful_sql_memory",
+            "input_payload": {"memory_hit": memory_hit},
+            "output_payload": {"updated_memory_id": str(updated_memory_id) if updated_memory_id else None},
+            "status": "success" if updated_memory_id else "skipped",
+            "latency_ms": node_timings.get("memory_update", 0),
+        },
+        {
+            "tool_name": "analysis_graph.pipeline_timings",
+            "input_payload": {"question": question},
+            "output_payload": {
+                "node_timings_ms": node_timings,
+                "total_latency_ms": latency_ms,
+                "slowest_node": _slowest_node(node_timings),
+            },
+            "status": "success",
+            "latency_ms": latency_ms,
+        },
+    ]
+    logger.log_tool_calls(query_run_id=run.id, tool_calls=tool_calls)
 
 
 def _sql_candidate(stage: str, generated: GeneratedSql) -> dict[str, Any]:
@@ -900,21 +904,24 @@ def _sql_intent_warnings(
 
     if not sql.strip():
         warnings.append(f"{subject} 为空，无法执行。")
-    missing_tables = _allowed_context_table_exceptions(
-        question=question,
-        observed_text=observed["text"],
-        missing_tables=coverage["missing_tables"],
-    )
-    if missing_tables:
-        warnings.append(_context_table_coverage_warning(missing_tables))
+    # Query Plan 存在时，必需表由 Inspector 按 plan.entities 精确检查；
+    # 召回上下文的过度召回不应再强迫 SQL JOIN 无关表（与提示词"不要仅因其存在而 JOIN"一致）。
+    if _query_spec_from_intent(question_intent) is None:
+        missing_tables = _allowed_context_table_exceptions(
+            question=question,
+            observed_text=observed["text"],
+            missing_tables=coverage["missing_tables"],
+        )
+        if missing_tables:
+            warnings.append(_context_table_coverage_warning(missing_tables))
     for table in required["required_tables"]:
         if table not in observed["tables"]:
             warnings.append(f"{subject} 缺少当前问题需要的数据表：{table}")
     for token in required["required_metric_tokens"]:
-        if not _token_present(token, observed["text"]):
+        if not _token_present(token, observed["text"], observed):
             warnings.append(f"{subject} 缺少当前问题需要的指标口径：{token}")
     for token in required["required_dimension_tokens"]:
-        if not _token_present(token, observed["text"]):
+        if not _token_present(token, observed["text"], observed):
             warnings.append(f"{subject} 缺少当前问题需要的维度：{token}")
     if required["granularity"] and required["granularity"] != observed["granularity"]:
         warnings.append(
@@ -996,7 +1003,16 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def _token_present(token: str, lowered_sql: str) -> bool:
+# 依赖 COUNT(DISTINCT table.column) 语义（经 AST 别名解析）判定的指标口径：
+# 不再依赖写死的 u./o. 表别名，任何别名的等价 SQL 均可通过校验。
+_COUNT_DISTINCT_TOKEN_COLUMNS = {
+    "new_user_count": {"users.id"},
+    "ordering_user_count": {"orders.user_id"},
+    "purchase_count": {"orders.id"},
+}
+
+
+def _token_present(token: str, lowered_sql: str, features: dict[str, Any] | None = None) -> bool:
     aliases = {
         "repeat": ["repeat", "repeat_rate", "paid_order_count"],
         "product": ["product", "product_id", "product_label"],
@@ -1005,16 +1021,25 @@ def _token_present(token: str, lowered_sql: str) -> bool:
         "date": ["date", "order_date", "created_at", "date_trunc('day'"],
         "month": ["month", "order_month", "date_trunc('month'"],
         "total_amount": ["total_amount", "sales_amount", "daily_sales", "gmv"],
-        "new_user_count": ["new_user_count", "new_users", "count(distinct u.id"],
-        "ordering_user_count": ["ordering_user_count", "order_user_count", "count(distinct o.user_id"],
-        "purchase_count": ["purchase_count", "order_count", "count(distinct o.id"],
+        "new_user_count": ["new_user_count", "new_users"],
+        "ordering_user_count": ["ordering_user_count", "order_user_count"],
+        "purchase_count": ["purchase_count", "order_count"],
         "conversion_rate": ["conversion_rate", "conversion", "convert_rate"],
         "coupon_redemption_rate": ["coupon_redemption_rate", "redemption_rate", "redeem_rate"],
         "source": ["source", "traffic_source", "channel"],
         "user": ["user", "user_id", "user_label"],
         "coupon": ["coupon", "coupon_id", "coupon_code"],
     }
-    return any(alias in lowered_sql for alias in aliases.get(token, [token]))
+    if any(alias in lowered_sql for alias in aliases.get(token, [token])):
+        return True
+    semantic_columns = _COUNT_DISTINCT_TOKEN_COLUMNS.get(token)
+    if semantic_columns:
+        count_distinct = (features or {}).get("count_distinct")
+        if count_distinct is None:
+            count_distinct = _count_distinct_columns(lowered_sql)
+        if semantic_columns & set(count_distinct):
+            return True
+    return False
 
 
 def _allowed_context_table_exceptions(
@@ -1120,7 +1145,44 @@ def _sql_features(sql: str) -> dict[str, Any]:
         "granularity": _sql_granularity(lowered),
         "has_order_by": "order by" in lowered,
         "limit": _sql_limit(sql),
+        "count_distinct": _count_distinct_columns(sql),
     }
+
+
+def _count_distinct_columns(sql: str) -> set[str]:
+    """提取 COUNT(DISTINCT ...) 内引用的列，并把别名解析回真实表名。
+
+    返回形如 {"orders.id", "users.id"} 的集合，供指标口径校验使用，
+    避免把表别名写死成 u./o. 造成对正确 SQL 的误报。
+    """
+    if not sql.strip():
+        return set()
+    try:
+        expression = parse_one(sql, dialect="postgres")
+    except ParseError:
+        return set()
+    alias_to_table = {
+        table.alias_or_name: table.name
+        for table in expression.find_all(exp.Table)
+        if table.name
+    }
+    alias_to_table.update(
+        {table.name: table.name for table in expression.find_all(exp.Table) if table.name}
+    )
+    sole_table = next(iter(set(alias_to_table.values())), "") if len(set(alias_to_table.values())) == 1 else ""
+
+    columns: set[str] = set()
+    for count in expression.find_all(exp.Count):
+        target = count.this
+        if not isinstance(target, exp.Distinct):
+            continue
+        for column in target.find_all(exp.Column):
+            table_name = alias_to_table.get(column.table or "", "" if column.table else sole_table)
+            if table_name and column.name:
+                columns.add(f"{table_name}.{column.name}".lower())
+            elif column.name:
+                columns.add(column.name.lower())
+    return columns
 
 
 def _uses_orders_status_paid(sql: str) -> bool:
@@ -1270,14 +1332,48 @@ def _required_limit(question: str) -> int | None:
 
 
 def _sql_has_time_bounds(sql: str, start: str, end: str) -> bool:
-    """Require both endpoints; the generator receives the exact half-open predicate."""
+    """接受 PostgreSQL 等价日期写法，仍要求半开区间的两个端点。
+
+    先用 sqlglot 规范化（'x'::date 等价写法统一渲染为 CAST），再匹配：
+    - col >= start AND col < end（含操作数反序 start <= col / end > col）
+    - col BETWEEN start AND end（闭区间，视为满足两个端点）
+    """
     if not sql.strip() or not start or not end:
         return False
-    lowered = sql.lower()
-    date_literal = r"(?:date\s+)?['\"]{}['\"]"
-    has_start = re.search(r">=\s*" + date_literal.format(re.escape(start)), lowered)
-    has_end = re.search(r"<\s*" + date_literal.format(re.escape(end)), lowered)
+    lowered = _normalized_lower_sql(sql)
+    start_literal = _postgres_date_literal_pattern(start)
+    end_literal = _postgres_date_literal_pattern(end)
+    between = re.search(
+        r"between\s+" + start_literal + r".{0,40}?\s+and\s+" + end_literal,
+        lowered,
+        flags=re.DOTALL,
+    )
+    if between:
+        return True
+    has_start = re.search(r">=\s*" + start_literal, lowered) or re.search(
+        start_literal + r"\s*<=", lowered
+    )
+    has_end = re.search(r"<\s*" + end_literal, lowered) or re.search(
+        end_literal + r"\s*>", lowered
+    )
     return bool(has_start and has_end)
+
+
+def _normalized_lower_sql(sql: str) -> str:
+    """sqlglot 规范化后转小写；解析失败时退回原文本。"""
+    try:
+        return parse_one(sql, dialect="postgres").sql(dialect="postgres").lower()
+    except (ParseError, Exception):  # noqa: BLE001 - 校验器不能因方言差异而崩溃
+        return sql.lower()
+
+
+def _postgres_date_literal_pattern(value: str) -> str:
+    escaped = re.escape(value.lower())
+    return (
+        r"(?:date\s+['\"]" + escaped + r"['\"]"
+        + r"|cast\s*\(\s*['\"]" + escaped + r"['\"]\s+as\s+(?:date|timestamp(?:\s+without\s+time\s+zone)?)\s*\)"
+        + r"|['\"]" + escaped + r"['\"])"
+    )
 
 
 def _sql_granularity(lowered_sql: str) -> str | None:

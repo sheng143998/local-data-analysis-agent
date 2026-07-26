@@ -22,10 +22,17 @@ METRIC_KEYWORDS = {
 }
 
 
-def retrieve_metrics(question: str, limit: int = 4) -> list[MetricContext]:
+def retrieve_metrics(
+    question: str,
+    limit: int = 4,
+    *,
+    question_vector: list[float] | None = None,
+) -> list[MetricContext]:
     """从 metric_definitions 召回与问题相关的业务指标。"""
     metrics = _load_enabled_metrics()
-    semantic_scores = retrieve_metric_vector_candidates(question, limit=max(limit * 2, 8))
+    semantic_scores = retrieve_metric_vector_candidates(
+        question, limit=max(limit * 2, 8), vector=question_vector
+    )
     ranked = sorted(
         (
             _score_metric(

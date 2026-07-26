@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  color: #0f172a;
-  background: #e8eef3;
+  color: #1c1917;
+  background: #faf9f5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,11 +19,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  /* 暖米白纸感底色 + 页面顶部一层极淡的暖色径向渐变（光从上方来） */
   background:
-    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    #e8eef3;
-  background-size: 36px 36px;
+    radial-gradient(1200px 420px at 50% -80px, rgba(201, 100, 66, 0.055), transparent 70%),
+    #faf9f5;
+  background-attachment: fixed;
 }
 
 button,
@@ -35,37 +35,45 @@ select {
 
 @layer components {
   .panel {
-    @apply border border-slate-200/80 bg-white/[0.92] shadow-cockpit;
-    border-radius: 8px;
+    @apply rounded-2xl border border-stone-200 bg-white shadow-soft;
   }
 
   .sub-panel {
-    @apply border border-slate-200 bg-slate-50/70;
-    border-radius: 8px;
+    @apply rounded-xl border border-stone-200 bg-paper;
   }
 
   .control {
-    @apply border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition;
-    border-radius: 6px;
+    @apply border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 outline-none transition duration-150;
+    border-radius: 10px;
   }
 
   .control:focus {
-    @apply border-cyan-500 shadow-[0_0_0_3px_rgba(34,211,238,0.16)];
+    border-color: #c96442;
+    box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.18);
   }
 
   .primary-btn {
-    @apply inline-flex items-center justify-center gap-2 bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70;
-    border-radius: 6px;
+    @apply inline-flex items-center justify-center gap-2 bg-accent px-4 py-2 text-sm font-semibold text-white transition duration-150 ease-swift disabled:cursor-not-allowed disabled:opacity-70;
+    border-radius: 10px;
+  }
+
+  .primary-btn:hover:not(:disabled) {
+    @apply -translate-y-px bg-accent-600 shadow-lift;
   }
 
   .secondary-btn {
-    @apply inline-flex items-center justify-center gap-2 border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700;
-    border-radius: 6px;
+    @apply inline-flex items-center justify-center gap-2 border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition duration-150 ease-swift hover:border-accent-200 hover:bg-accent-50 hover:text-accent-700 disabled:cursor-not-allowed disabled:opacity-70;
+    border-radius: 10px;
+  }
+
+  .icon-btn {
+    @apply grid h-8 w-8 place-items-center rounded-lg border border-stone-200 bg-white transition duration-150;
   }
 
   .status-dot {
-    @apply inline-block h-2 w-2 rounded-full bg-emerald-400;
-    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.14);
+    @apply inline-block h-2 w-2 rounded-full;
+    background: #7d9b76;
+    box-shadow: 0 0 0 4px rgba(125, 155, 118, 0.16);
     animation: pulse-soft 2.6s ease-in-out infinite;
   }
 
@@ -73,9 +81,33 @@ select {
     animation: page-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
+  /* 卡片悬浮上浮：只动 transform 与 shadow，不触发重排 */
+  .card-hover {
+    @apply transition duration-200 ease-swift hover:-translate-y-0.5 hover:shadow-lift;
+  }
+
+  /* 表格与 KPI 数值等宽数字 */
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 查询语句展示：暖纸底 + stone 文字，关键字高亮由组件内正则完成 */
   .code-block {
-    @apply overflow-auto border border-slate-800 bg-slate-950 p-4 font-mono text-sm leading-6 text-cyan-100;
-    border-radius: 8px;
+    @apply overflow-auto rounded-xl border border-stone-200 p-4 font-mono text-sm leading-6 text-stone-700;
+    background: #faf7f2;
+  }
+
+  .code-block .sql-keyword {
+    color: #b55535;
+    font-weight: 600;
+  }
+
+  .code-block .sql-string {
+    color: #7d9b76;
+  }
+
+  .code-block .sql-comment {
+    color: #a8a29e;
   }
 
   .sql-code-block {
@@ -87,7 +119,126 @@ select {
   .sql-code-block code {
     min-width: max-content;
   }
+
+  /* ---- 流式进度 stepper ---- */
+  .step-dot-current {
+    @apply inline-block h-2.5 w-2.5 rounded-full bg-accent;
+    animation: pulse-soft 1.5s ease-in-out infinite;
+  }
+
+  /* ---- 登录/注册页 ---- */
+  .login-backdrop {
+    background: linear-gradient(180deg, #1c1917 0%, #292524 100%);
+  }
+
+  .login-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .login-blob-a {
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(circle at 35% 35%, rgba(201, 100, 66, 0.85), transparent 70%);
+    opacity: 0.38;
+    animation: blob-a 22s ease-in-out infinite alternate;
+  }
+
+  .login-blob-b {
+    width: 460px;
+    height: 460px;
+    background: radial-gradient(circle at 60% 40%, rgba(212, 162, 127, 0.8), transparent 70%);
+    opacity: 0.3;
+    animation: blob-b 26s ease-in-out infinite alternate;
+  }
+
+  .login-blob-c {
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle at 50% 60%, rgba(193, 76, 100, 0.7), transparent 70%);
+    opacity: 0.26;
+    animation: blob-c 18s ease-in-out infinite alternate;
+  }
+
+  .login-conic {
+    position: absolute;
+    pointer-events: none;
+    width: 720px;
+    height: 720px;
+    border-radius: 9999px;
+    background: conic-gradient(
+      from 0deg,
+      rgba(201, 100, 66, 0.14),
+      rgba(212, 162, 127, 0.05),
+      rgba(201, 100, 66, 0.12),
+      rgba(193, 76, 61, 0.05),
+      rgba(201, 100, 66, 0.14)
+    );
+    filter: blur(60px);
+    opacity: 0.8;
+    animation: conic-spin 42s linear infinite;
+  }
+
+  .glass-card {
+    @apply rounded-3xl border border-white/15 bg-white/[0.08] backdrop-blur-xl;
+    border-top-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    animation: card-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .glass-input {
+    @apply flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2.5 transition duration-200 ease-swift;
+  }
+
+  .glass-input:focus-within {
+    border-color: rgba(212, 139, 108, 0.9);
+    box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.28);
+  }
+
+  /* 主按钮 hover 45° 光泽扫过 */
+  .shimmer-btn {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-btn::after {
+    content: '';
+    position: absolute;
+    top: -40%;
+    bottom: -40%;
+    left: -30%;
+    width: 40%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: translateX(-160%) rotate(0.001deg);
+    pointer-events: none;
+  }
+
+  .shimmer-btn:hover::after {
+    animation: shimmer 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .shake {
+    animation: shake 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
 }
+
+/* 入场 stagger：元素以 60ms 间隔淡入上移。
+   置于 @layer 之外，保证按索引动态拼接的类名不被内容扫描裁剪。 */
+.stagger-item {
+  animation: fade-up 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.stagger-1 { animation-delay: 60ms; }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+.stagger-6 { animation-delay: 360ms; }
+.stagger-7 { animation-delay: 420ms; }
+.stagger-8 { animation-delay: 480ms; }
 
 @keyframes pulse-soft {
   0%, 100% { transform: scale(1); opacity: 0.85; }
@@ -99,14 +250,49 @@ select {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes scan {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(100%); }
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes draw-line {
-  from { stroke-dashoffset: 420; }
-  to { stroke-dashoffset: 0; }
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blob-a {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(70px, -50px) scale(1.12); }
+  100% { transform: translate(-50px, 60px) scale(0.94); }
+}
+
+@keyframes blob-b {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-80px, 40px) scale(1.08); }
+  100% { transform: translate(60px, -60px) scale(0.9); }
+}
+
+@keyframes blob-c {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(50px, 70px) scale(1.15); }
+  100% { transform: translate(-60px, -40px) scale(0.92); }
+}
+
+@keyframes conic-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-160%) rotate(0.001deg); }
+  to { transform: translateX(520%) rotate(0.001deg); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-3px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

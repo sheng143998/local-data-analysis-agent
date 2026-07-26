@@ -7,6 +7,7 @@ def test_inspector_reports_missing_plan_entity_and_ranking_constraints() -> None
         {"entities": ["orders", "products"], "expected_row_shape": "ranking", "limit": 5},
     )
     assert {issue.category for issue in issues} == {"missing_table", "missing_order", "missing_limit"}
+    assert {issue.enforcement for issue in issues} == {"advisory"}
 
 
 def test_inspector_does_not_invent_unknown_plan_constraints() -> None:

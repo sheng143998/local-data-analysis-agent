@@ -151,6 +151,12 @@ class SqlMemoryRepository:
             ((existing.avg_latency_ms * existing.success_count) + payload.latency_ms)
             / next_success_count
         )
+        if existing.trust_status == "verified":
+            return self._record_verified_success(
+                existing,
+                next_success_count=next_success_count,
+                next_avg_latency=next_avg_latency,
+            )
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -195,6 +201,33 @@ class SqlMemoryRepository:
                     payload.row_count,
                     str(existing.id),
                 ),
+            )
+            return _row_to_memory(cursor.fetchone())
+
+    def _record_verified_success(
+        self,
+        existing: SqlMemoryRecord,
+        *,
+        next_success_count: int,
+        next_avg_latency: int,
+    ) -> SqlMemoryRecord:
+        """审核后的 SQL 只能由显式信任操作修改，普通成功执行只更新使用统计。"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE sql_memories
+                SET success_count = %s,
+                    avg_latency_ms = %s,
+                    last_used_at = now()
+                WHERE id = %s
+                RETURNING id, canonical_question, normalized_question, question_pattern,
+                          intent, sql_template, final_sql, param_schema, parameters,
+                          tables, metrics, dimensions, filters, dialect, schema_version,
+                          success_count, failure_count, avg_latency_ms, last_result_columns,
+                          last_row_count, last_used_at, created_at
+                """,
+                (next_success_count, next_avg_latency, str(existing.id)),
             )
             return _row_to_memory(cursor.fetchone())
 

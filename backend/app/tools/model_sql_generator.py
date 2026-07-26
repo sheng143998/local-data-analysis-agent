@@ -145,7 +145,7 @@ def build_sql_generation_payload(
         "metrics": metrics,
         "schema_fields": fields,
         "table_relationships": relationships,
-        "metric_semantics": {
+        "metric_semantics": _relevant_metric_semantics(question_intent, retrieval_context, {
             "sales_amount": {
                 "meaning": "总销售额 / 一共卖了多少钱",
                 "preferred_formula": "SUM(orders.total_amount)",
@@ -169,7 +169,7 @@ def build_sql_generation_payload(
                     "If payments is joined, calculate on distinct orders or pre-aggregate payments by order_id first.",
                 ],
             },
-        },
+        }),
         "requirements": [
             "以 query_plan 的 entities、measures、dimensions、filters、order_by、limit 和 expected_row_shape 为本次查询的必需约束",
             "query_plan.entities 中的表必须实际参与查询；allowed_tables 中未被计划要求的表只是候选上下文，不要仅因其存在而 JOIN",
@@ -282,12 +282,40 @@ def _user_prompt(
         repair_context,
         question_intent=question_intent,
     )
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    # 不缩进：面向模型的 JSON 载荷不需要排版，indent=2 会平白多出约 30% 提示词 token。
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def _relevant_metric_semantics(
+    question_intent: dict[str, Any] | None,
+    retrieval_context: RetrievalContext,
+    semantics: dict[str, Any],
+) -> dict[str, Any]:
+    """只把与本次问题相关的指标语义送进提示词；无法判断时保留全部（安全兜底）。"""
+    mentioned: set[str] = set()
+    if isinstance(question_intent, dict):
+        raw_plan = question_intent.get("query_plan")
+        if isinstance(raw_plan, dict):
+            for measure in raw_plan.get("measures", []) or []:
+                if isinstance(measure, dict) and measure.get("name"):
+                    mentioned.add(str(measure["name"]))
+                elif measure:
+                    mentioned.add(str(measure))
+        for metric in question_intent.get("metrics", []) or []:
+            mentioned.add(str(metric))
+    for metric in retrieval_context.metrics:
+        mentioned.add(metric.metric_name)
+    if not mentioned:
+        return semantics
+    relevant = {key: value for key, value in semantics.items() if key in mentioned}
+    return relevant or semantics
 
 
 def _compact_question_intent(question_intent: dict[str, Any] | None) -> dict[str, Any]:
     if not question_intent:
         return {}
+    # query_plan / resolved_contracts 已经以 query_plan 与 generation_contract 的形式
+    # 出现在 payload 顶层；这里不再重复携带，避免同一约束三份副本互相干扰并放大提示词。
     allowed_keys = {
         "original_question",
         "normalized_question",
@@ -301,8 +329,6 @@ def _compact_question_intent(question_intent: dict[str, Any] | None) -> dict[str
         "needs_clarification",
         "source",
         "query_spec",
-        "query_plan",
-        "resolved_contracts",
     }
     return {key: question_intent[key] for key in allowed_keys if key in question_intent}
 
@@ -442,6 +468,9 @@ def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any
     raw = question_intent.get("query_plan")
     if not isinstance(raw, dict):
         raw = {}
+    # 计划未折叠契约时，从 resolved_contracts 兜底，保证契约口径始终随 query_plan 送达模型
+    # （question_intent 不再重复携带 resolved_contracts）。
+    contract_source = raw.get("contract_constraints") or question_intent.get("resolved_contracts") or []
     measures: list[dict[str, str]] = []
     for measure in raw.get("measures", []):
         if isinstance(measure, dict) and measure.get("name"):
@@ -466,7 +495,7 @@ def _compact_query_plan(question_intent: dict[str, Any] | None) -> dict[str, Any
                 "source_tables": _string_list(item.get("source_tables")),
                 "source_fields": _string_list(item.get("source_fields")),
             }
-            for item in raw.get("contract_constraints", [])
+            for item in contract_source
             if isinstance(item, dict) and item.get("contract_key")
         ],
         "execution_contract": _compact_execution_contract(raw.get("execution_contract")),

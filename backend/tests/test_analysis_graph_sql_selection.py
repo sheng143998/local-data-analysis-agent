@@ -236,6 +236,35 @@ def test_verify_memory_sql_rewrites_when_metric_does_not_match() -> None:
     assert any("order_count" in warning for warning in verification["warnings"])
 
 
+def test_verify_memory_sql_uses_contract_metrics_and_accepts_cast_date_bounds() -> None:
+    verification = _verify_memory_sql(
+        question="2017 年已支付订单数是多少？",
+        retrieval_context=_context(),
+        reuse_plan=_plan("fast_path", score=0.91),
+        sql=(
+            "SELECT COUNT(DISTINCT o.id) AS order_count FROM orders o "
+            "JOIN payments p ON p.order_id = o.id "
+            "WHERE p.status = 'paid' "
+            "AND o.purchase_at >= CAST('2017-01-01' AS DATE) "
+            "AND o.purchase_at < CAST('2018-01-01' AS DATE) LIMIT 1"
+        ),
+        question_intent={
+            "query_spec": {
+                "metrics": ["order_count"],
+                "dimensions": [],
+                "time_start": "2017-01-01",
+                "time_end": "2018-01-01",
+                "time_filter": "{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+                "required_table_groups": [["orders", "payments"]],
+                "required_metric_tokens": ["order_count"],
+            }
+        },
+    )
+
+    assert verification["decision"] == "reuse"
+    assert verification["warnings"] == []
+
+
 def test_verify_memory_sql_rewrites_non_fast_candidate() -> None:
     verification = _verify_memory_sql(
         question="最近 7 天销售额是多少？",
@@ -325,7 +354,7 @@ def test_validate_generated_sql_intent_accepts_matching_model_sql() -> None:
     assert state["generated_sql"].path == "model_generate"
 
 
-def test_validate_generated_sql_intent_blocks_after_failed_repair() -> None:
+def test_validate_generated_sql_intent_keeps_safe_sql_after_advisory_repair() -> None:
     state = _validate_generated_sql_intent_node(
         {
             "question": "最近 7 天订单数是多少？",
@@ -339,9 +368,10 @@ def test_validate_generated_sql_intent_blocks_after_failed_repair() -> None:
         }
     )
 
-    assert state["sql_intent_verification"]["decision"] == "reject"
-    assert state["generated_sql"].path == "model_error"
-    assert state["selected_sql"] == ""
+    assert state["sql_intent_verification"]["decision"] == "repair"
+    assert state["generated_sql"].path == "model_repair"
+    assert state["selected_sql"].startswith("SELECT SUM")
+    assert _route_generated_sql_intent({**state, "repair_attempts": 1}) == "guard_sql"
 
 
 def test_repair_model_sql_node_sends_intent_errors_to_model() -> None:
@@ -529,7 +559,7 @@ def test_select_generated_sql_uses_model_first_for_single_order_count() -> None:
     assert adapter.calls == 1
 
 
-def test_validate_generated_sql_stops_after_failed_repair_without_fixed_sql() -> None:
+def test_validate_generated_sql_keeps_business_warning_after_failed_repair() -> None:
     state = _validate_generated_sql_intent_node(
         {
             "question": "当前订单总数是多少？",
@@ -553,9 +583,10 @@ def test_validate_generated_sql_stops_after_failed_repair_without_fixed_sql() ->
         }
     )
 
-    assert state["generated_sql"].path == "model_error"
-    assert state["selected_sql"] == ""
-    assert state["sql_intent_verification"]["decision"] == "reject"
+    assert state["generated_sql"].path == "model_repair"
+    assert "orders.status = 'paid'" in state["selected_sql"]
+    assert state["sql_intent_verification"]["decision"] == "repair"
+    assert _route_generated_sql_intent({**state, "repair_attempts": 1}) == "guard_sql"
 
 
 def test_validate_generated_sql_keeps_first_empty_result_for_controlled_repair() -> None:

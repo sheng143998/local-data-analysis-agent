@@ -8,7 +8,7 @@ export function AppLayout() {
       <Sidebar />
       <main className="min-w-0 flex-1">
         <TopStatusBar />
-        <div className="page-enter mx-auto max-w-[1540px] p-4 md:p-6">
+        <div className="page-enter mx-auto max-w-[1280px] p-4 md:p-6">
           <Outlet />
         </div>
       </main>

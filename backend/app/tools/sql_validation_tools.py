@@ -34,7 +34,27 @@ BLOCKED_FUNCTIONS = {
     "pg_stat_file",
     "dblink_connect",
     "dblink_exec",
+    "pg_terminate_backend",
+    "pg_cancel_backend",
+    "pg_reload_conf",
+    "lo_import",
+    "lo_export",
+    "set_config",
 }
+
+# AST 层面必须拒绝的写操作节点：首关键字检查拦不住 WITH ... AS (DELETE ...) SELECT 这类
+# 藏在 CTE 里的写语句，防线不能只依赖执行器的只读事务。
+_WRITE_EXPRESSION_TYPES = (
+    exp.Insert,
+    exp.Delete,
+    exp.Update,
+    exp.Merge,
+    exp.Create,
+    exp.Drop,
+    exp.Alter,
+    exp.TruncateTable,
+    exp.Grant,
+)
 
 
 def validate_sql(request: SqlValidationRequest) -> SqlValidationResult:
@@ -60,8 +80,11 @@ def validate_sql(request: SqlValidationRequest) -> SqlValidationResult:
     if not isinstance(expression, exp.Select):
         errors.append("只允许 SELECT 查询")
 
-    if _starts_with_write_keyword(sql):
+    if _starts_with_write_keyword(sql) or _contains_write_expression(expression):
         errors.append("禁止写操作、DDL 或权限变更语句")
+
+    if _has_select_into(expression):
+        errors.append("禁止 SELECT ... INTO 写出结果表")
 
     blocked_tables = sorted(set(tables) - set(request.allowed_tables))
     if blocked_tables:
@@ -188,6 +211,18 @@ def _limit_value(limit: exp.Expression | None) -> int | None:
 def _starts_with_write_keyword(sql: str) -> bool:
     first = sql.lstrip().split(maxsplit=1)[0].upper() if sql.strip() else ""
     return first in WRITE_KEYWORDS
+
+
+def _contains_write_expression(expression: exp.Expression) -> bool:
+    """遍历整棵 AST（含 CTE 与子查询）查找写操作节点。"""
+    return any(expression.find_all(*_WRITE_EXPRESSION_TYPES))
+
+
+def _has_select_into(expression: exp.Expression) -> bool:
+    return any(
+        select.args.get("into") is not None
+        for select in expression.find_all(exp.Select)
+    )
 
 
 def _validate_field_references(

@@ -8,16 +8,19 @@ import { MetricsPage } from './pages/MetricsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { RouteErrorFallback } from './components/common/ErrorBoundary';
 
 const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/app/chat" replace /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  { path: '/', element: <Navigate to="/app/chat" replace />, errorElement: <RouteErrorFallback /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorFallback /> },
+  { path: '/register', element: <RegisterPage />, errorElement: <RouteErrorFallback /> },
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorFallback />,
     children: [{
       path: '/app',
       element: <AppLayout />,
+      errorElement: <RouteErrorFallback />,
       children: [
       { index: true, element: <Navigate to="/app/chat" replace /> },
       { path: 'chat', element: <ChatPage /> },

@@ -40,3 +40,10 @@ Thumbs.db
 # generated caches
 .ruff_cache/
 .mypy_cache/
+
+# eval 运行产物（保留最新基线报告；历史批次仅存本地）
+eval/reports/*
+!eval/reports/latest_eval_report.json
+
+# 会话清理暂存
+_to_delete/

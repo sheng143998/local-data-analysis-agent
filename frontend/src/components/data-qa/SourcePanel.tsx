@@ -11,12 +11,12 @@ export function SourcePanel() {
   ];
   return (
     <section className="panel p-5">
-      <h3 className="text-lg font-bold text-slate-950">数据来源与指标口径</h3>
+      <h3 className="text-lg font-bold text-stone-900">数据来源与指标口径</h3>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {items.map(([label, value]) => (
-          <div key={label} className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 text-sm">
-            <span className="text-slate-500">{label}</span>
-            <span className="text-right font-medium text-slate-800">{value}</span>
+          <div key={label} className="flex items-start justify-between gap-4 border-b border-stone-100 pb-3 text-sm">
+            <span className="text-stone-500">{label}</span>
+            <span className="text-right font-medium text-stone-800">{value}</span>
           </div>
         ))}
       </div>

@@ -114,3 +114,18 @@ def test_presenter_preserves_monthly_sql_order_and_formats_summary_date() -> Non
     assert response.rows[0]["month"] == "2017-01-01T00:00:00+00:00"
     assert "首行月份为 2017-01-01" in response.summary
     assert "2017-12-01" in response.source.range
+
+
+def test_rate_values_already_in_percent_units_are_not_rescaled() -> None:
+    """项目 SQL 口径统一输出 ROUND(x*100, 2)：1.24 表示 1.24%，不得二次放大为 124.00%。"""
+    from backend.app.tools.analysis_presenter import _format_number
+
+    assert _format_number("refund_rate", 1.24) == "1.24%"
+    assert _format_number("success_rate", 98.5) == "98.50%"
+
+
+def test_rate_values_as_fractions_are_scaled_to_percent() -> None:
+    from backend.app.tools.analysis_presenter import _format_number
+
+    assert _format_number("refund_rate", 0.0124) == "1.24%"
+    assert _format_number("repeat_rate", 0.5) == "50.00%"

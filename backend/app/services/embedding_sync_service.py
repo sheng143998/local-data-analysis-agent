@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from time import sleep
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, TypeVar
+
+T = TypeVar("T")
 
 from backend.app.core.embedding_adapter import EmbeddingAdapter, EmbeddingRequest
 from backend.app.db.connection import get_connection
@@ -449,7 +451,7 @@ def _sleep_seconds(sleep_ms: int) -> float:
     return sleep_ms / 1000
 
 
-def _chunks[T](values: list[T], size: int) -> list[list[T]]:
+def _chunks(values: list[T], size: int) -> list[list[T]]:
     return [values[index : index + size] for index in range(0, len(values), size)]
 
 

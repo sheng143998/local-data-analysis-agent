@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpenText, Database, Gauge, MessageSquareText, Settings, UserRound } from 'lucide-react';
+import { BookOpenText, Database, MessageSquareText, Settings, UserRound } from 'lucide-react';
 
 const navItems = [
   { to: '/app/chat', label: '数据问答', icon: MessageSquareText },
@@ -11,41 +11,41 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden min-h-screen w-72 shrink-0 flex-col bg-slate-950 text-white shadow-2xl lg:flex">
-      <div className="border-b border-white/10 p-6">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/40 bg-cyan-300/10">
-            <Gauge className="h-5 w-5 text-cyan-200" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-400">数据分析助手</p>
-            <h1 className="text-lg font-semibold">本地数据分析 Agent</h1>
-          </div>
-        </div>
+    <aside className="hidden min-h-screen w-64 shrink-0 flex-col border-r border-stone-200 bg-white lg:flex">
+      <div className="p-6">
+        <p className="text-lg font-bold tracking-tight text-stone-900">本地数据分析助手</p>
+        <p className="mt-1 text-xs text-stone-400">用日常语言，读懂业务数据</p>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 px-3 py-2">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               [
-                'group flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition',
+                'group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition duration-150',
                 isActive
-                  ? 'bg-cyan-300/12 text-cyan-100 shadow-line'
-                  : 'text-slate-300 hover:bg-white/6 hover:text-white',
+                  ? 'bg-accent-50 text-accent-700'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900',
               ].join(' ')
             }
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            {({ isActive }) => (
+              <>
+                {isActive ? (
+                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-accent" aria-hidden="true" />
+                ) : null}
+                <item.icon className={['h-4 w-4', isActive ? 'text-accent' : 'text-stone-500'].join(' ')} />
+                {item.label}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="border-t border-white/10 p-5 text-xs leading-6 text-slate-400">
-        <p className="font-semibold text-slate-300">面向业务分析</p>
+      <div className="border-t border-stone-100 p-5 text-xs leading-6 text-stone-400">
+        <p className="font-semibold text-stone-500">面向业务分析</p>
         <p className="mt-1">用自然语言提问，维护指标口径，沉淀团队统一分析标准。</p>
       </div>
     </aside>

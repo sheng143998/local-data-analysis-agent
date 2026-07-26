@@ -29,6 +29,7 @@ def retrieve_sql_memory(
     repository: SqlMemoryRepository | None = None,
     semantic_scores: dict[str, float] | None = None,
     context_fingerprints: dict[str, str] | None = None,
+    question_vector: list[float] | None = None,
 ) -> list[SqlMemoryCandidate]:
     """SQL Memory 混合检索：pgvector 语义分 + 文本相似 + 表/指标 + 成功率。"""
     repo = repository or SqlMemoryRepository()
@@ -36,7 +37,9 @@ def retrieve_sql_memory(
         semantic_scores = (
             {}
             if repository is not None
-            else retrieve_sql_memory_vector_candidates(question, limit=max(limit * 4, 20))
+            else retrieve_sql_memory_vector_candidates(
+                question, limit=max(limit * 4, 20), vector=question_vector
+            )
         )
     normalized_question = normalize_question(question)
     metric_set = set(metrics)
@@ -82,13 +85,12 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
     if not candidates:
         return SqlReusePlan(path_type="cold_path", candidate_count=0)
 
-    selected = candidates[0]
-    if (
-        selected.score >= FAST_PATH_THRESHOLD
-        and selected.required_table_match
-        and selected.context_fingerprint_match
-        and selected.memory.trust_status == "verified"
-    ):
+    verified_candidate = next(
+        (candidate for candidate in candidates if _can_fast_reuse(candidate)),
+        None,
+    )
+    selected = verified_candidate or candidates[0]
+    if verified_candidate:
         return SqlReusePlan(
             path_type="fast_path",
             reuse_type="parameter_rewrite",
@@ -118,6 +120,15 @@ def plan_sql_reuse(candidates: list[SqlMemoryCandidate]) -> SqlReusePlan:
     )
 
 
+def _can_fast_reuse(candidate: SqlMemoryCandidate) -> bool:
+    return (
+        candidate.score >= FAST_PATH_THRESHOLD
+        and candidate.required_table_match
+        and candidate.context_fingerprint_match
+        and candidate.memory.trust_status == "verified"
+    )
+
+
 def upsert_successful_sql_memory(
     *,
     question: str,
@@ -133,12 +144,14 @@ def upsert_successful_sql_memory(
     context_fingerprints: dict[str, str] | None = None,
     repository: SqlMemoryRepository | None = None,
     adapter: EmbeddingAdapter | None = None,
+    question_vector: list[float] | None = None,
 ) -> SqlMemoryRecord:
     repo = repository or SqlMemoryRepository()
     question_embedding, sql_embedding = _build_sql_memory_embeddings(
         question=question,
         final_sql=final_sql,
         adapter=adapter,
+        question_vector=question_vector,
     )
     return repo.upsert_success(
         SqlMemoryUpsert(
@@ -164,7 +177,14 @@ def _build_sql_memory_embeddings(
     question: str,
     final_sql: str,
     adapter: EmbeddingAdapter | None = None,
+    question_vector: list[float] | None = None,
 ) -> tuple[list[float] | None, list[float] | None]:
+    if question_vector:
+        # 问题向量在检索阶段已经算过，这里只需补 SQL 向量，省一次远程 embedding。
+        response = (adapter or EmbeddingAdapter()).embed(EmbeddingRequest(texts=[final_sql]))
+        if not response.ok or not response.vectors:
+            return question_vector, None
+        return question_vector, response.vectors[0]
     response = (adapter or EmbeddingAdapter()).embed(EmbeddingRequest(texts=[question, final_sql]))
     if not response.ok or len(response.vectors) < 2:
         return None, None

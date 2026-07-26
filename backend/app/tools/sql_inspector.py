@@ -11,10 +11,12 @@ class InspectionIssue:
     message: str
     # 业务规则：把结构化检查结果转成模型可以直接执行的修复指令，避免只传递模糊错误。
     repair_rule: str = ""
+    # 计划与合同描述目标语义，不限定唯一 SQL 写法；最终安全决策仍由 Guard、EXPLAIN 和只读执行承担。
+    enforcement: str = "advisory"
 
 
 def inspect_query_plan(sql: str, query_plan: dict | None) -> list[InspectionIssue]:
-    """在 Guard 前以 AST 校验已确认的计划与业务合同，禁止错误口径进入数据库。"""
+    """以 AST 诊断计划偏差，供模型修复和运行观测，不限定唯一 SQL 实现。"""
     if not sql.strip() or not query_plan:
         return []
     try:

@@ -11,8 +11,8 @@ export function QuestionInput({ value, onChange, onRun, running }: QuestionInput
   return (
     <section className="panel p-5">
       <div className="mb-4">
-        <h3 className="text-xl font-bold text-slate-950">数据问答</h3>
-        <p className="text-sm text-slate-500">用自然语言查询本地 PostgreSQL 数据库</p>
+        <h3 className="text-xl font-bold text-stone-900">数据问答</h3>
+        <p className="text-sm text-stone-500">用自然语言查询本地 PostgreSQL 数据库</p>
       </div>
       <textarea
         value={value}

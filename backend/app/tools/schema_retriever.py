@@ -60,6 +60,8 @@ def retrieve_schema(
     question: str,
     metrics: list[MetricContext],
     limit_per_table: int = 12,
+    *,
+    question_vector: list[float] | None = None,
 ) -> list[SchemaColumnContext]:
     """根据问题和指标所需表字段召回 schema_metadata。"""
     tables = _related_tables(question, metrics)
@@ -69,7 +71,9 @@ def retrieve_schema(
         for field in metric.required_fields
         if "." in field
     }
-    semantic_scores = retrieve_schema_vector_candidates(question, limit=max(limit_per_table * 4, 48))
+    semantic_scores = retrieve_schema_vector_candidates(
+        question, limit=max(limit_per_table * 4, 48), vector=question_vector
+    )
     vector_tables = [
         field_name.split(".", 1)[0]
         for field_name in semantic_scores

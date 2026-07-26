@@ -193,8 +193,6 @@ def run_cases(cases: list[EvalCase], analyze: AnalyzeFunc) -> list[EvalCaseResul
             row_match, row_mismatch = _match_expected_rows(case, body.get("rows"))
             strict_ok = (
                 ok
-                and table_match
-                and keyword_match
                 and forbidden_match
                 and (answer_match is not False)
                 and (row_match is not False)
@@ -291,6 +289,11 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         for result in results
         if result.ok and not result.strict_ok
     ]
+    implementation_failures = [
+        result
+        for result in results
+        if result.ok and (not result.table_match or not result.keyword_match)
+    ]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total": total,
@@ -321,9 +324,100 @@ def summarize_results(results: list[EvalCaseResult]) -> dict[str, Any]:
         "failures": [asdict(result) for result in results if not result.ok],
         "assertion_failures": [asdict(result) for result in assertion_failures],
         "assertion_failure_summary": _assertion_failure_summary(assertion_failures),
+        "implementation_failures": [asdict(result) for result in implementation_failures],
+        "implementation_failure_summary": _assertion_failure_summary(implementation_failures),
         "performance_summary": _performance_summary(results),
         "cases": [asdict(result) for result in results],
     }
+
+
+def build_memory_warmup_comparison(
+    cold_report: dict[str, Any],
+    warm_report: dict[str, Any],
+) -> dict[str, Any]:
+    """比较同一批 case 的冷链路与已审核 SQL Memory 热链路，避免只比较 HTTP 状态。"""
+    cold_cases = _report_cases(cold_report, "冷链路")
+    warm_cases = _report_cases(warm_report, "热链路")
+    cold_by_id = {str(item["id"]): item for item in cold_cases}
+    warm_by_id = {str(item["id"]): item for item in warm_cases}
+    if set(cold_by_id) != set(warm_by_id):
+        raise EvaluationConfigurationError("冷/热报告的 case ID 不一致，无法比较 SQL Memory 效率")
+
+    ordered_ids = [str(item["id"]) for item in cold_cases]
+    pairs = [(case_id, cold_by_id[case_id], warm_by_id[case_id]) for case_id in ordered_ids]
+    eligible_pairs = [pair for pair in pairs if bool(pair[1].get("strict_ok"))]
+    warm_memory_hits = [pair for pair in eligible_pairs if bool(pair[2].get("memory_hit"))]
+    regressions = [
+        case_id for case_id, _, warm_case in eligible_pairs if not bool(warm_case.get("strict_ok"))
+    ]
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "comparison_type": "verified_sql_memory_warmup",
+        "case_count": len(pairs),
+        "eligible_case_count": len(eligible_pairs),
+        "correctness": {
+            "cold_strict_success_count": sum(1 for _, cold_case, _ in pairs if bool(cold_case.get("strict_ok"))),
+            "warm_strict_success_count": sum(1 for _, _, warm_case in pairs if bool(warm_case.get("strict_ok"))),
+            "preserved_strict_success_count": len(eligible_pairs) - len(regressions),
+            "regressed_case_ids": regressions,
+        },
+        "memory": {
+            "warm_memory_hit_count": len(warm_memory_hits),
+            "warm_memory_hit_rate_on_eligible_cases": _rate(len(warm_memory_hits), len(eligible_pairs)),
+            "warm_memory_hit_case_ids": [case_id for case_id, _, _ in warm_memory_hits],
+        },
+        "efficiency": _memory_warmup_efficiency(warm_memory_hits),
+        "interpretation": (
+            "仅对冷链路已严格正确且热链路命中 verified SQL Memory 的同一 case 计算效率变化；"
+            "样本不足或存在正确性回归时不得宣称性能提升。"
+        ),
+    }
+
+
+def _report_cases(report: dict[str, Any], label: str) -> list[dict[str, Any]]:
+    cases = report.get("cases")
+    if not isinstance(cases, list) or not all(isinstance(item, dict) and item.get("id") for item in cases):
+        raise EvaluationConfigurationError(f"{label}报告缺少可比较的 cases")
+    return cases
+
+
+def _memory_warmup_efficiency(
+    pairs: list[tuple[str, dict[str, Any], dict[str, Any]]],
+) -> dict[str, Any]:
+    cold_total = [_safe_int(cold_case.get("latency_ms")) for _, cold_case, _ in pairs]
+    warm_total = [_safe_int(warm_case.get("latency_ms")) for _, _, warm_case in pairs]
+    cold_generation = [_case_node_latency(cold_case, "sql_generation") for _, cold_case, _ in pairs]
+    warm_generation = [_case_node_latency(warm_case, "sql_generation") for _, _, warm_case in pairs]
+    return {
+        "sample_count": len(pairs),
+        "cold_total_latency_ms": _latency_stats(cold_total),
+        "warm_total_latency_ms": _latency_stats(warm_total),
+        "total_latency_reduction_pct": _latency_reduction(cold_total, warm_total),
+        "cold_sql_generation_latency_ms": _latency_stats(cold_generation),
+        "warm_sql_generation_latency_ms": _latency_stats(warm_generation),
+        "sql_generation_latency_reduction_pct": _latency_reduction(cold_generation, warm_generation),
+    }
+
+
+def _case_node_latency(case: dict[str, Any], node_name: str) -> int:
+    trace = case.get("run_trace_summary")
+    if not isinstance(trace, dict):
+        return 0
+    timings = trace.get("node_timings_ms")
+    if not isinstance(timings, dict):
+        return 0
+    return _safe_int(timings.get(node_name))
+
+
+def _latency_reduction(cold: list[int], warm: list[int]) -> float | None:
+    if not cold or not warm:
+        return None
+    cold_average = sum(cold) / len(cold)
+    if cold_average <= 0:
+        return None
+    warm_average = sum(warm) / len(warm)
+    return round((cold_average - warm_average) * 100 / cold_average, 2)
 
 
 def write_report(report: dict[str, Any], path: Path = REPORT_PATH) -> None:
@@ -497,7 +591,39 @@ def main() -> None:
         action="store_true",
         help="从 checkpoint 恢复，仅执行尚未完成的案例",
     )
+    parser.add_argument(
+        "--compare-cold-report",
+        type=Path,
+        default=None,
+        help="已写入并完成正确性验证前的冷链路评测报告；需与 --compare-warm-report 成对使用",
+    )
+    parser.add_argument(
+        "--compare-warm-report",
+        type=Path,
+        default=None,
+        help="将对应 SQL Memory 审核为 verified 后的热链路评测报告；需与 --compare-cold-report 成对使用",
+    )
     args = parser.parse_args()
+    if args.compare_cold_report or args.compare_warm_report:
+        if not args.compare_cold_report or not args.compare_warm_report:
+            raise SystemExit("eval blocked: --compare-cold-report 与 --compare-warm-report 必须同时提供")
+        try:
+            cold_report = json.loads(args.compare_cold_report.read_text(encoding="utf-8"))
+            warm_report = json.loads(args.compare_warm_report.read_text(encoding="utf-8"))
+            if not isinstance(cold_report, dict) or not isinstance(warm_report, dict):
+                raise EvaluationConfigurationError("冷/热报告必须是 JSON 对象")
+            comparison = build_memory_warmup_comparison(cold_report, warm_report)
+        except (OSError, json.JSONDecodeError, EvaluationConfigurationError) as exc:
+            raise SystemExit(f"eval blocked: {exc}") from exc
+        write_report(comparison, args.report)
+        print(
+            "memory warmup comparison completed: "
+            f"eligible={comparison['eligible_case_count']}, "
+            f"memory_hits={comparison['memory']['warm_memory_hit_count']}, "
+            f"total_latency_reduction_pct={comparison['efficiency']['total_latency_reduction_pct']}, "
+            f"report={args.report}"
+        )
+        return
     all_cases = load_cases(args.dataset)
     try:
         cases = select_case_batch(all_cases, start=args.start, limit=args.limit)

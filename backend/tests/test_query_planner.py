@@ -82,6 +82,16 @@ def test_query_plan_discards_sort_direction_language_from_business_filters() -> 
     assert build_query_plan(intent).filters == []
 
 
+def test_query_plan_does_not_turn_dimension_into_order_requirement() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="按城市统计订单数",
+        normalized_question="按城市统计订单数",
+        query_spec=QuerySpec(dimensions=["city"], requires_order_by=True),
+    )
+
+    assert build_query_plan(intent).order_by == []
+
+
 def test_query_plan_binds_executable_paid_order_month_contract() -> None:
     intent = ParsedQuestionIntent(
         original_question="2017 年每个月已支付订单的销售额和订单数分别是多少？按月份升序展示。",
@@ -165,3 +175,33 @@ def test_query_plan_normalizes_category_synonyms_for_item_sales_ranking() -> Non
     assert plan.execution_contract.canonical_filters == ["payments.status = 'paid'"]
     assert plan.execution_contract.aggregation_grain == "order"
     assert set(plan.expected_columns) == {"category", "order_item_count", "sales_amount"}
+
+
+def test_query_plan_binds_paid_order_sales_summary_contract() -> None:
+    intent = ParsedQuestionIntent(
+        original_question="2017 年成交额是多少？",
+        normalized_question="2017 年成交额",
+        query_spec=QuerySpec(
+            metrics=["sales_amount"],
+            time_filter="{time_field} >= DATE '2017-01-01' AND {time_field} < DATE '2018-01-01'",
+        ),
+        resolved_contracts=[{
+            "contract_key": "paid_order_sales_summary",
+            "source_tables": ["orders", "payments"],
+            "source_fields": ["orders.id", "orders.total_amount", "payments.order_id", "payments.status"],
+            "aggregation": "sum",
+            "semantic_config": {"plan": {
+                "measures": [{"name": "sales_amount", "operation": "sum"}, {"name": "order_count", "operation": "count"}],
+                "filters": ["payments.status = 'paid'"],
+                "expected_columns": ["sales_amount", "order_count"],
+                "expected_row_shape": "single",
+            }},
+        }],
+    )
+
+    plan = build_query_plan(intent)
+
+    assert plan.entities == ["orders", "payments"]
+    assert plan.filters == ["payments.status = 'paid'"]
+    assert plan.execution_contract.aggregation_grain == "order"
+    assert set(plan.expected_columns) == {"sales_amount", "order_count"}

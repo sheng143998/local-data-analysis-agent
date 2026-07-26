@@ -170,8 +170,13 @@ def test_build_sql_generation_payload_preserves_resolved_contract_plan() -> None
         },
     )
 
-    assert payload["question_intent"]["query_plan"]["order_by"] == ["category_sales_amount DESC"]
-    assert payload["question_intent"]["resolved_contracts"][0]["contract_key"] == "category_sales_ranking"
+    # query_plan/resolved_contracts 不再在 question_intent 中重复出现（提示词去重），
+    # 计划与契约信息由顶层 query_plan / generation_contract 唯一承载。
+    assert "query_plan" not in payload["question_intent"]
+    assert "resolved_contracts" not in payload["question_intent"]
+    assert payload["query_plan"]["order_by"] == ["category_sales_amount DESC"]
+    assert payload["query_plan"]["contract_constraints"][0]["contract_key"] == "category_sales_ranking"
+    assert payload["generation_contract"]["contract_constraints"][0]["contract_key"] == "category_sales_ranking"
 
 
 def test_build_sql_generation_payload_separates_required_plan_from_optional_context() -> None:

@@ -78,3 +78,11 @@ def test_transaction_state_contract_seed_declares_payment_and_order_shapes_only(
         assert contract_key in sql
     assert "payments.status" in sql
     assert "SELECT " not in sql.upper()
+
+
+def test_complex_sql_accuracy_contract_seed_declares_semantics_only() -> None:
+    sql = (MIGRATION_DIR / "016_complex_sql_accuracy_semantic_contracts.sql").read_text(encoding="utf-8")
+    for contract_key in ["paid_order_sales_summary", "gross_margin", "category_sales_ranking"]:
+        assert contract_key in sql
+    assert "payments.status" in sql
+    assert "SELECT " not in sql.upper()

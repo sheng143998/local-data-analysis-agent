@@ -94,3 +94,22 @@ def test_resolver_uses_specific_category_item_sales_contract_instead_of_generic_
     resolved = apply_semantic_resolution(intent, SemanticResolver(_Repository([generic_sales, item_count, composite])))
 
     assert [contract["contract_key"] for contract in resolved.resolved_contracts] == ["category_item_sales_ranking"]
+
+
+def test_resolver_uses_latest_category_sales_contract_version() -> None:
+    old_contract = _contract(
+        "category_sales_ranking", "品类销售额排行", synonyms=["销售额最高的品类"],
+        config={"plan": {"expected_columns": ["category", "category_sales_amount"]}},
+    )
+    latest_contract = old_contract.model_copy(
+        update={"version": 2, "semantic_config": {"plan": {"expected_columns": ["category", "sales_amount"]}}}
+    )
+    intent = ParsedQuestionIntent(
+        original_question="销售额最高的前 5 个品类是什么？",
+        normalized_question="销售额最高的前5个品类",
+    )
+
+    resolved = apply_semantic_resolution(intent, SemanticResolver(_Repository([old_contract, latest_contract])))
+
+    assert resolved.resolved_contracts[0]["version"] == 2
+    assert resolved.resolved_contracts[0]["semantic_config"]["plan"]["expected_columns"] == ["category", "sales_amount"]

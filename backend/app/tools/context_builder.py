@@ -1,3 +1,5 @@
+import logging
+
 from backend.app.schemas.retrieval import (
     MetricContext,
     RetrievalContext,
@@ -10,13 +12,21 @@ from backend.app.tools.metric_retriever import retrieve_metrics
 from backend.app.tools.schema_retriever import retrieve_schema
 
 
+logger = logging.getLogger("backend.retrieval")
+
 DEFAULT_RELATIONSHIP_LIMIT = 24
 
 
-def build_retrieval_context(question: str, semantic_contracts: list[dict] | None = None, query_plan: dict | None = None) -> RetrievalContext:
+def build_retrieval_context(
+    question: str,
+    semantic_contracts: list[dict] | None = None,
+    query_plan: dict | None = None,
+    *,
+    question_vector: list[float] | None = None,
+) -> RetrievalContext:
     """组合指标口径和表结构上下文，供 Agent 后续节点使用。"""
-    metrics = retrieve_metrics(question)
-    schema_columns = retrieve_schema(question, metrics)
+    metrics = retrieve_metrics(question, question_vector=question_vector)
+    schema_columns = retrieve_schema(question, metrics, question_vector=question_vector)
     metrics, schema_columns, rerank_diagnostics = rerank_context(question, metrics, schema_columns)
     contracts = semantic_contracts or []
     plan = query_plan or {}
@@ -58,6 +68,7 @@ def infer_table_relationships(
         try:
             database_relationships = _load_postgres_foreign_key_relationships(fields_by_table)
         except Exception:
+            logger.warning("foreign key introspection degraded", exc_info=True)
             database_relationships = []
         for relationship in database_relationships:
             _append_relationship(
@@ -157,6 +168,7 @@ def _load_postgres_foreign_key_relationships(
             )
             rows = cursor.fetchall()
     except Exception:
+        logger.warning("foreign key query degraded", exc_info=True)
         return []
 
     relationships: list[TableRelationshipContext] = []

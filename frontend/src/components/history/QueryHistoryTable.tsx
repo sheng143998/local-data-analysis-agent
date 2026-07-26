@@ -41,36 +41,36 @@ export function QueryHistoryTable() {
     {
       id: 'action',
       header: '操作',
-      cell: ({ row }) => <button type="button" className="font-semibold text-cyan-700" onClick={() => setSelected(row.original)}>查看</button>,
+      cell: ({ row }) => <button type="button" className="font-semibold text-accent-700" onClick={() => setSelected(row.original)}>查看</button>,
     },
   ], []);
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
       <section className="panel overflow-hidden">
-        <div className="border-b border-slate-200 p-4">
+        <div className="border-b border-stone-200 p-4">
           <input
-            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-600"
+            className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-600"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="搜索问题或 SQL"
           />
         </div>
-        {loading ? <p className="p-5 text-sm text-slate-500">正在读取真实运行记录...</p> : null}
+        {loading ? <p className="p-5 text-sm text-stone-500">正在读取真实运行记录...</p> : null}
         {error ? <p className="p-5 text-sm text-rose-700">{error}</p> : null}
-        {!loading && !error && !filteredRuns.length ? <p className="p-5 text-sm text-slate-500">暂无可访问的运行记录。</p> : null}
+        {!loading && !error && !filteredRuns.length ? <p className="p-5 text-sm text-stone-500">暂无可访问的运行记录。</p> : null}
         {!loading && !error && filteredRuns.length ? <DataTable data={filteredRuns} columns={columns} /> : null}
       </section>
       <aside className="panel p-5">
-        <h3 className="text-lg font-bold text-slate-950">查询详情</h3>
-        {!selected ? <p className="mt-3 text-sm text-slate-500">选择一条真实运行记录后查看详情。</p> : (
+        <h3 className="text-lg font-bold text-stone-900">查询详情</h3>
+        {!selected ? <p className="mt-3 text-sm text-stone-500">选择一条真实运行记录后查看详情。</p> : (
           <>
-            <p className="mt-4 text-sm font-semibold text-slate-700">原始问题</p>
-            <p className="mt-1 break-words text-sm text-slate-500">{selected.user_question}</p>
-            <p className="mt-4 text-sm font-semibold text-slate-700">最终 SQL</p>
-            <pre className="mt-2 max-h-52 overflow-auto rounded-md bg-slate-950 p-3 font-mono text-xs text-cyan-100">{selected.final_sql ?? '本次运行未生成可执行 SQL。'}</pre>
-            <p className="mt-4 text-sm font-semibold text-slate-700">运行状态</p>
-            <p className="mt-1 text-sm text-slate-500">Guard: {selected.guard_status}，执行: {selected.execution_status}，返回 {selected.row_count} 行</p>
+            <p className="mt-4 text-sm font-semibold text-stone-700">原始问题</p>
+            <p className="mt-1 break-words text-sm text-stone-500">{selected.user_question}</p>
+            <p className="mt-4 text-sm font-semibold text-stone-700">最终 SQL</p>
+            <pre className="mt-2 max-h-52 overflow-auto rounded-md bg-stone-900 p-3 font-mono text-xs text-accent-100">{selected.final_sql ?? '本次运行未生成可执行 SQL。'}</pre>
+            <p className="mt-4 text-sm font-semibold text-stone-700">运行状态</p>
+            <p className="mt-1 text-sm text-stone-500">数据校验: {selected.guard_status === 'allowed' ? '通过' : '未通过'}，执行: {selected.execution_status}，返回 {selected.row_count} 行</p>
             {selected.error_message ? <p className="mt-3 text-sm text-rose-700">{selected.error_message}</p> : null}
           </>
         )}

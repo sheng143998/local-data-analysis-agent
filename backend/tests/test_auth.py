@@ -76,5 +76,9 @@ def test_login_rate_limit_uses_development_fallback_when_redis_is_unavailable(mo
     email = f"rate-{uuid4().hex}@example.com"
     password = "correct horse battery staple"
     assert owner_client.post("/api/auth/register", json={"email": email, "display_name": "Rate Test", "password": password}).status_code == 200
+    # 成功登录不消耗限额：连续两次正确密码登录都应成功。
     assert login_client.post("/api/auth/login", json={"email": email, "password": password}).status_code == 200
+    assert login_client.post("/api/auth/login", json={"email": email, "password": password}).status_code == 200
+    # 失败尝试才计数：一次失败达到限额后，即使密码正确也被 429 拦截（内存回退路径）。
+    assert login_client.post("/api/auth/login", json={"email": email, "password": "wrong password"}).status_code == 401
     assert login_client.post("/api/auth/login", json={"email": email, "password": password}).status_code == 429

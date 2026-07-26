@@ -28,9 +28,11 @@ class AuthService:
 
     def login(self, payload: LoginRequest, request: Request, response: Response) -> AuthResponse:
         email = str(payload.email).strip().lower()
-        auth_rate_limiter.enforce("login", request, email, settings.auth_login_rate_limit_per_15_minutes, 15 * 60)
+        # 成功登录不消耗限额：先校验，失败时才计数，避免正常高频用户被自己的成功登录锁死。
+        auth_rate_limiter.check("login", request, email, settings.auth_login_rate_limit_per_15_minutes, 15 * 60)
         user = self.repository.get_user_by_email(email)
         if user is None or user["status"] != "active" or not verify_password(payload.password, user["password_hash"]):
+            auth_rate_limiter.record_failure("login", request, email, 15 * 60)
             self.repository.record_event(user_id=user["id"] if user else None, action="login_rejected", reason="invalid_credentials")
             raise HTTPException(status_code=401, detail="邮箱或密码错误")
         profile = UserProfile(id=user["id"], email=user["email"], display_name=user["display_name"], role=user["role"], created_at=user["created_at"])
@@ -104,13 +106,29 @@ class AuthService:
         response.delete_cookie(settings.auth_csrf_cookie_name, path="/", secure=settings.auth_cookie_secure, samesite="lax")
 
 
+TOUCH_SESSION_MIN_INTERVAL_SECONDS = 60
+
+
 def get_principal_from_session(token: str | None) -> tuple[AuthPrincipal, str] | None:
     if not token:
         return None
-    session = AuthRepository().get_active_session(hash_token(token))
+    repository = AuthRepository()
+    session = repository.get_active_session(hash_token(token))
     if session is None or session["status"] != "active":
         return None
-    AuthRepository().touch_session(session["id"], datetime.now(timezone.utc) + timedelta(hours=settings.auth_session_idle_hours))
+    # 节流会话续期写入：60 秒内的重复请求不再写库，读多写少的接口不必每次都 UPDATE。
+    now = datetime.now(timezone.utc)
+    new_idle_expires_at = now + timedelta(hours=settings.auth_session_idle_hours)
+    stored_idle_expires_at = session.get("idle_expires_at")
+    try:
+        should_touch = (
+            stored_idle_expires_at is None
+            or (new_idle_expires_at - stored_idle_expires_at).total_seconds() >= TOUCH_SESSION_MIN_INTERVAL_SECONDS
+        )
+    except TypeError:  # naive/aware 混用时按保守路径续期
+        should_touch = True
+    if should_touch:
+        repository.touch_session(session["id"], new_idle_expires_at)
     return (AuthPrincipal(id=session["user_id"], email=session["email"], display_name=session["display_name"], role=session["role"], session_id=session["id"]), session["csrf_token_hash"])
 
 

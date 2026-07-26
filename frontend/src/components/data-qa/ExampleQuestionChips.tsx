@@ -4,7 +4,7 @@ export function ExampleQuestionChips() {
   return (
     <div className="flex flex-wrap gap-2">
       {examples.map((example) => (
-        <button key={example} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:border-cyan-300 hover:text-cyan-700">
+        <button key={example} className="rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600 transition hover:border-accent-300 hover:text-accent-700">
           {example}
         </button>
       ))}

@@ -325,7 +325,8 @@ def _should_recover_explicit_data_question(question: str, intent: ParsedQuestion
 def _is_explicit_data_question(question: str) -> bool:
     """只识别用户已经给出对象和查询操作的问题，避免把概览型闲聊误作数据查询。"""
     query_operations = ("多少", "总数", "总额", "平均", "最高", "最低", "前 ", "前", "最多", "最少", "日期", "类型", "数量", "率", "趋势", "分布")
-    business_objects = ("订单", "商品", "品类", "库存", "流量", "用户", "退款", "支付", "送达", "加购", "优惠券", "城市", "州")
+    # 业务规则：成交/交易金额已明确指向订单交易事实，不能因未出现“订单”二字误触发澄清。
+    business_objects = ("订单", "商品", "品类", "库存", "流量", "用户", "退款", "支付", "送达", "加购", "优惠券", "城市", "州", "成交", "交易", "销售", "金额")
     return any(token in question for token in query_operations) and any(token in question for token in business_objects)
 
 

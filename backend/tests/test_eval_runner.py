@@ -7,6 +7,7 @@ from eval.scripts.run_eval import (
     _find_latest_run_id,
     authenticate_evaluation_client,
     build_batch_metadata,
+    build_memory_warmup_comparison,
     load_cases,
     load_checkpoint,
     load_database_ground_truth_cases,
@@ -335,13 +336,13 @@ def test_summary_separates_execution_success_from_assertion_match() -> None:
     report = summarize_results(results)
 
     assert report["success_count"] == 1
-    assert report["strict_success_count"] == 0
+    assert report["strict_success_count"] == 1
     assert report["execution_success_rate"] == 1
-    assert report["strict_success_rate"] == 0
+    assert report["strict_success_rate"] == 1
     assert report["table_match_rate"] == 0
     assert report["keyword_match_rate"] == 0
-    assert report["assertion_failures"][0]["missing_tables"] == ["coupons"]
-    assert report["assertion_failure_summary"] == {
+    assert report["implementation_failures"][0]["missing_tables"] == ["coupons"]
+    assert report["implementation_failure_summary"] == {
         "total": 1,
         "by_missing_table": [{"name": "coupons", "count": 1}],
         "by_forbidden_keyword": [],
@@ -579,7 +580,7 @@ def test_summary_groups_assertion_failures_by_table_category_and_path() -> None:
 
     report = summarize_results(run_cases(cases, fake_analyze))
 
-    assert report["assertion_failure_summary"] == {
+    assert report["implementation_failure_summary"] == {
         "total": 3,
         "by_missing_table": [
             {"name": "traffic_events", "count": 2},
@@ -613,3 +614,43 @@ def test_performance_summary_separates_graph_and_unattributed_time() -> None:
     assert summary["stages_ms"]["api_total"]["count"] == 1
     assert summary["stages_ms"]["unattributed"]["total"] == 0
     assert summary["slowest_node_counts"] == [{"name": "sql_generation", "count": 1}]
+
+
+def test_memory_warmup_comparison_requires_correct_verified_reuse_and_reports_latency() -> None:
+    case = EvalCase(
+        id="memory_case",
+        category="SQL Memory",
+        question="已支付订单数",
+        expected_tables=["orders"],
+        expected_keywords=["COUNT"],
+        expected_rows=[{"order_count": 10}],
+    )
+    cold = summarize_results(run_cases(
+        [case],
+        lambda _: (200, {
+            "path": "cold_path",
+            "sql": "SELECT COUNT(*) AS order_count FROM orders",
+            "rows": [{"order_count": 10}],
+            "source": {"security": "SQL Guard", "returnedRows": 1},
+            "_eval_run_trace_summary": {"node_timings_ms": {"sql_generation": 120}},
+        }),
+    ))
+    warm = summarize_results(run_cases(
+        [case],
+        lambda _: (200, {
+            "path": "fast_path",
+            "sql": "SELECT COUNT(*) AS order_count FROM orders",
+            "rows": [{"order_count": 10}],
+            "source": {"security": "SQL Guard", "returnedRows": 1},
+            "_eval_run_trace_summary": {"node_timings_ms": {"sql_generation": 0}},
+        }),
+    ))
+    cold["cases"][0]["latency_ms"] = 200
+    warm["cases"][0]["latency_ms"] = 50
+
+    comparison = build_memory_warmup_comparison(cold, warm)
+
+    assert comparison["correctness"]["regressed_case_ids"] == []
+    assert comparison["memory"]["warm_memory_hit_case_ids"] == ["memory_case"]
+    assert comparison["efficiency"]["total_latency_reduction_pct"] == 75.0
+    assert comparison["efficiency"]["sql_generation_latency_reduction_pct"] == 100.0

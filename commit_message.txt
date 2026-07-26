@@ -1,0 +1,26 @@
+重构优化：后端性能与安全加固、前端视觉改版与术语精简
+
+后端（349/349 测试通过）：
+- 数据库连接池与 tool_calls 批量落库，消除每次分析 15~25 次 TCP 握手
+- 问题 embedding 一次化，记忆检索规划从 1354ms 降至 12ms
+- 共享 HTTP 客户端复用 keep-alive；4xx 确定性错误不再重试
+- SQL Guard 增加 AST 写操作拦截（CTE 内写语句、SELECT INTO、危险函数）
+- 时间边界与指标口径校验 AST 化，消除对正确 SQL 的误报修复循环
+- SQL 生成提示词去重（生成耗时 -12%）
+- 认证会话每请求单次查库、touch 节流；限流器失败才计数并防内存膨胀
+- 修复比率指标二次放大（1.24% 误显示为 124.00%）
+
+前端（tsc 零错误）：
+- 暖色纸感设计系统（米白底、陶土主色、stone 中性色、软阴影大圆角）
+- 登录/注册页光斑流动、玻璃卡片、错落入场等动效光效
+- ChatPage 509 行拆分为 hooks 与组件；答案优先、详情渐进披露
+- 普通视图术语最小化：查询语句/分析过程/数据来源；路径枚举译为业务语言
+- ECharts 按需注册与暖色主题；同源代理修复 Cookie 掉登录；SSE 规范化与空闲超时
+
+文档与评测：
+- 新增优化分析报告、实施计划、变更说明、前端视觉设计文档
+- 新增 29 个回归测试；一键测试/评测脚本
+- .gitignore 收敛 eval 运行产物（保留最新基线报告）
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016Vm1CKqzG3yGygefmrUYTe

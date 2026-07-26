@@ -38,7 +38,8 @@ def build_query_plan(intent: ParsedQuestionIntent) -> QueryPlan:
         # 业务规则：契约声明的默认过滤器只进入结构化计划，仍由模型、Inspector、Guard 和 Executor 共同校验。
         filters=filters,
         time_filter=execution_contract.time_predicate or spec.time_filter,
-        order_by=contract_plan["order_by"] or (dimensions if spec.requires_order_by else []),
+        # 业务规则：维度只说明分组对象，不能被误当作排序度量；未解析到明确排序合同则交给模型按用户语义选择。
+        order_by=contract_plan["order_by"],
         limit=spec.top_n or contract_plan["limit"],
         expected_columns=expected_columns,
         expected_row_shape=expected_row_shape,

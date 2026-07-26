@@ -1,5 +1,28 @@
 ﻿# 当前 Handoff
 
+## SQL 生成成功率改进计划（进行中）
+
+- 计划：`docs/plans/2026-07-22-sql-generation-success-improvement.md`。
+- 目标：基于 20 条结构化 SQL accuracy 基准，先解决模型生成/Repair 不稳定、检索参考项误升级为强制约束、SQL Memory 0 命中，再改善结果行匹配；不放宽 Guard、EXPLAIN 或只读执行边界。
+- 基线：`12/20` SQL 生成/执行成功、`7/20` 严格成功、`8/20` 结构化行匹配、SQL Memory 命中 `0%`；7 条为模型生成或 Repair 后的 HTTP 503，数据库执行平均约 `0.26s`，不是当前主瓶颈。
+- 已完成子模块：SQL Memory 冷/热链路评测。记录：`docs/modules/2026-07-22-sql-memory-warmup-evaluation.md`。评测可对同一 case 的冷报告与已审核 `verified` Memory 热报告配对，只有结果正确且热链路命中 Memory 时才计算总回答和 SQL 生成耗时降幅；不自动升级 `executed` 状态。
+- 真实 smoke：三条多表问题冷/热均为 `3/3` 结构化行正确，但已审核 Memory 热测仍 `0/3` 命中，全部降级为 `rewrite_path`，没有效率收益。候选相似度 `0.9455-0.98`，根因是无关召回指标被视为必需 token，以及等价 `CAST(... AS DATE)` 时间谓词未被识别。
+- 当前工作：分离 SQL Memory 复用校验中的合同必需指标与普通召回指标，并识别 PostgreSQL 等价时间字面量；仅修复误降级，不放宽 Query Plan、Guard、EXPLAIN 或只读执行边界。
+- 已完成修复与真实回归：verified SQL Memory 只按 QuerySpec 指标校验、接受等价 `CAST(... AS DATE)` 时间字面量、优先于同分 executed 候选，且后续成功写入不会降级或替换审核 SQL。三个多表 smoke 热链路为 `3/3` fast path、`3/3` 结构化行正确，平均总耗时从 `29.08s` 降至 `13.86s`，配对降幅 `52.36%`。验证 `75 passed, 1 warning`；详情和报告路径见 `docs/modules/2026-07-22-sql-memory-warmup-evaluation.md`。
+- 20 条真实验证：`19/20` 执行成功、`12/20` 结构化行匹配、Memory `5/20` fast path 且均正确；fast path 平均 `12.68s`，rewrite path 平均 `24.99s`。`speed_006` 因模型错误澄清未生成 SQL；其余 8 条行不匹配需按业务语义、模型生成与 Repair 分类治理。报告：`eval/reports/sql_accuracy_20_memory_current_20260722.json`。
+- 下一步：针对 8 条结构化行不匹配和 `speed_006` 的错误澄清逐项归因，按单变量修复后复跑相同 20 条集。
+- 当前子模块：`docs/plans/2026-07-22-complex-sql-generation-quality.md`。范围是按 `speed_005` 至 `speed_013` 的失败归因，补齐明确“成交额”问题的错误澄清恢复，以及已支付成交额、整体毛利率、品类销售额排行的版本化语义合同；不写固定 SQL，不改变 Guard、`EXPLAIN` 或只读执行边界。
+- 已完成复杂 SQL 质量子模块：记录 `docs/modules/2026-07-22-complex-sql-generation-quality.md`。migration `016` 已应用；对话路由与意图解析将成交/交易/金额识别为明确数据对象；新增已支付成交额、整体毛利率和品类销售额 v2 合同。最终 20 条结构化评测为 `20/20` 执行成功、`15/20` 行匹配（`75%`），相对前次 `19/20` 与 `12/20`（`60%`）改善；默认标准评测为 `19/20`、`95%` strict。报告：`eval/reports/sql_accuracy_20_complex_contracts_final_20260722.json`。残余失败是支付品类排行去重、未支付品类销售额口径和“按商品明细”毛利率粒度；下一轮应加 Inspector 定向 Repair。由于共享文件包含已有未提交的 SQL Memory/分层校验改动，当前未单独 commit/push，避免误提交。
+- 验证：失败分类 focused tests、Planner/Inspector/Graph/Memory 回归、标准评测、同一 20 条顺序结构化评测、前端构建和差异检查。
+- 风险：工作区已有未提交的分层 SQL 校验改动，实施前需先核对并合并边界，不能覆盖用户现有修改。
+
+## 分层 SQL 校验重构（进行中）
+
+- 计划：`docs/plans/2026-07-19-layered-sql-validation.md`。
+- 目标：把业务合同和 SQL 形态从硬拒绝改为一次修复建议与 warning，保留意图安全校验、Guard、EXPLAIN、只读 Executor 的阻断边界；评测严格成功以结果语义为主。
+- 风险：放宽形态阻断可能暴露安全但口径错误的 SQL，必须用结构化行参考结果和诊断 warning 衡量，不能只看 HTTP 200。
+- 验证：Inspector/Graph/Planner/Eval focused tests、标准 Eval、相同 20 条顺序结构化评测、前端构建和差异检查。
+
 ## SQL 生成速度二十样本基准优化（已完成）
 
 - 计划：`docs/plans/2026-07-19-sql-speed-20-sample-benchmark.md`。
@@ -1300,3 +1323,9 @@
 6. 更新本文件。
 7. commit 并 push。
 
+## README 简历展示优化（已完成）
+
+- 计划：`docs/plans/2026-07-23-readme-resume-polish.md`。
+- 完成：根目录 README 已重写为面向简历访客的项目介绍，包含架构图、量化评测、快速启动和文档导航；完成记录见 `docs/modules/2026-07-23-readme-resume-polish.md`。
+- 验证：README UTF-8 读取通过；引用的目录、文档、报告、脚本和 npm scripts 均存在。
+- 风险：本次未触碰已有业务代码和未提交改动；复杂问题结构化行匹配率当前仍为 75%，后续继续按失败归因优化。

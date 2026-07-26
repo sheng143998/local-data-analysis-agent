@@ -9,6 +9,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
+from backend.app.core.http_client import is_retryable_status, shared_client
 
 
 class EmbeddingUsage(BaseModel):
@@ -66,8 +67,8 @@ class HttpxEmbeddingTransport:
         json: dict[str, Any],
         timeout: float,
     ) -> httpx.Response:
-        with httpx.Client(timeout=timeout) as client:
-            return client.post(url, headers=headers, json=json)
+        client = shared_client(trust_env=True)
+        return client.post(url, headers=headers, json=json, timeout=timeout)
 
 
 class EmbeddingAdapter:
@@ -115,7 +116,8 @@ class EmbeddingAdapter:
                 )
                 if response.status_code >= 400:
                     last_error = f"HTTP {response.status_code}: {response.text}"
-                    if attempt < attempts - 1:
+                    # 401/404/422 等确定性错误重试只会白等，立即返回。
+                    if is_retryable_status(response.status_code) and attempt < attempts - 1:
                         sleep(_retry_delay(attempt))
                         continue
                     return self._error_response(

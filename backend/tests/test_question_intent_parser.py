@@ -86,6 +86,29 @@ def test_parse_question_intent_recovers_explicit_query_from_empty_model_clarific
     assert "错误澄清" in intent.warnings[0]
 
 
+def test_parse_question_intent_recovers_explicit_transaction_amount_from_empty_model_clarification() -> None:
+    adapter = FakeAdapter(
+        ModelResponse(
+            ok=True,
+            content=(
+                '{"normalized_question":"2017年成交额",'
+                '"metrics":[],"dimensions":[],"filters":[],"time_range":"",'
+                '"confidence":0.2,"needs_clarification":true,'
+                '"clarification":"请说明业务对象"}'
+            ),
+            provider="cloud",
+            model="test",
+            latency_ms=1,
+        )
+    )
+
+    intent = parse_question_intent("2017 年成交额是多少？", adapter=adapter, model_enabled=True)
+
+    assert intent.needs_clarification is False
+    assert intent.semantic_metrics == ["2017 年成交额是多少？"]
+    assert intent.query_spec.time_start == "2017-01-01"
+
+
 def test_parse_question_intent_recovers_when_model_omits_clarification_text() -> None:
     adapter = FakeAdapter(
         ModelResponse(

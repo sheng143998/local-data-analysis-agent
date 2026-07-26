@@ -326,8 +326,10 @@ def _format_value(column: str | None, value: Any) -> str:
 
 def _format_number(column: str | None, value: float) -> str:
     if column and _is_rate_column(column):
-        # 业务规则：数据库比例按 0 到 1 返回，界面与摘要统一转换为百分数。
-        return f"{value * 100:.2f}%"
+        # 业务口径：项目内 SQL 统一以 ROUND(x * 100, 2) 输出百分数值（1.24 即 1.24%）。
+        # 仅当数值明显是 0~1 的小数比例时才放大 100 倍，避免二次放大（1.24 → 124.00%）。
+        percent = value * 100 if abs(value) <= 1 else value
+        return f"{percent:.2f}%"
     if column and _is_money_column(column):
         return f"¥ {value:,.0f}"
     if abs(value) >= 1000:

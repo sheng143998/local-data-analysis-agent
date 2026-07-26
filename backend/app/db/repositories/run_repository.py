@@ -73,6 +73,36 @@ class RunRepository:
             )
             return _row_to_tool_call(cursor.fetchone())
 
+    def create_tool_calls(self, payloads: list[ToolCallCreate]) -> int:
+        """单连接批量写入 tool_calls：一次分析约 10 条日志从 10 个连接降到 1 个。"""
+        if not payloads:
+            return 0
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.executemany(
+                """
+                INSERT INTO tool_calls (
+                  id, query_run_id, tool_name, input_payload, output_payload,
+                  status, latency_ms, error_message
+                )
+                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s)
+                """,
+                [
+                    (
+                        str(payload.id),
+                        str(payload.query_run_id),
+                        payload.tool_name,
+                        json.dumps(payload.input_payload, ensure_ascii=False),
+                        json.dumps(payload.output_payload, ensure_ascii=False),
+                        payload.status,
+                        payload.latency_ms,
+                        payload.error_message,
+                    )
+                    for payload in payloads
+                ],
+            )
+        return len(payloads)
+
     def list_runs(self, limit: int = 20) -> list[QueryRunRecord]:
         with get_connection() as conn:
             cursor = conn.cursor()

@@ -23,11 +23,14 @@ class FakeMemoryRepository:
 
     def upsert_success(self, payload):
         self.upsert_payload = payload
-        return _memory(
+        memory = _memory(
             payload.canonical_question,
             final_sql=payload.final_sql,
             tables=payload.tables,
+            trust_status=payload.trust_status,
         )
+        self.memories = [memory]
+        return memory
 
 
 class FakeEmbeddingAdapter:
@@ -147,6 +150,24 @@ def test_plan_sql_reuse_accepts_matching_context_fingerprints() -> None:
     assert plan_sql_reuse(candidates).path_type == "fast_path"
 
 
+def test_plan_sql_reuse_prefers_verified_candidate_over_newer_executed_candidate() -> None:
+    executed = _memory("最近 30 天销售额按天变化如何？", trust_status="executed")
+    verified = _memory("最近 30 天销售额按天变化如何？", trust_status="verified")
+    candidates = retrieve_sql_memory(
+        "最近 30 天销售额按天变化如何？",
+        metrics=["sales_amount", "order_count"],
+        tables=["orders", "payments"],
+        repository=FakeMemoryRepository([executed, verified]),
+        semantic_scores={str(executed.id): 1.0, str(verified.id): 1.0},
+    )
+
+    plan = plan_sql_reuse(candidates)
+
+    assert candidates[0].memory.id == executed.id
+    assert plan.path_type == "fast_path"
+    assert plan.selected_memory_id == verified.id
+
+
 def test_context_fingerprints_change_with_schema_or_contract_version() -> None:
     context = RetrievalContext(
         tables=["orders"], fields=["orders.id"],
@@ -218,6 +239,41 @@ def test_upsert_successful_sql_memory_passes_question_and_sql_embeddings() -> No
     assert repo.upsert_payload.dimensions == ["date"]
     assert repo.upsert_payload.trust_status == "executed"
     assert repo.upsert_payload.filters == {"context_fingerprints": {}}
+
+
+def test_written_memory_requires_verified_review_before_fast_path_reuse() -> None:
+    repo = FakeMemoryRepository([])
+    written = upsert_successful_sql_memory(
+        question="最近 30 天销售额是多少？",
+        sql_template="SELECT SUM(total_amount) FROM orders",
+        final_sql="SELECT SUM(total_amount) AS sales_amount FROM orders LIMIT 10",
+        tables=["orders"],
+        metrics=["sales_amount"],
+        result_columns=["sales_amount"],
+        row_count=1,
+        latency_ms=20,
+        repository=repo,
+        adapter=FakeEmbeddingAdapter(),
+    )
+
+    executed_plan = plan_sql_reuse(retrieve_sql_memory(
+        "最近 30 天销售额是多少？",
+        metrics=["sales_amount"],
+        tables=["orders"],
+        repository=repo,
+    ))
+    repo.memories = [written.model_copy(update={"trust_status": "verified"})]
+    verified_plan = plan_sql_reuse(retrieve_sql_memory(
+        "最近 30 天销售额是多少？",
+        metrics=["sales_amount"],
+        tables=["orders"],
+        repository=repo,
+    ))
+
+    assert written.trust_status == "executed"
+    assert executed_plan.path_type == "rewrite_path"
+    assert verified_plan.path_type == "fast_path"
+    assert verified_plan.memory_hit is True
 
 
 def test_build_sql_memory_embeddings_returns_none_when_adapter_fails() -> None:

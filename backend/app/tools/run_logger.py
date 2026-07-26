@@ -62,6 +62,36 @@ class QueryRunLogger:
         )
         return run
 
+    def log_tool_calls(self, *, query_run_id: UUID, tool_calls: list[dict]) -> int:
+        """批量记录工具调用：一次分析的所有 tool_call 走同一个数据库连接。"""
+        payloads = [
+            ToolCallCreate(
+                id=uuid4(),
+                query_run_id=query_run_id,
+                tool_name=call["tool_name"],
+                input_payload=call.get("input_payload", {}),
+                output_payload=call.get("output_payload", {}),
+                status=call.get("status", "success"),
+                latency_ms=call.get("latency_ms", 0),
+                error_message=call.get("error_message"),
+            )
+            for call in tool_calls
+        ]
+        inserted = self.repository.create_tool_calls(payloads)
+        for payload in payloads:
+            _log_event(
+                {
+                    "event": "tool_call",
+                    "run_id": str(query_run_id),
+                    "tool_name": payload.tool_name,
+                    "status": payload.status,
+                    "latency_ms": payload.latency_ms,
+                    "has_error": bool(payload.error_message),
+                    "output_keys": sorted(payload.output_payload.keys()),
+                }
+            )
+        return inserted
+
     def log_tool_call(
         self,
         *,

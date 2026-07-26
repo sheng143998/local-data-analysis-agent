@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDashed, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { AgentStep } from '../../types/analysis';
 
 type AgentPipelineProps = {
@@ -6,51 +6,56 @@ type AgentPipelineProps = {
   steps: AgentStep[];
 };
 
+/**
+ * 分析过程竖向 stepper：
+ * 完成项灰绿打勾、当前项主色呼吸点、右侧展示耗时（秒数）。
+ * 阶段名由后端下发，保持业务语言（理解问题 / 检索口径 / 生成查询…）。
+ */
 export function AgentPipeline({ running, steps }: AgentPipelineProps) {
   if (!steps.length) return null;
 
   return (
-    <section className="panel p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-slate-950">Agent 执行链路</h3>
-          <p className="text-sm text-slate-500">节点逐步激活，仅展示可信执行状态</p>
-        </div>
-        <span className="rounded-md bg-slate-950 px-3 py-1.5 text-xs font-semibold text-cyan-100">LangGraph</span>
-      </div>
-      <div className="grid gap-3 md:grid-cols-7">
+    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
+      <p className="mb-3 text-sm font-semibold text-stone-800">分析过程</p>
+      <ol className="space-y-0">
         {steps.map((step, index) => {
-          const active = step.status !== '已跳过';
-          const isRunning = running && step.status === '运行中';
+          const isCurrent = running && step.status === '运行中';
+          const isDone = step.status === '已完成' || (!running && step.status === '运行中');
+          const isSkipped = step.status === '已跳过';
+          const isLast = index === steps.length - 1;
           return (
-            <div key={step.name} className="relative">
-              <div
-                className={[
-                  'min-h-32 border p-3 transition duration-500',
-                  active ? 'border-cyan-300 bg-cyan-50/80 shadow-[0_0_22px_rgba(34,211,238,0.18)]' : 'border-slate-200 bg-slate-50',
-                ].join(' ')}
-                style={{ borderRadius: 8, transitionDelay: `${index * 90}ms` }}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  {isRunning ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
-                  ) : active ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  ) : (
-                    <CircleDashed className="h-5 w-5 text-slate-400" />
-                  )}
-                  <span className="font-mono text-xs text-slate-500">{step.time}</span>
-                </div>
-                <p className="font-semibold text-slate-900">{step.name}</p>
-                <p className="mt-2 text-xs text-slate-500">{isRunning ? '运行中' : step.status}</p>
-              </div>
-              {index < steps.length - 1 ? (
-                <div className="absolute right-[-14px] top-1/2 hidden h-px w-7 bg-cyan-300 md:block" />
+            <li key={`${step.name}-${index}`} className="relative flex gap-3 pb-0">
+              {/* 连接线 */}
+              {!isLast ? (
+                <span className="absolute left-[11px] top-6 h-[calc(100%-14px)] w-px bg-stone-200" aria-hidden="true" />
               ) : null}
-            </div>
+              <span className="relative z-[1] mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center">
+                {isCurrent ? (
+                  <span className="step-dot-current" />
+                ) : isDone ? (
+                  <span className="grid h-[22px] w-[22px] place-items-center rounded-full bg-success-soft">
+                    <Check className="h-3.5 w-3.5 text-success" strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span className="h-2 w-2 rounded-full bg-stone-300" />
+                )}
+              </span>
+              <div className={['flex min-w-0 flex-1 items-baseline justify-between gap-3', isLast ? '' : 'pb-4'].join(' ')}>
+                <p
+                  className={[
+                    'truncate text-sm',
+                    isCurrent ? 'font-semibold text-accent-700' : isSkipped ? 'text-stone-400' : 'text-stone-700',
+                  ].join(' ')}
+                >
+                  {step.name}
+                  {isSkipped ? <span className="ml-2 text-xs text-stone-400">未涉及</span> : null}
+                </p>
+                <span className="nums shrink-0 text-xs text-stone-400">{isSkipped ? '' : step.time}</span>
+              </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </section>
   );
 }

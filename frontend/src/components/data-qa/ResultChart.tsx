@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import type { EChartsOption } from 'echarts';
-import { Chart } from '../common/Chart';
+import { Chart, type ChartOption } from '../common/Chart';
 import type { AnalysisRow, VisualizationSpec } from '../../types/analysis';
 
 type ResultChartProps = {
@@ -8,7 +7,7 @@ type ResultChartProps = {
   visualization: VisualizationSpec;
 };
 
-const colors = ['#0f766e', '#2563eb', '#d97706', '#be123c'];
+const colors = ['#C96442', '#7D9B76', '#D4A27F', '#8B7E74', '#A8763E', '#5E7B8B'];
 
 function numericValue(value: AnalysisRow[string]) {
   if (typeof value === 'number') return value;
@@ -43,7 +42,7 @@ function unitLabel(unit: VisualizationSpec['unit']) {
 }
 
 export function ResultChart({ rows, visualization }: ResultChartProps) {
-  const option = useMemo<EChartsOption | null>(() => {
+  const option = useMemo<ChartOption | null>(() => {
     if (visualization.kind === 'none' || !visualization.x_field || !visualization.y_fields.length) return null;
     const labels = rows.map((row) => displayDimension(row[visualization.x_field!], visualization.x_field!));
     const valueField = visualization.y_fields[0];
@@ -100,8 +99,8 @@ export function ResultChart({ rows, visualization }: ResultChartProps) {
 
   if (!option) return null;
   return (
-    <section className="overflow-hidden border border-slate-200 bg-white" style={{ borderRadius: 8 }}>
-      <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">{visualization.title}</div>
+    <section className="overflow-hidden border border-stone-200 bg-white" style={{ borderRadius: 8 }}>
+      <div className="border-b border-stone-200 px-4 py-3 text-sm font-semibold text-stone-900">{visualization.title}</div>
       <div className="p-3"><Chart option={option} height={300} /></div>
     </section>
   );
