@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26T13:22:55.707111+00:00",
+  "generated_at": "2026-07-30T09:32:09.934586+00:00",
   "total": 20,
   "success_count": 19,
   "strict_success_count": 19,
@@ -16,11 +16,12 @@
   "row_match_count": 0,
   "row_match_rate": 0,
   "semantic_accuracy_rate": 0,
-  "memory_hit_rate": 0.0,
-  "reuse_success_rate": 0.0,
-  "average_latency_ms": 21281,
+  "memory_hit_rate": 0.05,
+  "reuse_success_rate": 0.05,
+  "average_latency_ms": 15415,
   "path_counts": {
-    "rewrite_path": 19,
+    "rewrite_path": 18,
+    "fast_path": 1,
     "cold_path": 1
   },
   "failures": [
@@ -31,7 +32,7 @@
       "ok": false,
       "path": "cold_path",
       "status_code": 200,
-      "latency_ms": 8941,
+      "latency_ms": 6181,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -59,7 +60,7 @@
       "run_id": null,
       "run_detail_path": "",
       "run_trace_summary": {},
-      "error": "这是一个很好的分析方向。为了得出准确结论，建议您进一步明确需要分析的时间段、特定活动或用户群体，以便进行更有针对性的对比分析。"
+      "error": "这是一个很好的分析方向。为了得出准确结论，我们需要对比使用和未使用优惠券订单的平均客单价。请问您希望分析哪个时间段或特定业务线的数据呢？"
     }
   ],
   "assertion_failures": [],
@@ -80,7 +81,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 49141,
+      "latency_ms": 34255,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -108,91 +109,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "d15dc21d-fa3b-43d6-adba-3c9d66c20498",
-      "run_detail_path": "/api/runs/d15dc21d-fa3b-43d6-adba-3c9d66c20498",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "order_items",
-          "products"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "order_items.product_id",
-          "payments.order_id",
-          "order_items.order_id",
-          "products.id",
-          "payments.id",
-          "order_items.id",
-          "orders.created_at",
-          "products.created_at",
-          "orders.user_id",
-          "order_items.seller_id",
-          "order_items.price",
-          "payments.amount",
-          "products.category",
-          "products.weight_g",
-          "products.width_cm",
-          "order_items.item_seq"
-        ],
-        "metric_count": 3,
-        "schema_column_count": 36,
-        "relationship_count": 10,
-        "generation_path": "model_repair",
-        "generation_warning_count": 1,
-        "generation_warnings": [
-          "SQL 未输出计划要求的列或别名：product_id。"
-        ],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.98,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_repair": 16147,
-          "sql_explain": 3,
-          "intent_parse": 0,
-          "memory_update": 4596,
-          "sql_execution": 388,
-          "present_result": 0,
-          "sql_generation": 19841,
-          "context_retrieval": 4572,
-          "sql_intent_validation": 5,
-          "memory_sql_verification": 8,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 40989,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 19841
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 16147
-        },
-        "repair_attempts": 1,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "order_items",
-            "orders",
-            "payments",
-            "products"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -202,7 +121,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 32651,
+      "latency_ms": 12053,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -229,88 +148,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "eeb04aee-6b2e-4234-8200-c0bbfafb51f7",
-      "run_detail_path": "/api/runs/eeb04aee-6b2e-4234-8200-c0bbfafb51f7",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "order_items",
-          "products"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "order_items.product_id",
-          "products.category",
-          "payments.order_id",
-          "order_items.order_id",
-          "payments.id",
-          "products.id",
-          "order_items.id",
-          "orders.created_at",
-          "products.created_at",
-          "orders.user_id",
-          "order_items.seller_id",
-          "order_items.price",
-          "payments.amount",
-          "products.weight_g",
-          "products.width_cm",
-          "order_items.item_seq"
-        ],
-        "metric_count": 3,
-        "schema_column_count": 36,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.98,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4708,
-          "sql_execution": 148,
-          "present_result": 0,
-          "sql_generation": 20632,
-          "context_retrieval": 4680,
-          "sql_intent_validation": 5,
-          "memory_sql_verification": 7,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 25489,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 20632
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 20631
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "order_items",
-            "orders",
-            "payments",
-            "products"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -320,19 +160,19 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 19501,
+      "latency_ms": 15135,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
       "expected_table_hits": [
-        "orders"
+        "orders",
+        "payments"
       ],
       "expected_keyword_hits": [
         "repeat_rate"
       ],
       "missing_tables": [
-        "users",
-        "payments"
+        "users"
       ],
       "missing_keywords": [],
       "forbidden_keyword_hits": [],
@@ -347,86 +187,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "8542c344-9a45-4eb2-ad89-7cba5dd1a779",
-      "run_detail_path": "/api/runs/8542c344-9a45-4eb2-ad89-7cba5dd1a779",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.total_amount",
-          "payments.status",
-          "orders.created_at",
-          "users.created_at",
-          "refunds.created_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "users.id",
-          "payments.id",
-          "refunds.id",
-          "orders.user_id",
-          "users.unique_id",
-          "users.city",
-          "users.state",
-          "refunds.reason",
-          "payments.amount",
-          "refunds.amount"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4653,
-          "sql_execution": 40,
-          "present_result": 0,
-          "sql_generation": 5452,
-          "context_retrieval": 4792,
-          "sql_intent_validation": 5,
-          "memory_sql_verification": 8,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 10315,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5452
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5451
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "user_order_counts"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -436,7 +199,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 16857,
+      "latency_ms": 11809,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -463,98 +226,15 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "02b96ed6-74dc-432c-b50e-194cf12d9849",
-      "run_detail_path": "/api/runs/02b96ed6-74dc-432c-b50e-194cf12d9849",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "orders.id",
-          "orders.status",
-          "payments.status",
-          "refunds.order_id",
-          "users.id",
-          "users.city",
-          "payments.id",
-          "refunds.id",
-          "users.created_at",
-          "orders.created_at",
-          "orders.user_id",
-          "users.unique_id",
-          "users.state",
-          "users.zip_code_prefix",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at",
-          "orders.estimated_delivery_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 1,
-        "guard_warnings": [
-          "已将 LIMIT 收紧为 30"
-        ],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.975,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4765,
-          "sql_execution": 417,
-          "present_result": 0,
-          "sql_generation": 4293,
-          "context_retrieval": 4901,
-          "sql_intent_validation": 2,
-          "memory_sql_verification": 5,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 9635,
-        "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 4901
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 4293
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "users"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     }
   ],
   "implementation_failure_summary": {
     "total": 4,
     "by_missing_table": [
-      {
-        "name": "payments",
-        "count": 1
-      },
       {
         "name": "users",
         "count": 1
@@ -563,14 +243,9 @@
     "by_forbidden_keyword": [],
     "by_missing_table_context_status": [
       {
-        "name": "payments",
-        "missing_from_context": 0,
-        "present_in_context": 1
-      },
-      {
         "name": "users",
-        "missing_from_context": 0,
-        "present_in_context": 1
+        "missing_from_context": 1,
+        "present_in_context": 0
       }
     ],
     "by_category": [
@@ -600,145 +275,33 @@
     "stages_ms": {
       "api_total": {
         "count": 20,
-        "total": 425615,
-        "avg": 21281,
-        "p50": 18282,
-        "p95": 43504,
-        "max": 49141
-      },
-      "context_retrieval": {
-        "count": 19,
-        "total": 87474,
-        "avg": 4604,
-        "p50": 4638,
-        "p95": 4858,
-        "max": 4901
+        "total": 308300,
+        "avg": 15415,
+        "p50": 12667,
+        "p95": 34255,
+        "max": 54316
       },
       "graph_known": {
         "count": 20,
-        "total": 350180,
-        "avg": 17509,
-        "p50": 14718,
-        "p95": 40942,
-        "max": 45571
-      },
-      "intent_parse": {
-        "count": 19,
         "total": 0,
         "avg": 0,
         "p50": 0,
         "p95": 0,
         "max": 0
-      },
-      "memory_retrieval_and_plan": {
-        "count": 19,
-        "total": 232,
-        "avg": 12,
-        "p50": 9,
-        "p95": 31,
-        "max": 49
-      },
-      "memory_sql_verification": {
-        "count": 19,
-        "total": 102,
-        "avg": 5,
-        "p50": 4,
-        "p95": 10,
-        "max": 14
-      },
-      "memory_update": {
-        "count": 19,
-        "total": 88072,
-        "avg": 4635,
-        "p50": 4678,
-        "p95": 4796,
-        "max": 4805
-      },
-      "present_result": {
-        "count": 19,
-        "total": 0,
-        "avg": 0,
-        "p50": 0,
-        "p95": 0,
-        "max": 0
-      },
-      "sql_execution": {
-        "count": 19,
-        "total": 3220,
-        "avg": 169,
-        "p50": 30,
-        "p95": 928,
-        "max": 1083
-      },
-      "sql_explain": {
-        "count": 19,
-        "total": 32,
-        "avg": 2,
-        "p50": 2,
-        "p95": 3,
-        "max": 4
-      },
-      "sql_generation": {
-        "count": 19,
-        "total": 135976,
-        "avg": 7157,
-        "p50": 5142,
-        "p95": 19841,
-        "max": 20632
-      },
-      "sql_guard": {
-        "count": 19,
-        "total": 42,
-        "avg": 2,
-        "p50": 2,
-        "p95": 4,
-        "max": 7
-      },
-      "sql_intent_validation": {
-        "count": 19,
-        "total": 72,
-        "avg": 4,
-        "p50": 3,
-        "p95": 6,
-        "max": 8
-      },
-      "sql_repair": {
-        "count": 3,
-        "total": 34958,
-        "avg": 11653,
-        "p50": 13273,
-        "p95": 16147,
-        "max": 16147
       },
       "unattributed": {
         "count": 20,
-        "total": 75435,
-        "avg": 3772,
-        "p50": 3431,
-        "p95": 7567,
-        "max": 8941
+        "total": 308300,
+        "avg": 15415,
+        "p50": 12667,
+        "p95": 34255,
+        "max": 54316
       }
     },
     "slowest_node_counts": [
       {
-        "name": "sql_generation",
-        "count": 12
-      },
-      {
-        "name": "context_retrieval",
-        "count": 5
-      },
-      {
-        "name": "memory_update",
-        "count": 1
-      },
-      {
-        "name": "sql_repair",
-        "count": 1
-      },
-      {
         "name": "unknown",
-        "count": 1
+        "count": 20
       }
     ],
     "execution_status_counts": [
@@ -760,7 +323,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 16658,
+      "latency_ms": 17975,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -786,85 +349,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "d941fbb6-896f-424b-9d52-add5411a58a1",
-      "run_detail_path": "/api/runs/d941fbb6-896f-424b-9d52-add5411a58a1",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.created_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "payments.id",
-          "orders.user_id",
-          "refunds.created_at",
-          "payments.amount",
-          "payments.payment_type",
-          "payments.installments",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "payments.payment_sequential",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at",
-          "orders.estimated_delivery_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 23,
-        "relationship_count": 6,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9667,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 4,
-          "intent_parse": 0,
-          "memory_update": 4805,
-          "sql_execution": 40,
-          "present_result": 0,
-          "sql_generation": 3413,
-          "context_retrieval": 4858,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 6,
-          "memory_retrieval_and_plan": 10
-        },
-        "total_latency_ms": 8353,
-        "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 4858
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 3412
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "payments"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -872,12 +359,12 @@
       "category": "基础查询",
       "question": "最近 30 天每天的销售额是多少？",
       "ok": true,
-      "path": "rewrite_path",
+      "path": "fast_path",
       "status_code": 200,
-      "latency_ms": 16675,
+      "latency_ms": 5827,
       "has_sql": true,
       "guard_passed": true,
-      "memory_hit": false,
+      "memory_hit": true,
       "expected_table_hits": [
         "orders",
         "payments"
@@ -893,92 +380,16 @@
       "keyword_match": true,
       "forbidden_match": true,
       "strict_ok": true,
-      "returned_rows": 0,
+      "returned_rows": 30,
       "expected_answer": "",
-      "actual_answer": "",
+      "actual_answer": "2026-07-30 0.0 0 0.0；2026-07-29 0.0 0 0.0；2026-07-28 0.0 0 0.0；2026-07-27 0.0 0 0.0；2026-07-26 0.0 0 0.0；2026-07-25 0.0 0 0.0；2026-07-24 0.0 0 0.0；2026-07-23 0.0 0 0.0；2026-07-22 0.0 0 0.0；2026-07-21 0.0 0 0.0；2026-07-20 0.0 0 0.0；2026-07-19 0.0 0 0.0；2026-07-18 0.0 0 0.0；2026-07-17 0.0 0 0.0；2026-07-16 0.0 0 0.0；2026-07-15 0.0 0 0.0；2026-07-14 0.0 0 0.0；2026-07-13 0.0 0 0.0；2026-07-12 0.0 0 0.0；2026-07-11 0.0 0 0.0；2026-07-10 0.0 0 0.0；2026-07-09 0.0 0 0.0；2026-07-08 0.0 0 0.0；2026-07-07 0.0 0 0.0；2026-07-06 0.0 0 0.0；2026-07-05 0.0 0 0.0；2026-07-04 0.0 0 0.0；2026-07-03 0.0 0 0.0；2026-07-02 0.0 0 0.0；2026-07-01 0.0 0 0.0",
       "answer_match": null,
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "2482af80-0676-43b5-b533-5d2233cd45f7",
-      "run_detail_path": "/api/runs/2482af80-0676-43b5-b533-5d2233cd45f7",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.created_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "payments.id",
-          "orders.user_id",
-          "refunds.created_at",
-          "payments.amount",
-          "payments.payment_type",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "payments.installments",
-          "payments.payment_sequential",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at",
-          "orders.estimated_delivery_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 23,
-        "relationship_count": 6,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9667,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4379,
-          "sql_execution": 62,
-          "present_result": 0,
-          "sql_generation": 5882,
-          "context_retrieval": 4294,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 4,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 10264,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5882
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5882
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "payments"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -988,7 +399,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 21479,
+      "latency_ms": 12667,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1014,90 +425,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "8b1d3827-38cb-4821-9704-752aebee8188",
-      "run_detail_path": "/api/runs/8b1d3827-38cb-4821-9704-752aebee8188",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "orders.total_amount",
-          "refunds.order_id",
-          "payments.status",
-          "orders.created_at",
-          "payments.id",
-          "refunds.id",
-          "orders.user_id",
-          "refunds.created_at",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at",
-          "orders.estimated_delivery_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "refunds.reason",
-          "payments.amount",
-          "refunds.amount"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 23,
-        "relationship_count": 6,
-        "generation_path": "model_repair",
-        "generation_warning_count": 1,
-        "generation_warnings": [
-          "模型 SQL 时间粒度不匹配：需要 month，实际 unknown"
-        ],
-        "guard_status": "allowed",
-        "guard_warning_count": 1,
-        "guard_warnings": [
-          "已将 LIMIT 收紧为 30"
-        ],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9667,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_repair": 5538,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4400,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 4711,
-          "context_retrieval": 4232,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 4,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 14513,
-        "slowest_node": {
-          "name": "sql_repair",
-          "latency_ms": 5538
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5537
-        },
-        "repair_attempts": 1,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "payments"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1107,7 +437,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 49141,
+      "latency_ms": 34255,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1135,91 +465,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "d15dc21d-fa3b-43d6-adba-3c9d66c20498",
-      "run_detail_path": "/api/runs/d15dc21d-fa3b-43d6-adba-3c9d66c20498",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "order_items",
-          "products"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "order_items.product_id",
-          "payments.order_id",
-          "order_items.order_id",
-          "products.id",
-          "payments.id",
-          "order_items.id",
-          "orders.created_at",
-          "products.created_at",
-          "orders.user_id",
-          "order_items.seller_id",
-          "order_items.price",
-          "payments.amount",
-          "products.category",
-          "products.weight_g",
-          "products.width_cm",
-          "order_items.item_seq"
-        ],
-        "metric_count": 3,
-        "schema_column_count": 36,
-        "relationship_count": 10,
-        "generation_path": "model_repair",
-        "generation_warning_count": 1,
-        "generation_warnings": [
-          "SQL 未输出计划要求的列或别名：product_id。"
-        ],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.98,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_repair": 16147,
-          "sql_explain": 3,
-          "intent_parse": 0,
-          "memory_update": 4596,
-          "sql_execution": 388,
-          "present_result": 0,
-          "sql_generation": 19841,
-          "context_retrieval": 4572,
-          "sql_intent_validation": 5,
-          "memory_sql_verification": 8,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 40989,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 19841
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 16147
-        },
-        "repair_attempts": 1,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "order_items",
-            "orders",
-            "payments",
-            "products"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1229,7 +477,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 32651,
+      "latency_ms": 12053,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1256,88 +504,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "eeb04aee-6b2e-4234-8200-c0bbfafb51f7",
-      "run_detail_path": "/api/runs/eeb04aee-6b2e-4234-8200-c0bbfafb51f7",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "order_items",
-          "products"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "order_items.product_id",
-          "products.category",
-          "payments.order_id",
-          "order_items.order_id",
-          "payments.id",
-          "products.id",
-          "order_items.id",
-          "orders.created_at",
-          "products.created_at",
-          "orders.user_id",
-          "order_items.seller_id",
-          "order_items.price",
-          "payments.amount",
-          "products.weight_g",
-          "products.width_cm",
-          "order_items.item_seq"
-        ],
-        "metric_count": 3,
-        "schema_column_count": 36,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.98,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4708,
-          "sql_execution": 148,
-          "present_result": 0,
-          "sql_generation": 20632,
-          "context_retrieval": 4680,
-          "sql_intent_validation": 5,
-          "memory_sql_verification": 7,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 25489,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 20632
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 20631
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "order_items",
-            "orders",
-            "payments",
-            "products"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1347,7 +516,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 23080,
+      "latency_ms": 12762,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1371,84 +540,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "98f944ad-1e5b-446a-8e67-bef2a9de16d9",
-      "run_detail_path": "/api/runs/98f944ad-1e5b-446a-8e67-bef2a9de16d9",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "payments.paid_at",
-          "payments.order_id",
-          "payments.id",
-          "orders.created_at",
-          "refunds.created_at",
-          "payments.amount",
-          "payments.installments",
-          "payments.payment_type",
-          "payments.payment_sequential",
-          "refunds.id",
-          "orders.user_id",
-          "refunds.amount",
-          "refunds.reason",
-          "orders.approved_at",
-          "orders.purchase_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 23,
-        "relationship_count": 6,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9333,
-        "node_timings_ms": {
-          "sql_guard": 1,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4547,
-          "sql_execution": 8,
-          "present_result": 0,
-          "sql_generation": 6713,
-          "context_retrieval": 4227,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 3,
-          "memory_retrieval_and_plan": 10
-        },
-        "total_latency_ms": 10972,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 6713
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 6712
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "payments"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1458,7 +552,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 18306,
+      "latency_ms": 16199,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1479,94 +573,14 @@
       "strict_ok": true,
       "returned_rows": 1,
       "expected_answer": "",
-      "actual_answer": "pc_gamer 0.125",
+      "actual_answer": "pc_gamer 12.5",
       "answer_match": null,
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "59640cc4-47e9-4a24-baf1-8ed70c2f016d",
-      "run_detail_path": "/api/runs/59640cc4-47e9-4a24-baf1-8ed70c2f016d",
-      "run_trace_summary": {
-        "context_tables": [
-          "refunds",
-          "orders",
-          "order_items",
-          "products",
-          "payments"
-        ],
-        "context_fields_sample": [
-          "refunds.order_id",
-          "orders.status",
-          "orders.id",
-          "order_items.order_id",
-          "order_items.product_id",
-          "products.category",
-          "payments.order_id",
-          "products.id",
-          "refunds.id",
-          "order_items.id",
-          "orders.created_at",
-          "products.created_at",
-          "refunds.created_at",
-          "orders.total_amount",
-          "orders.user_id",
-          "payments.status",
-          "order_items.seller_id",
-          "refunds.amount",
-          "refunds.reason",
-          "order_items.price"
-        ],
-        "metric_count": 2,
-        "schema_column_count": 41,
-        "relationship_count": 17,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.98,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 3,
-          "intent_parse": 0,
-          "memory_update": 4322,
-          "sql_execution": 928,
-          "present_result": 0,
-          "sql_generation": 5142,
-          "context_retrieval": 4504,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 14,
-          "memory_retrieval_and_plan": 49
-        },
-        "total_latency_ms": 10654,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5142
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5141
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "order_items",
-            "orders",
-            "products",
-            "refunds"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1576,7 +590,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 17756,
+      "latency_ms": 19519,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1601,87 +615,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "4d4440e3-2a8a-42e5-8ebd-78300bab8049",
-      "run_detail_path": "/api/runs/4d4440e3-2a8a-42e5-8ebd-78300bab8049",
-      "run_trace_summary": {
-        "context_tables": [
-          "refunds",
-          "orders",
-          "payments",
-          "order_items",
-          "products"
-        ],
-        "context_fields_sample": [
-          "refunds.order_id",
-          "orders.status",
-          "orders.id",
-          "orders.total_amount",
-          "payments.status",
-          "orders.created_at",
-          "refunds.created_at",
-          "order_items.order_id",
-          "payments.order_id",
-          "refunds.id",
-          "orders.user_id",
-          "products.created_at",
-          "refunds.amount",
-          "refunds.reason",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at",
-          "orders.estimated_delivery_at",
-          "payments.paid_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 41,
-        "relationship_count": 17,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 7,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4476,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 5887,
-          "context_retrieval": 4608,
-          "sql_intent_validation": 6,
-          "memory_sql_verification": 7,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 10533,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5887
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5886
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "refunds"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1691,7 +627,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 43504,
+      "latency_ms": 54316,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1717,94 +653,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "a73c72e2-2c6d-4c6b-8dd6-a2ac49500ab5",
-      "run_detail_path": "/api/runs/a73c72e2-2c6d-4c6b-8dd6-a2ac49500ab5",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "order_items",
-          "product_costs",
-          "products"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.total_amount",
-          "payments.status",
-          "order_items.product_id",
-          "product_costs.product_id",
-          "products.created_at",
-          "products.category",
-          "product_costs.updated_at",
-          "order_items.order_id",
-          "products.id",
-          "order_items.id",
-          "order_items.seller_id",
-          "orders.created_at",
-          "refunds.created_at",
-          "order_items.price",
-          "products.height_cm",
-          "products.length_cm",
-          "products.weight_g"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 44,
-        "relationship_count": 19,
-        "generation_path": "model_repair",
-        "generation_warning_count": 1,
-        "generation_warnings": [
-          "订单商品整体毛利率 未使用合同要求的来源字段：order_items.id。"
-        ],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9833,
-        "node_timings_ms": {
-          "sql_guard": 4,
-          "sql_repair": 13273,
-          "sql_explain": 3,
-          "intent_parse": 0,
-          "memory_update": 4786,
-          "sql_execution": 49,
-          "present_result": 0,
-          "sql_generation": 18163,
-          "context_retrieval": 4641,
-          "sql_intent_validation": 8,
-          "memory_sql_verification": 6,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 36171,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 18163
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 13272
-        },
-        "repair_attempts": 1,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "item_level",
-            "order_items",
-            "orders",
-            "product_costs",
-            "products"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1814,7 +665,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 18282,
+      "latency_ms": 11489,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1838,84 +689,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "ae1610e7-4834-4c18-81d1-abb926c33636",
-      "run_detail_path": "/api/runs/ae1610e7-4834-4c18-81d1-abb926c33636",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "payments.payment_type",
-          "payments.order_id",
-          "payments.id",
-          "payments.amount",
-          "payments.installments",
-          "payments.paid_at",
-          "payments.payment_sequential",
-          "refunds.id",
-          "orders.created_at",
-          "refunds.created_at",
-          "orders.user_id",
-          "refunds.reason",
-          "refunds.amount",
-          "orders.approved_at",
-          "orders.purchase_at"
-        ],
-        "metric_count": 3,
-        "schema_column_count": 23,
-        "relationship_count": 6,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9333,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 0,
-          "intent_parse": 0,
-          "memory_update": 4665,
-          "sql_execution": 16,
-          "present_result": 0,
-          "sql_generation": 6427,
-          "context_retrieval": 4638,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 4,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 11105,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 6427
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 6426
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "payments"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -1925,7 +701,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 15094,
+      "latency_ms": 7999,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -1949,85 +725,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "80431198-aec5-4a5b-b7ce-760ed34a1d98",
-      "run_detail_path": "/api/runs/80431198-aec5-4a5b-b7ce-760ed34a1d98",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.total_amount",
-          "payments.status",
-          "users.created_at",
-          "users.id",
-          "orders.user_id",
-          "users.unique_id",
-          "orders.created_at",
-          "refunds.created_at",
-          "users.city",
-          "users.state",
-          "users.zip_code_prefix",
-          "payments.paid_at",
-          "payments.order_id",
-          "payments.id",
-          "refunds.id",
-          "payments.amount",
-          "refunds.amount"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.925,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4552,
-          "sql_execution": 30,
-          "present_result": 0,
-          "sql_generation": 2512,
-          "context_retrieval": 4607,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 10,
-          "memory_retrieval_and_plan": 31
-        },
-        "total_latency_ms": 7203,
-        "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 4607
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 2511
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "users"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2037,7 +737,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 16901,
+      "latency_ms": 15275,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2062,86 +762,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "b6176aa7-819d-493f-9890-8a608d63f0e2",
-      "run_detail_path": "/api/runs/b6176aa7-819d-493f-9890-8a608d63f0e2",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "orders.total_amount",
-          "refunds.order_id",
-          "payments.status",
-          "users.id",
-          "orders.user_id",
-          "users.created_at",
-          "orders.created_at",
-          "payments.id",
-          "refunds.id",
-          "users.unique_id",
-          "refunds.created_at",
-          "users.city",
-          "users.state",
-          "users.zip_code_prefix",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.95,
-        "node_timings_ms": {
-          "sql_guard": 1,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4690,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 5089,
-          "context_retrieval": 4659,
-          "sql_intent_validation": 2,
-          "memory_sql_verification": 2,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 9767,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5089
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5088
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "users"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2151,7 +774,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 19949,
+      "latency_ms": 10708,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2176,86 +799,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "5bd22be0-1cfc-49e2-998b-d0ddf88afb42",
-      "run_detail_path": "/api/runs/5bd22be0-1cfc-49e2-998b-d0ddf88afb42",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "users",
-          "payments"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.total_amount",
-          "users.id",
-          "users.created_at",
-          "orders.user_id",
-          "users.unique_id",
-          "users.city",
-          "users.state",
-          "users.zip_code_prefix",
-          "payments.order_id",
-          "refunds.id",
-          "payments.id",
-          "orders.created_at",
-          "refunds.created_at",
-          "payments.status",
-          "refunds.reason",
-          "payments.amount",
-          "refunds.amount"
-        ],
-        "metric_count": 3,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.95,
-        "node_timings_ms": {
-          "sql_guard": 1,
-          "sql_explain": 0,
-          "intent_parse": 0,
-          "memory_update": 4678,
-          "sql_execution": 1083,
-          "present_result": 0,
-          "sql_generation": 3499,
-          "context_retrieval": 4690,
-          "sql_intent_validation": 2,
-          "memory_sql_verification": 2,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 9292,
-        "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 4690
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 3498
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "users"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2265,19 +811,19 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 19501,
+      "latency_ms": 15135,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
       "expected_table_hits": [
-        "orders"
+        "orders",
+        "payments"
       ],
       "expected_keyword_hits": [
         "repeat_rate"
       ],
       "missing_tables": [
-        "users",
-        "payments"
+        "users"
       ],
       "missing_keywords": [],
       "forbidden_keyword_hits": [],
@@ -2292,86 +838,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "8542c344-9a45-4eb2-ad89-7cba5dd1a779",
-      "run_detail_path": "/api/runs/8542c344-9a45-4eb2-ad89-7cba5dd1a779",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "orders.total_amount",
-          "payments.status",
-          "orders.created_at",
-          "users.created_at",
-          "refunds.created_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "users.id",
-          "payments.id",
-          "refunds.id",
-          "orders.user_id",
-          "users.unique_id",
-          "users.city",
-          "users.state",
-          "refunds.reason",
-          "payments.amount",
-          "refunds.amount"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4653,
-          "sql_execution": 40,
-          "present_result": 0,
-          "sql_generation": 5452,
-          "context_retrieval": 4792,
-          "sql_intent_validation": 5,
-          "memory_sql_verification": 8,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 10315,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5452
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5451
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "user_order_counts"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2381,7 +850,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 16857,
+      "latency_ms": 11809,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2408,88 +877,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "02b96ed6-74dc-432c-b50e-194cf12d9849",
-      "run_detail_path": "/api/runs/02b96ed6-74dc-432c-b50e-194cf12d9849",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "orders.id",
-          "orders.status",
-          "payments.status",
-          "refunds.order_id",
-          "users.id",
-          "users.city",
-          "payments.id",
-          "refunds.id",
-          "users.created_at",
-          "orders.created_at",
-          "orders.user_id",
-          "users.unique_id",
-          "users.state",
-          "users.zip_code_prefix",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at",
-          "orders.estimated_delivery_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 29,
-        "relationship_count": 10,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 1,
-        "guard_warnings": [
-          "已将 LIMIT 收紧为 30"
-        ],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.975,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4765,
-          "sql_execution": 417,
-          "present_result": 0,
-          "sql_generation": 4293,
-          "context_retrieval": 4901,
-          "sql_intent_validation": 2,
-          "memory_sql_verification": 5,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 9635,
-        "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 4901
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 4293
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "users"
-          ],
-          "missing_tables": [],
-          "required_tables": []
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2499,7 +889,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 17836,
+      "latency_ms": 8913,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2524,89 +914,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "2975686d-c67c-4b51-9964-55e95ea283ed",
-      "run_detail_path": "/api/runs/2975686d-c67c-4b51-9964-55e95ea283ed",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "traffic_events",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "orders.total_amount",
-          "refunds.order_id",
-          "payments.status",
-          "traffic_events.id",
-          "orders.created_at",
-          "traffic_events.created_at",
-          "users.id",
-          "refunds.id",
-          "payments.id",
-          "orders.user_id",
-          "traffic_events.product_id",
-          "traffic_events.user_id",
-          "refunds.created_at",
-          "users.created_at",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "traffic_events.event_type",
-          "traffic_events.source"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 35,
-        "relationship_count": 16,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4771,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 4136,
-          "context_retrieval": 4741,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 3,
-          "memory_retrieval_and_plan": 10
-        },
-        "total_latency_ms": 8904,
-        "slowest_node": {
-          "name": "memory_update",
-          "latency_ms": 4771
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 4135
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "traffic_events"
-          ],
-          "missing_tables": [],
-          "required_tables": [
-            "traffic_events"
-          ]
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2616,7 +926,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 17712,
+      "latency_ms": 16748,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2641,89 +951,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "c3dc6f98-8358-41b3-9901-d38a6db39c0f",
-      "run_detail_path": "/api/runs/c3dc6f98-8358-41b3-9901-d38a6db39c0f",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "payments",
-          "refunds",
-          "traffic_events",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.total_amount",
-          "payments.status",
-          "orders.id",
-          "orders.status",
-          "refunds.order_id",
-          "traffic_events.created_at",
-          "payments.paid_at",
-          "payments.order_id",
-          "payments.id",
-          "traffic_events.id",
-          "traffic_events.product_id",
-          "traffic_events.user_id",
-          "orders.created_at",
-          "refunds.created_at",
-          "users.created_at",
-          "payments.amount",
-          "payments.installments",
-          "payments.payment_type",
-          "traffic_events.event_type",
-          "traffic_events.source"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 35,
-        "relationship_count": 16,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4796,
-          "sql_execution": 11,
-          "present_result": 0,
-          "sql_generation": 4920,
-          "context_retrieval": 4493,
-          "sql_intent_validation": 4,
-          "memory_sql_verification": 4,
-          "memory_retrieval_and_plan": 10
-        },
-        "total_latency_ms": 9451,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 4920
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 4919
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "payments",
-            "traffic_events"
-          ],
-          "missing_tables": [],
-          "required_tables": [
-            "traffic_events"
-          ]
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2733,7 +963,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 16832,
+      "latency_ms": 10523,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2758,91 +988,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "d6b398e1-dc78-49c2-b29b-bf8344eb2535",
-      "run_detail_path": "/api/runs/d6b398e1-dc78-49c2-b29b-bf8344eb2535",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "coupon_usages",
-          "coupons",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "orders.total_amount",
-          "refunds.order_id",
-          "payments.status",
-          "coupon_usages.order_id",
-          "coupons.id",
-          "coupon_usages.id",
-          "coupon_usages.user_id",
-          "coupon_usages.coupon_id",
-          "coupons.code",
-          "coupons.discount_type",
-          "coupons.discount_value",
-          "coupons.ends_at",
-          "coupons.starts_at",
-          "coupon_usages.used_at",
-          "payments.order_id",
-          "users.id",
-          "refunds.id",
-          "payments.id"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 40,
-        "relationship_count": 24,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.9333,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 2,
-          "intent_parse": 0,
-          "memory_update": 4728,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 3890,
-          "context_retrieval": 4765,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 3,
-          "memory_retrieval_and_plan": 8
-        },
-        "total_latency_ms": 8680,
-        "slowest_node": {
-          "name": "context_retrieval",
-          "latency_ms": 4765
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 3890
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "coupon_usages",
-            "coupons"
-          ],
-          "missing_tables": [],
-          "required_tables": [
-            "coupon_usages",
-            "coupons"
-          ]
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     },
     {
@@ -2852,7 +1000,7 @@
       "ok": false,
       "path": "cold_path",
       "status_code": 200,
-      "latency_ms": 8941,
+      "latency_ms": 6181,
       "has_sql": false,
       "guard_passed": false,
       "memory_hit": false,
@@ -2880,7 +1028,7 @@
       "run_id": null,
       "run_detail_path": "",
       "run_trace_summary": {},
-      "error": "这是一个很好的分析方向。为了得出准确结论，建议您进一步明确需要分析的时间段、特定活动或用户群体，以便进行更有针对性的对比分析。"
+      "error": "这是一个很好的分析方向。为了得出准确结论，我们需要对比使用和未使用优惠券订单的平均客单价。请问您希望分析哪个时间段或特定业务线的数据呢？"
     },
     {
       "id": "marketing_020",
@@ -2889,7 +1037,7 @@
       "ok": true,
       "path": "rewrite_path",
       "status_code": 200,
-      "latency_ms": 18460,
+      "latency_ms": 7947,
       "has_sql": true,
       "guard_passed": true,
       "memory_hit": false,
@@ -2914,89 +1062,9 @@
       "answer_mismatch": "",
       "row_match": null,
       "row_mismatch": "",
-      "run_id": "bc07549f-30c5-434e-8391-81628e76c969",
-      "run_detail_path": "/api/runs/bc07549f-30c5-434e-8391-81628e76c969",
-      "run_trace_summary": {
-        "context_tables": [
-          "orders",
-          "refunds",
-          "payments",
-          "traffic_events",
-          "users"
-        ],
-        "context_fields_sample": [
-          "orders.id",
-          "orders.status",
-          "orders.total_amount",
-          "refunds.order_id",
-          "payments.status",
-          "traffic_events.id",
-          "users.id",
-          "payments.id",
-          "refunds.id",
-          "orders.created_at",
-          "traffic_events.created_at",
-          "orders.user_id",
-          "traffic_events.user_id",
-          "traffic_events.product_id",
-          "traffic_events.source",
-          "orders.approved_at",
-          "orders.purchase_at",
-          "traffic_events.event_type",
-          "orders.delivered_carrier_at",
-          "orders.delivered_customer_at"
-        ],
-        "metric_count": 4,
-        "schema_column_count": 35,
-        "relationship_count": 16,
-        "generation_path": "model_rewrite",
-        "generation_warning_count": 0,
-        "generation_warnings": [],
-        "guard_status": "allowed",
-        "guard_warning_count": 0,
-        "guard_warnings": [],
-        "guard_error_count": 0,
-        "guard_errors": [],
-        "memory_path_type": "rewrite_path",
-        "memory_reuse_type": "regenerate",
-        "memory_hit": false,
-        "memory_score": 0.94,
-        "node_timings_ms": {
-          "sql_guard": 2,
-          "sql_explain": 1,
-          "intent_parse": 0,
-          "memory_update": 4755,
-          "sql_execution": 0,
-          "present_result": 0,
-          "sql_generation": 5374,
-          "context_retrieval": 4572,
-          "sql_intent_validation": 3,
-          "memory_sql_verification": 2,
-          "memory_retrieval_and_plan": 9
-        },
-        "total_latency_ms": 9971,
-        "slowest_node": {
-          "name": "sql_generation",
-          "latency_ms": 5374
-        },
-        "model_route": {
-          "model": "qwen3.7-max-2026-05-17",
-          "provider": "aliyun",
-          "latency_ms": 5374
-        },
-        "repair_attempts": 0,
-        "context_table_coverage": {
-          "covered": true,
-          "sql_tables": [
-            "orders",
-            "traffic_events"
-          ],
-          "missing_tables": [],
-          "required_tables": [
-            "traffic_events"
-          ]
-        }
-      },
+      "run_id": null,
+      "run_detail_path": "",
+      "run_trace_summary": {},
       "error": ""
     }
   ],

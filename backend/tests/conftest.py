@@ -7,13 +7,29 @@ from backend.app.schemas.sql_generation import GeneratedSql
 
 @pytest.fixture(autouse=True)
 def _use_development_auth_default(monkeypatch):
-    """测试默认不依赖开发机 .env；需要登录的用例自行显式开启鉴权。"""
+    """测试默认不依赖开发机 .env；需要登录的用例自行显式开启鉴权。
+
+    簿记默认走同步路径，保证断言时 run/tool_calls 已落库；
+    异步路径由 test_background_bookkeeping 显式开启并等待。
+    """
     monkeypatch.setattr(settings, "auth_required", False)
     monkeypatch.setattr(settings, "auth_allow_self_registration", False)
+    monkeypatch.setattr(settings, "bookkeeping_async", False)
+    # 记忆快路径与 embedding 缓存按用例显式开启，避免测试间通过数据库/缓存耦合。
+    monkeypatch.setattr(settings, "graph_memory_first", False)
+    from backend.app.tools.vector_retrieval import clear_embedding_cache
+    from backend.app.tools.context_builder import clear_sample_values_cache
+
+    clear_embedding_cache()
+    clear_sample_values_cache()
 
 
 def _test_sql_for_question(question: str) -> str:
-    if "销售额按天变化" in question:
+    if (
+        "销售额" in question
+        and any(token in question for token in ("按天", "每天", "日趋势"))
+        and any(token in question for token in ("变化", "趋势"))
+    ):
         return """
 WITH date_spine AS (
   SELECT generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day')::date AS order_date
@@ -181,7 +197,7 @@ LIMIT 30
 
 @pytest.fixture(autouse=True)
 def stable_model_sql_for_api_tests(monkeypatch, request):
-    if not any(test_file in str(request.fspath) for test_file in ("test_api.py", "test_runs.py")):
+    if not any(test_file in str(request.fspath) for test_file in ("test_api.py", "test_runs.py", "test_memory_lifecycle.py")):
         yield
         return
 
@@ -195,6 +211,8 @@ def stable_model_sql_for_api_tests(monkeypatch, request):
         adapter=None,
         model_enabled=None,
         repair_context=None,
+        question_intent=None,
+        few_shot_examples=None,
     ):
         sql = _test_sql_for_question(question)
         if not sql:

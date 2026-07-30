@@ -73,6 +73,7 @@ class AnalyzeResponse(BaseModel):
     trace: AnalysisTrace
     steps: list[AgentStep]
     visualization: VisualizationSpec = Field(default_factory=VisualizationSpec)
+    run_id: UUID | None = None
     conversation_id: UUID | None = None
     pending_clarification: bool = False
     conversation_status: Literal["active", "waiting_for_clarification", "cancelled"] = "active"

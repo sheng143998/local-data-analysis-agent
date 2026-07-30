@@ -1,5 +1,8 @@
 import logging
+import re
+import threading
 
+from backend.app.core.config import settings
 from backend.app.schemas.retrieval import (
     MetricContext,
     RetrievalContext,
@@ -16,6 +19,75 @@ logger = logging.getLogger("backend.retrieval")
 
 DEFAULT_RELATIONSHIP_LIMIT = 24
 
+# 低基数枚举列命名特征：这些列的真实取值样本会被注入生成提示词（计划 3b-lite），
+# 直接消除 "status='completed'（库里其实叫 delivered）" 这类取值幻觉。
+_SAMPLE_VALUE_COLUMN_TOKENS = ("status", "type", "category", "method", "source", "channel", "state", "reason")
+_SAMPLE_VALUE_DATA_TYPES = ("text", "character", "varchar", "char")
+
+_sample_values_cache: dict[tuple[str, str], list[str]] = {}
+_sample_values_lock = threading.Lock()
+
+
+def clear_sample_values_cache() -> None:
+    with _sample_values_lock:
+        _sample_values_cache.clear()
+
+
+def attach_sample_values(schema_columns: list[SchemaColumnContext]) -> list[SchemaColumnContext]:
+    """为召回的低基数枚举列补充数据库真实取值样本。
+
+    只处理命名与类型都符合枚举特征的列；取值查询走白名单标识符 +
+    进程内缓存（枚举取值极少变化），失败静默降级为无样本。
+    """
+    limit = settings.sample_values_per_column
+    if limit <= 0:
+        return schema_columns
+    enriched: list[SchemaColumnContext] = []
+    for column in schema_columns:
+        if _is_sample_value_candidate(column):
+            values = _load_sample_values(column.table_name, column.column_name, limit)
+            if values:
+                column = column.model_copy(update={"sample_values": values})
+        enriched.append(column)
+    return enriched
+
+
+def _is_sample_value_candidate(column: SchemaColumnContext) -> bool:
+    name = column.column_name.lower()
+    data_type = (column.data_type or "").lower()
+    return any(token in name for token in _SAMPLE_VALUE_COLUMN_TOKENS) and any(
+        token in data_type for token in _SAMPLE_VALUE_DATA_TYPES
+    )
+
+
+def _load_sample_values(table_name: str, column_name: str, limit: int) -> list[str]:
+    # 标识符不可参数化：仅允许安全字符，防注入。
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", table_name) or not re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_]*", column_name
+    ):
+        return []
+    cache_key = (table_name, column_name)
+    with _sample_values_lock:
+        if cache_key in _sample_values_cache:
+            return list(_sample_values_cache[cache_key])
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                f'SELECT DISTINCT "{column_name}" FROM "{table_name}" '
+                f'WHERE "{column_name}" IS NOT NULL LIMIT %s',
+                (limit + 1,),
+            )
+            rows = [str(row[0]) for row in cursor.fetchall()]
+    except Exception:  # noqa: BLE001 - 样本值缺失不阻断检索
+        logger.warning("sample values lookup degraded for %s.%s", table_name, column_name, exc_info=True)
+        return []
+    # 超过上限说明不是低基数枚举列，不注入以免误导模型。
+    values = sorted(rows)[:limit] if len(rows) <= limit else []
+    with _sample_values_lock:
+        _sample_values_cache[cache_key] = list(values)
+    return values
+
 
 def build_retrieval_context(
     question: str,
@@ -23,10 +95,25 @@ def build_retrieval_context(
     query_plan: dict | None = None,
     *,
     question_vector: list[float] | None = None,
+    precomputed_metrics: list[MetricContext] | None = None,
+    precomputed_schema: list[SchemaColumnContext] | None = None,
 ) -> RetrievalContext:
-    """组合指标口径和表结构上下文，供 Agent 后续节点使用。"""
-    metrics = retrieve_metrics(question, question_vector=question_vector)
-    schema_columns = retrieve_schema(question, metrics, question_vector=question_vector)
+    """组合指标口径和表结构上下文，供 Agent 后续节点使用。
+
+    precomputed_*：意图解析阶段并行预取的检索产物（计划 2b）；提供时跳过
+    重复检索，只做 rerank、契约合并与关系推断。
+    """
+    metrics = (
+        precomputed_metrics
+        if precomputed_metrics is not None
+        else retrieve_metrics(question, question_vector=question_vector)
+    )
+    schema_columns = (
+        precomputed_schema
+        if precomputed_schema is not None
+        else retrieve_schema(question, metrics, question_vector=question_vector)
+    )
+    schema_columns = attach_sample_values(schema_columns)
     metrics, schema_columns, rerank_diagnostics = rerank_context(question, metrics, schema_columns)
     contracts = semantic_contracts or []
     plan = query_plan or {}

@@ -2,14 +2,16 @@ from functools import lru_cache
 import re
 from time import perf_counter
 from typing import Any, TypedDict
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from langgraph.graph import END, StateGraph
 from sqlglot import exp, parse_one
 from sqlglot.errors import ParseError
 
+from backend.app.core.background import submit_bookkeeping
 from backend.app.core.config import settings
 from backend.app.core.model_adapter import ModelAdapter
+from backend.app.db.repositories.memory_repository import SqlMemoryRepository
 from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.schemas.retrieval import RetrievalContext
 from backend.app.schemas.sql_generation import GeneratedSql
@@ -47,12 +49,15 @@ BASE_TRANSACTION_TABLES = {
 
 class AnalysisGraphState(TypedDict, total=False):
     question: str
+    run_id: UUID
     app_user_id: UUID | None
     original_question: str
     question_intent: dict[str, Any]
     node_timings: dict[str, int]
     started: float
     question_vector: list[float]
+    precomputed_retrieval: Any
+    cancel_event: Any
     retrieval_context: RetrievalContext
     metric_names: list[str]
     memory_candidates: list[Any]
@@ -83,9 +88,8 @@ def _build_analysis_graph():
     graph.add_node("guard_sql", _guard_sql_node)
     graph.add_node("explain_sql", _explain_sql_node)
     graph.add_node("execute_sql", _execute_sql_node)
-    graph.add_node("update_memory", _update_memory_node)
     graph.add_node("present_result", _present_result_node)
-    graph.add_node("log_run", _log_run_node)
+    graph.add_node("bookkeeping", _bookkeeping_node)
 
     graph.set_entry_point("retrieve_context")
     graph.add_edge("retrieve_context", "plan_memory_reuse")
@@ -107,19 +111,20 @@ def _build_analysis_graph():
     )
     graph.add_edge("repair_model_sql", "validate_generated_sql_intent")
     graph.add_edge("guard_sql", "explain_sql")
+    # 记忆写回与日志（bookkeeping）移到 present_result 之后：
+    # 响应先就绪，约 4.6s 的簿记工作不再占用用户可感知延迟（计划 1c）。
     graph.add_conditional_edges(
         "explain_sql",
         _route_explain_result,
-        {"execute_sql": "execute_sql", "repair_model_sql": "repair_model_sql", "update_memory": "update_memory"},
+        {"execute_sql": "execute_sql", "repair_model_sql": "repair_model_sql", "update_memory": "present_result"},
     )
     graph.add_conditional_edges(
         "execute_sql",
         _route_execution_result,
-        {"repair_model_sql": "repair_model_sql", "update_memory": "update_memory"},
+        {"repair_model_sql": "repair_model_sql", "update_memory": "present_result"},
     )
-    graph.add_edge("update_memory", "present_result")
-    graph.add_edge("present_result", "log_run")
-    graph.add_edge("log_run", END)
+    graph.add_edge("present_result", "bookkeeping")
+    graph.add_edge("bookkeeping", END)
     return graph.compile()
 
 
@@ -127,6 +132,8 @@ def run_analysis_graph(
     question: str,
     app_user_id: UUID | None = None,
     parsed_intent: ParsedQuestionIntent | None = None,
+    precomputed_retrieval: Any = None,
+    cancel_event: Any = None,
 ) -> AnalyzeResponse:
     """正式 LangGraph 编排：召回、记忆复用、SQL 生成、Guard、执行、呈现和日志。"""
     started = perf_counter()
@@ -139,11 +146,14 @@ def run_analysis_graph(
     final_state = _analysis_graph().invoke(
         {
             "question": effective_question,
+            "run_id": uuid4(),
             "app_user_id": app_user_id,
             "original_question": question,
             "question_intent": intent.model_dump(),
             "node_timings": {"intent_parse": latency_ms},
             "started": started,
+            "precomputed_retrieval": precomputed_retrieval,
+            "cancel_event": cancel_event,
         }
     )
     response = final_state["response"]
@@ -170,17 +180,33 @@ def _slowest_node(timings: dict[str, int]) -> dict[str, Any]:
     return {"name": name, "latency_ms": latency_ms}
 
 
+def _raise_if_cancelled(state: AnalysisGraphState) -> None:
+    """用户断开/取消后立即停止后续昂贵节点（计划 2d）。"""
+    cancel_event = state.get("cancel_event")
+    if cancel_event is not None and cancel_event.is_set():
+        from backend.app.services.agent_service import AnalysisCancelledError
+
+        raise AnalysisCancelledError("分析已被取消")
+
+
 def _retrieve_context_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
+    _raise_if_cancelled(state)
     question = state["question"]
-    # 问题只 embed 一次：同一向量供指标召回、schema 召回、SQL Memory 召回与记忆写入复用，
-    # 避免同一问题触发 3~4 次远程 embedding 调用。
-    question_vector = embed_question(question)
+    precomputed = state.get("precomputed_retrieval")
+    # 问题只 embed 一次：同一向量供指标召回、schema 召回、SQL Memory 召回与记忆写入复用；
+    # 意图解析阶段已并行预取时（计划 2b）直接复用其产物，不再重复检索。
+    if precomputed is not None and getattr(precomputed, "question_vector", None) is not None:
+        question_vector = list(precomputed.question_vector)
+    else:
+        question_vector = embed_question(question)
     retrieval_context = build_retrieval_context(
         question,
         semantic_contracts=state.get("question_intent", {}).get("resolved_contracts", []),
         query_plan=state.get("question_intent", {}).get("query_plan", {}),
         question_vector=question_vector,
+        precomputed_metrics=getattr(precomputed, "metrics", None),
+        precomputed_schema=getattr(precomputed, "schema_columns", None),
     )
     metric_names = [metric.metric_name for metric in retrieval_context.metrics]
     return {
@@ -193,6 +219,7 @@ def _retrieve_context_node(state: AnalysisGraphState) -> AnalysisGraphState:
 
 def _plan_memory_reuse_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
+    _raise_if_cancelled(state)
     question = state["question"]
     retrieval_context = state["retrieval_context"]
     metric_names = state["metric_names"]
@@ -335,8 +362,33 @@ def _verify_memory_sql(
     }
 
 
+def _verified_few_shot_examples(state: AnalysisGraphState) -> list[dict[str, str]]:
+    """取 top-2 已验证记忆作为生成示例（计划 1d）。
+
+    近邻 few-shot 是 text-to-SQL 的经典提准手段；只用 verified 记忆，
+    避免把未审核 SQL 的错误模式当范例传播。
+    """
+    candidates = state.get("memory_candidates") or []
+    examples: list[dict[str, str]] = []
+    for candidate in candidates:
+        memory = getattr(candidate, "memory", None)
+        if memory is None or memory.trust_status != "verified":
+            continue
+        sql_lines = memory.final_sql.strip().splitlines()
+        examples.append(
+            {
+                "question": memory.canonical_question,
+                "sql": "\n".join(sql_lines[:40]),
+            }
+        )
+        if len(examples) >= 2:
+            break
+    return examples
+
+
 def _generate_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
+    _raise_if_cancelled(state)
     question = state["question"]
     retrieval_context = state["retrieval_context"]
     reuse_plan = state["reuse_plan"]
@@ -345,6 +397,7 @@ def _generate_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         retrieval_context=retrieval_context,
         reuse_plan=reuse_plan,
         question_intent=state.get("question_intent"),
+        few_shot_examples=_verified_few_shot_examples(state),
     )
     selected_sql = generated_sql.sql
     if reuse_plan.memory_hit:
@@ -410,6 +463,7 @@ def _validate_generated_sql_intent_node(state: AnalysisGraphState) -> AnalysisGr
 
 def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
+    _raise_if_cancelled(state)
     generated_sql = state["generated_sql"]
     verification = state.get("sql_intent_verification", {})
     execution = state.get("execution")
@@ -442,6 +496,7 @@ def _repair_model_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
         repair_context=repair_context,
         adapter=state.get("_test_adapter"),
         question_intent=state.get("question_intent"),
+        few_shot_examples=_verified_few_shot_examples(state),
     )
     warnings = [*generated_sql.warnings, *repaired_sql.warnings]
     return {
@@ -478,6 +533,7 @@ def _guard_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
 
 def _execute_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
+    _raise_if_cancelled(state)
     guard = state["guard"]
     execution = execute_guarded_sql(guard)
     latency_ms = int((perf_counter() - state["started"]) * 1000)
@@ -508,40 +564,72 @@ def _explain_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     return updates
 
 
-def _update_memory_node(state: AnalysisGraphState) -> AnalysisGraphState:
-    started = perf_counter()
+def _memory_update_work(state: AnalysisGraphState) -> Any:
+    """记忆写回（成功沉淀 / 失败降级）。返回 updated_memory_id 供日志使用。"""
     execution = state["execution"]
     guard = state["guard"]
     selected_sql = state["selected_sql"]
-    updated_memory_id = None
-    if execution.status == "success" and guard.allowed:
-        query_spec = _query_spec_from_intent(state.get("question_intent"))
-        updated_memory = upsert_successful_sql_memory(
-            question=state["question"],
-            sql_template=guard.final_sql or selected_sql,
-            final_sql=guard.final_sql or selected_sql,
-            parameters={
-                "generation_path": state["generated_sql"].path,
-                "model_provider": state["generated_sql"].model_provider,
-                "model_name": state["generated_sql"].model_name,
-            },
-            tables=sorted(_extract_sql_tables(guard.final_sql or selected_sql)),
-            metrics=query_spec.metrics if query_spec else state["metric_names"],
-            dimensions=query_spec.dimensions if query_spec else [],
-            result_columns=execution.columns,
-            row_count=execution.row_count,
-            latency_ms=execution.latency_ms,
-            context_fingerprints=build_sql_memory_context_fingerprints(
-                state["retrieval_context"],
-                state.get("question_intent", {}).get("resolved_contracts", []),
-            ),
-            question_vector=state.get("question_vector"),
+    generated_sql = state["generated_sql"]
+    reuse_plan = state["reuse_plan"]
+
+    # 复用已验证记忆却执行失败：打断状态机并降级（计划 1a 的降级臂）。
+    if (
+        execution.status != "success"
+        and generated_sql.path == "memory_reuse_verified"
+        and reuse_plan.selected_memory_id is not None
+    ):
+        SqlMemoryRepository().record_failure(
+            reuse_plan.selected_memory_id,
+            reason=execution.error_category or "execution_failure",
         )
-        updated_memory_id = updated_memory.id
-    return {
-        "updated_memory_id": updated_memory_id,
-        "node_timings": _add_node_timing(state, "memory_update", started),
-    }
+        return None
+
+    if execution.status != "success" or not guard.allowed:
+        return None
+
+    query_spec = _query_spec_from_intent(state.get("question_intent"))
+    updated_memory = upsert_successful_sql_memory(
+        question=state["question"],
+        sql_template=guard.final_sql or selected_sql,
+        final_sql=guard.final_sql or selected_sql,
+        parameters={
+            "generation_path": generated_sql.path,
+            "model_provider": generated_sql.model_provider,
+            "model_name": generated_sql.model_name,
+        },
+        tables=sorted(_extract_sql_tables(guard.final_sql or selected_sql)),
+        metrics=query_spec.metrics if query_spec else state["metric_names"],
+        dimensions=query_spec.dimensions if query_spec else [],
+        result_columns=execution.columns,
+        row_count=execution.row_count,
+        latency_ms=execution.latency_ms,
+        context_fingerprints=build_sql_memory_context_fingerprints(
+            state["retrieval_context"],
+            state.get("question_intent", {}).get("resolved_contracts", []),
+        ),
+        question_vector=state.get("question_vector"),
+    )
+    return updated_memory.id
+
+
+def _bookkeeping_node(state: AnalysisGraphState) -> AnalysisGraphState:
+    """响应之后的簿记：记忆写回 + 运行日志。
+
+    BOOKKEEPING_ASYNC=true 时提交后台线程（不阻塞响应）；
+    false 时同步执行（测试与需要强一致的场景）。
+    """
+    started = perf_counter()
+    snapshot: AnalysisGraphState = dict(state)
+
+    def _work() -> None:
+        updated_memory_id = _memory_update_work(snapshot)
+        _log_run_work(snapshot, updated_memory_id)
+
+    if settings.bookkeeping_async:
+        submit_bookkeeping(_work, description="analysis bookkeeping")
+    else:
+        _work()
+    return {"node_timings": _add_node_timing(state, "bookkeeping_dispatch", started)}
 
 
 def _present_result_node(state: AnalysisGraphState) -> AnalysisGraphState:
@@ -570,13 +658,15 @@ def _present_result_node(state: AnalysisGraphState) -> AnalysisGraphState:
         reuse_plan=state["reuse_plan"],
         result_contract=result_contract,
     )
+    # run_id 随响应返回：评测与前端不再靠"问题文本匹配最近 run"这种脆弱关联（计划 4d）。
+    response = response.model_copy(update={"run_id": state.get("run_id")})
     return {
         "response": response,
         "node_timings": _add_node_timing(state, "present_result", started),
     }
 
 
-def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
+def _log_run_work(state: AnalysisGraphState, updated_memory_id: Any) -> None:
     guard = state["guard"]
     execution = state["execution"]
     retrieval_context = state["retrieval_context"]
@@ -584,6 +674,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
     generated_sql = state["generated_sql"]
     selected_sql = state["selected_sql"]
     _log_analysis_run(
+        run_id=state.get("run_id"),
         app_user_id=state.get("app_user_id"),
         question=state.get("original_question", state["question"]),
         rewritten_question=state["question"],
@@ -602,7 +693,7 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
         model_latency_ms=generated_sql.model_latency_ms,
         generated_sql_text=selected_sql,
         sql_candidates=state.get("sql_candidates", []),
-        updated_memory_id=state["updated_memory_id"],
+        updated_memory_id=updated_memory_id,
         error_message=execution.error_message or "; ".join(guard.errors) or None,
         metric_count=len(retrieval_context.metrics),
         schema_column_count=len(retrieval_context.schema_columns),
@@ -618,11 +709,11 @@ def _log_run_node(state: AnalysisGraphState) -> AnalysisGraphState:
         explain=state.get("explain"),
         node_timings=state.get("node_timings", {}),
     )
-    return {}
 
 
 def _log_analysis_run(
     *,
+    run_id: UUID | None = None,
     app_user_id: UUID | None,
     question: str,
     rewritten_question: str | None,
@@ -659,6 +750,7 @@ def _log_analysis_run(
 ) -> None:
     logger = QueryRunLogger()
     run = logger.log_run(
+        run_id=run_id,
         app_user_id=app_user_id,
         user_question=question,
         rewritten_question=rewritten_question,
@@ -813,6 +905,7 @@ def _select_generated_sql(
     model_enabled: bool | None = None,
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
+    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> GeneratedSql:
     enabled = settings.model_sql_generator_enabled if model_enabled is None else model_enabled
     if not enabled:
@@ -828,6 +921,7 @@ def _select_generated_sql(
         adapter=adapter,
         repair_context=repair_context,
         question_intent=question_intent,
+        few_shot_examples=few_shot_examples,
     )
     warnings = [*model_result.warnings]
     if model_result.sql:
@@ -843,12 +937,15 @@ def _select_generated_sql(
 
 
 def _select_generated_sql_compat(**kwargs) -> GeneratedSql:
+    """兼容旧签名的测试替身：逐个剥离其不认识的新增关键字参数。"""
+    optional_kwargs = ("few_shot_examples", "question_intent")
     try:
         return _select_generated_sql(**kwargs)
     except TypeError as exc:
-        if "question_intent" not in str(exc):
+        if not any(name in str(exc) for name in optional_kwargs):
             raise
         fallback_kwargs = dict(kwargs)
+        fallback_kwargs.pop("few_shot_examples", None)
         question_intent = fallback_kwargs.pop("question_intent", None)
         if isinstance(question_intent, dict) and question_intent.get("original_question"):
             fallback_kwargs["question"] = str(question_intent["original_question"])

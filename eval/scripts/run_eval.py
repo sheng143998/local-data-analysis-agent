@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import os
 import re
 from argparse import ArgumentParser
@@ -425,14 +426,29 @@ def write_report(report: dict[str, Any], path: Path = REPORT_PATH) -> None:
 
 
 def _write_json_atomic(payload: dict[str, Any], path: Path) -> None:
-    """评测进程被中断时，保留上一份完整 JSON，不能留下半份报告。"""
+    """评测进程被中断时，保留上一份完整 JSON，不能留下半份报告。
+
+    Windows 上目标文件被编辑器/同步进程占用时 replace 可能抛
+    PermissionError；带退避重试三次，仍失败则落到 .fallback.json，
+    绝不让完整评测结果静默丢失（2026-07-26 实际发生过报告未刷新）。
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
     temporary_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    temporary_path.replace(path)
+    for attempt in range(3):
+        try:
+            temporary_path.replace(path)
+            return
+        except (PermissionError, OSError):
+            if attempt == 2:
+                fallback = path.with_suffix(f"{path.suffix}.fallback.json")
+                temporary_path.replace(fallback)
+                print(f"warning: report locked, wrote to {fallback}")
+                return
+            time.sleep(0.5 * (attempt + 1))
 
 
 def _checkpoint_payload(cases: list[EvalCase], results: list[EvalCaseResult]) -> dict[str, Any]:

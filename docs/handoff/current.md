@@ -1338,3 +1338,12 @@
 - 验证：README 无 BOM UTF-8；11 个本地链接和 8 个 npm scripts 静态检查通过；`git diff --check` 通过。
 - 风险：当前没有公开产品截图；阶段性评测数字容易随模型和数据变化，因此首页只提供可复现命令和报告入口。
 - 交付：用户确认直接推送后，`main` 已成功推送至 `origin/main`；远端从 `e5618a2` 更新到 `7a89ba1`，包含 README 提交 `32a675f`、交付记录提交 `7a89ba1` 和既有提交 `07272ca`。
+
+## 工作区全部改动提交交付（已完成，待 Git 推送）
+
+- 计划：`docs/plans/2026-07-30-commit-all-worktree-changes.md`。
+- 范围：按用户要求提交当前全部已修改、删除和未跟踪文件，包括第二轮 Agent 编排与性能优化、SQL Memory 生命周期、migration `017`、清理脚本、测试、评测调整和中文文档。
+- 完成：SQL Memory 生命周期与精确快路径、意图/检索并行、异步簿记、Embedding/样本缓存、migration `017`、数据清理脚本、回归测试和第二轮中文文档已整理为一个交付单元；详情见 `docs/modules/2026-07-30-commit-all-worktree-changes.md`。
+- 验证：migration `017` 应用成功；focused tests `52 passed`；前端构建、清理 dry-run、compileall 和差异检查通过；标准评测写出完整 20-case 报告（`19/20` strict）。
+- 未通过：全量 pytest 在 300 秒内未退出；E2E smoke 因本机开启鉴权且脚本未登录返回 `401`；标准评测报告完整但 Runner 在 300 秒内未退出。
+- 风险：需要后续定位测试/评测进程退出阻塞并更新鉴权 E2E；生产应用 migration `017` 前应备份重复 SQL Memory 数据。

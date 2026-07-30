@@ -20,6 +20,8 @@ class SchemaColumnContext(BaseModel):
     business_meaning: str
     semantic_score: float = 0
     score: float = 0
+    # 低基数枚举列的真实取值样本（计划 3b-lite）；空表示未采样或非枚举列。
+    sample_values: list[str] = Field(default_factory=list)
 
 
 class TableRelationshipContext(BaseModel):

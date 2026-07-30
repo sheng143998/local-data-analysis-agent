@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from backend.app.core.config import settings
 from backend.app.core.embedding_adapter import EmbeddingAdapter, EmbeddingRequest
 from backend.app.db.connection import get_connection
 
@@ -19,14 +22,54 @@ class VectorCandidate:
     score: float
 
 
+_embedding_cache: "OrderedDict[tuple[str, str, str], list[float]]" = OrderedDict()
+_embedding_cache_lock = threading.Lock()
+
+
+def clear_embedding_cache() -> None:
+    with _embedding_cache_lock:
+        _embedding_cache.clear()
+
+
 def embed_question(question: str, *, adapter: EmbeddingAdapter | None = None) -> list[float]:
-    """把问题 embed 成向量；一次请求内应只调用一次，向量向下游检索复用。"""
+    """把问题 embed 成向量；一次请求内应只调用一次，向量向下游检索复用。
+
+    进程内 LRU（计划 4c）：重复问题（评测、仪表盘刷新、快路径回退）不再
+    重复付远程 embedding 的延迟与费用；EMBEDDING_CACHE_SIZE=0 时禁用。
+    """
     if not question.strip():
         return []
-    response = (adapter or EmbeddingAdapter()).embed(EmbeddingRequest(texts=[question]))
+    active_adapter = adapter or EmbeddingAdapter()
+    adapter_config = getattr(active_adapter, "config", None)
+    if adapter_config is None:
+        # 测试替身或自定义适配器没有标准配置：不参与缓存，直接调用。
+        response = active_adapter.embed(EmbeddingRequest(texts=[question]))
+        if not response.ok or not response.vectors:
+            return []
+        return response.vectors[0]
+    cache_size = settings.embedding_cache_size
+    cache_key = (
+        adapter_config.provider,
+        adapter_config.model,
+        question.strip(),
+    )
+    if cache_size > 0:
+        with _embedding_cache_lock:
+            cached = _embedding_cache.get(cache_key)
+            if cached is not None:
+                _embedding_cache.move_to_end(cache_key)
+                return list(cached)
+    response = active_adapter.embed(EmbeddingRequest(texts=[question]))
     if not response.ok or not response.vectors:
         return []
-    return response.vectors[0]
+    vector = response.vectors[0]
+    if cache_size > 0:
+        with _embedding_cache_lock:
+            _embedding_cache[cache_key] = list(vector)
+            _embedding_cache.move_to_end(cache_key)
+            while len(_embedding_cache) > cache_size:
+                _embedding_cache.popitem(last=False)
+    return vector
 
 
 def retrieve_metric_vector_candidates(

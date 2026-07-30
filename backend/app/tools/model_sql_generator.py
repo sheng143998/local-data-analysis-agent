@@ -20,6 +20,7 @@ def generate_sql_with_model(
     adapter: ModelAdapter | None = None,
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
+    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> GeneratedSql:
     """通过统一 ModelAdapter 生成 SQL 文本，但不执行 SQL。"""
     route = route_model("sql_repair" if repair_context else "sql_generation")
@@ -36,6 +37,7 @@ def generate_sql_with_model(
         reuse_plan,
         repair_context,
         question_intent=question_intent,
+        few_shot_examples=few_shot_examples,
     )
     response = model_adapter.chat(
         ModelRequest(
@@ -77,6 +79,7 @@ def build_sql_generation_messages(
     reuse_plan: SqlReusePlan,
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
+    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> list[ModelMessage]:
     return [
         ModelMessage(role="system", content=_system_prompt()),
@@ -88,6 +91,7 @@ def build_sql_generation_messages(
                 reuse_plan,
                 repair_context,
                 question_intent=question_intent,
+                few_shot_examples=few_shot_examples,
             ),
         ),
     ]
@@ -99,6 +103,7 @@ def build_sql_generation_payload(
     reuse_plan: SqlReusePlan,
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
+    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     metrics = [
         {
@@ -117,9 +122,17 @@ def build_sql_generation_payload(
             "column": column.column_name,
             "type": column.data_type,
             "meaning": column.business_meaning or column.description,
+            **({"values": column.sample_values} if getattr(column, "sample_values", None) else {}),
         }
         for column in retrieval_context.schema_columns[:MAX_SCHEMA_FIELDS_IN_PROMPT]
     ]
+    # 修复请求只携带相关表的字段与关系（计划 2c）：全量重发上下文让 11 秒级
+    # 的修复调用白白变慢，且与"只修列出的问题"目标相悖。
+    if repair_context:
+        relevant_tables = _repair_relevant_tables(repair_context, question_intent, retrieval_context)
+        if relevant_tables:
+            slimmed_fields = [item for item in fields if item["table"] in relevant_tables]
+            fields = slimmed_fields or fields
     relationships = [
         {
             "left": f"{relationship.left_table}.{relationship.left_column}",
@@ -130,6 +143,15 @@ def build_sql_generation_payload(
         }
         for relationship in retrieval_context.table_relationships
     ]
+    if repair_context:
+        relevant_tables = _repair_relevant_tables(repair_context, question_intent, retrieval_context)
+        if relevant_tables:
+            slimmed_relationships = [
+                item
+                for item, relationship in zip(relationships, retrieval_context.table_relationships)
+                if relationship.left_table in relevant_tables and relationship.right_table in relevant_tables
+            ]
+            relationships = slimmed_relationships or relationships
     payload = {
         "question": question,
         "question_intent": _compact_question_intent(question_intent),
@@ -222,6 +244,16 @@ def build_sql_generation_payload(
                 else f"当前问题有明确时间范围，SQL WHERE 必须包含：{time_filter}；将 {{time_field}} 替换为相关的已允许时间字段。"
             )
         )
+    if any("values" in item for item in fields):
+        payload["requirements"].append(
+            "schema_fields 中带 values 的字段给出了数据库真实取值样本；对这些字段写过滤条件时必须使用样本中的值，不要凭空猜测取值"
+        )
+    if few_shot_examples:
+        # 已验证记忆作为近邻 few-shot 示例（计划 1d）：只供风格与口径参考。
+        payload["verified_examples"] = few_shot_examples
+        payload["requirements"].append(
+            "verified_examples 是已验证的历史问答范例，可参考其口径与写法；但本次 SQL 必须严格按当前 query_plan 生成，不得照抄不适用的过滤或时间范围"
+        )
     if repair_context:
         payload["repair_context"] = repair_context
         repair_rules = _repair_rules(repair_context)
@@ -274,6 +306,7 @@ def _user_prompt(
     reuse_plan: SqlReusePlan,
     repair_context: dict[str, Any] | None = None,
     question_intent: dict[str, Any] | None = None,
+    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> str:
     payload = build_sql_generation_payload(
         question,
@@ -281,9 +314,28 @@ def _user_prompt(
         reuse_plan,
         repair_context,
         question_intent=question_intent,
+        few_shot_examples=few_shot_examples,
     )
     # 不缩进：面向模型的 JSON 载荷不需要排版，indent=2 会平白多出约 30% 提示词 token。
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def _repair_relevant_tables(
+    repair_context: dict[str, Any],
+    question_intent: dict[str, Any] | None,
+    retrieval_context: RetrievalContext,
+) -> set[str]:
+    """修复请求的相关表 = 计划 entities ∪ 上一版 SQL 引用过的召回表。"""
+    relevant: set[str] = set()
+    raw_plan = (question_intent or {}).get("query_plan")
+    if isinstance(raw_plan, dict):
+        relevant.update(str(item) for item in raw_plan.get("entities", []) or [])
+    previous_sql = str(repair_context.get("previous_sql") or "").lower()
+    if previous_sql:
+        relevant.update(
+            table for table in retrieval_context.tables if table and table.lower() in previous_sql
+        )
+    return relevant
 
 
 def _relevant_metric_semantics(

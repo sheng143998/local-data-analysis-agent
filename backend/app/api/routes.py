@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -13,7 +14,7 @@ from backend.app.api.metrics import router as metrics_router
 from backend.app.api.runs import router as runs_router
 from backend.app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
 from backend.app.schemas.auth import AuthPrincipal
-from backend.app.services.agent_service import AgentService, AnalysisUnavailableError
+from backend.app.services.agent_service import AgentService, AnalysisCancelledError, AnalysisUnavailableError
 
 
 router = APIRouter()
@@ -50,14 +51,20 @@ async def analyze_stream(payload: AnalyzeRequest, principal: AuthPrincipal = Dep
     async def event_source():
         queue: asyncio.Queue[tuple[str, dict]] = asyncio.Queue()
         loop = asyncio.get_running_loop()
+        cancel_event = threading.Event()
 
         def on_stage(stage: dict[str, str]) -> None:
             loop.call_soon_threadsafe(queue.put_nowait, ("stage", stage))
 
         async def run_service() -> None:
             try:
-                response = await asyncio.to_thread(agent_service.analyze, payload, owner_id, on_stage)
+                response = await asyncio.to_thread(
+                    agent_service.analyze, payload, owner_id, on_stage, cancel_event
+                )
                 await queue.put(("result", response.model_dump(mode="json")))
+            except AnalysisCancelledError:
+                # 用户主动断开：无人接收，安静收尾即可。
+                pass
             except AnalysisUnavailableError as exc:
                 await queue.put(("error", {"status": 503, "detail": str(exc)}))
             except HTTPException as exc:
@@ -76,7 +83,9 @@ async def analyze_stream(payload: AnalyzeRequest, principal: AuthPrincipal = Dep
                 if event == "done":
                     break
         finally:
-            # 浏览器断开只停止 SSE 等待；已提交的只读分析继续受既有超时控制。
+            # 浏览器断开：置取消标志让流水线在下一个节点边界主动停下（计划 2d），
+            # 不再让已提交的分析白白跑完占用线程池。
+            cancel_event.set()
             if not task.done():
                 task.cancel()
 

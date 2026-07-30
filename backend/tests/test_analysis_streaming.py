@@ -43,7 +43,7 @@ def _events(body: str) -> list[tuple[str, dict]]:
 
 
 def test_analysis_stream_sends_real_stages_then_result_and_done(monkeypatch) -> None:
-    def fake_analyze(payload, app_user_id=None, on_stage=None):
+    def fake_analyze(payload, app_user_id=None, on_stage=None, cancel_event=None):
         assert app_user_id is None
         assert on_stage is not None
         on_stage({"name": "加载会话", "status": "running"})

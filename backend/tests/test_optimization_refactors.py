@@ -24,6 +24,7 @@ from backend.app.schemas.sql_validation import SqlValidationRequest
 
 
 def test_connection_pool_reuses_connections() -> None:
+    db_connection.close_all_pools()  # 冷启动，避免其它用例留下的多连接干扰复用断言
     with db_connection.get_connection() as first:
         first_id = id(first)
         first.cursor().execute("SELECT 1")
@@ -34,6 +35,7 @@ def test_connection_pool_reuses_connections() -> None:
 
 
 def test_connection_pool_discards_connection_on_error() -> None:
+    db_connection.close_all_pools()
     with db_connection.get_connection() as first:
         first_id = id(first)
     with pytest.raises(RuntimeError):

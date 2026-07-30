@@ -131,6 +131,21 @@ class Settings(BaseModel):
     auth_cookie_secure: bool = Field(default_factory=lambda: _env_bool("AUTH_COOKIE_SECURE", default=False))
     auth_dev_user_email: str = Field(default_factory=lambda: os.getenv("AUTH_DEV_USER_EMAIL", "local-admin@localhost"))
     redis_url: str = Field(default_factory=lambda: os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
+    # --- 第二轮优化：记忆生命周期与编排 ---
+    graph_memory_first: bool = Field(default_factory=lambda: _env_bool("GRAPH_MEMORY_FIRST", default=True))
+    bookkeeping_async: bool = Field(default_factory=lambda: _env_bool("BOOKKEEPING_ASYNC", default=True))
+    memory_auto_verify_threshold: int = Field(
+        default_factory=lambda: int(os.getenv("MEMORY_AUTO_VERIFY_THRESHOLD", "3")), ge=1, le=100
+    )
+    embedding_cache_size: int = Field(
+        default_factory=lambda: int(os.getenv("EMBEDDING_CACHE_SIZE", "512")), ge=0, le=100000
+    )
+    parallel_intent_retrieval: bool = Field(
+        default_factory=lambda: _env_bool("PARALLEL_INTENT_RETRIEVAL", default=True)
+    )
+    sample_values_per_column: int = Field(
+        default_factory=lambda: int(os.getenv("SAMPLE_VALUES_PER_COLUMN", "8")), ge=0, le=50
+    )
     conversation_retention_hours: int = Field(
         default_factory=lambda: int(os.getenv("CONVERSATION_RETENTION_HOURS", "72")), ge=1, le=168
     )

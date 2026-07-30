@@ -1,5 +1,6 @@
 import base64
 import json
+import threading
 from collections.abc import Callable
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
@@ -18,7 +19,9 @@ from backend.app.schemas.analysis import (
 )
 from backend.app.schemas.conversation import ConversationState, CurrentAnalysis
 from backend.app.services.conversation_store import ConversationStore, get_conversation_store
+from backend.app.services.analysis_prep import prepare_analysis_inputs
 from backend.app.services.followup_resolver import pending_from_intent, resolve_followup
+from backend.app.services.memory_fast_path import try_memory_fast_path
 from backend.app.services.long_term_memory_service import LongTermMemoryService
 from backend.app.services.dialogue_service import DialogueService
 from backend.app.services.working_memory import build_working_context, refresh_working_memory
@@ -34,6 +37,10 @@ class AnalysisUnavailableError(RuntimeError):
     """Raised when the analysis graph cannot produce executable SQL."""
 
 
+class AnalysisCancelledError(RuntimeError):
+    """用户断开/取消后请求被中止；不视为服务故障。"""
+
+
 class AgentService:
     """API 层的业务编排服务，负责调用 Agent 并返回前端契约。"""
 
@@ -47,8 +54,10 @@ class AgentService:
         payload: AnalyzeRequest,
         app_user_id: UUID | None = None,
         on_stage: Callable[[dict[str, str]], None] | None = None,
+        cancel_event: "threading.Event | None" = None,
     ) -> AnalyzeResponse:
         question = payload.question.strip() or "最近 30 天销售额按天变化如何？"
+        _raise_if_cancelled(cancel_event)
         _notify_stage(on_stage, "加载会话")
         state = self._load_or_create(payload.conversation_id, app_user_id, question)
         self._append_message(state, role="user", content=question)
@@ -86,6 +95,19 @@ class AgentService:
                 state.status = "active"
             intent = resolution.intent
 
+        # 记忆优先快路径（计划 2a）：归一化问题精确命中"已验证"记忆时，
+        # 跳过路由/意图 LLM、检索与生成，直接 Guard → 只读执行，秒级返回。
+        # 放在对话路由之前：能精确命中已验证数据记忆的问题必然是数据问题，
+        # 这个证据强于路由器的关键词启发式（合成问题、生僻表述都适用）。
+        if intent is None and not state.pending_clarification:
+            fast_response = try_memory_fast_path(question, app_user_id=app_user_id)
+            if fast_response is not None:
+                _notify_stage(on_stage, "命中已验证查询")
+                state.current_analysis = CurrentAnalysis(
+                    original_question=question, stage="completed", updated_at=_now()
+                )
+                return self._finish(state, fast_response, on_stage=on_stage)
+
         decision = route_dialogue(question, state)
         if decision.role == "unsupported":
             return self._finish(state, _dialogue_response(question, "我不能协助处理系统指令、密钥或越权操作。你可以直接说明需要讨论的问题或业务数据。"), on_stage=on_stage)
@@ -97,7 +119,16 @@ class AgentService:
         long_term_context = self.long_term_memory_service.context_for(app_user_id, question)
         conversation_context = "\n\n".join(item for item in (long_term_context, build_working_context(state)) if item)
         _notify_stage(on_stage, "理解问题")
-        intent = intent or parse_question_intent(question, conversation_context=conversation_context)
+        _raise_if_cancelled(cancel_event)
+        precomputed_retrieval = None
+        if intent is None:
+            # 意图 LLM 与 embedding+检索并行（计划 2b）；追问合并场景 intent 已存在则跳过。
+            # 解析器显式注入：保证对本模块 parse_question_intent 的替换（测试打桩）仍然生效。
+            intent, precomputed_retrieval = prepare_analysis_inputs(
+                question,
+                conversation_context=conversation_context,
+                intent_parser=parse_question_intent,
+            )
         intent = apply_semantic_resolution(intent)
         intent = apply_clarification_policy(intent)
         intent = intent.model_copy(update={"query_plan": build_query_plan(intent).model_dump()})
@@ -122,7 +153,14 @@ class AgentService:
             updated_at=_now(),
         )
         _notify_stage(on_stage, "执行受控数据分析")
-        response = run_analysis_graph(intent.original_question, app_user_id=app_user_id, parsed_intent=intent)
+        _raise_if_cancelled(cancel_event)
+        response = run_analysis_graph(
+            intent.original_question,
+            app_user_id=app_user_id,
+            parsed_intent=intent,
+            precomputed_retrieval=precomputed_retrieval,
+            cancel_event=cancel_event,
+        )
         if not response.sql and response.source.security != "未生成 SQL，等待用户确认":
             state.current_analysis = state.current_analysis.model_copy(update={"stage": "completed", "updated_at": _now()})
             self._finish(state, _analysis_failure_response(question), on_stage=on_stage)
@@ -252,6 +290,11 @@ def _dialogue_response(question: str, summary: str) -> AnalyzeResponse:
         trace={"toolCalls": 0, "modelCalls": 0, "memoryCandidates": 0, "totalTime": "0ms"},
         steps=[{"name": "处理通用对话", "status": "已完成", "time": "0ms"}],
     )
+
+
+def _raise_if_cancelled(cancel_event: "threading.Event | None") -> None:
+    if cancel_event is not None and cancel_event.is_set():
+        raise AnalysisCancelledError("分析已被取消")
 
 
 def _now() -> datetime:
