@@ -38,5 +38,5 @@
 
 ## Git 交付
 
-- README 与本任务文档提交：`5b101fd`（`更新 GitHub 首页 README`）。
+- README 与本任务文档提交：`32a675f`（`更新 GitHub 首页 README`）。
 - 未推送：任务开始时 `main` 已比 `origin/main` 领先既有提交 `07272ca`，直接推送会同时发布不属于本次 README 任务的业务代码提交，因此保留本地提交并记录边界。
