@@ -1348,3 +1348,11 @@
 - 未通过：全量 pytest 在 300 秒内未退出；E2E smoke 因本机开启鉴权且脚本未登录返回 `401`；标准评测报告完整但 Runner 在 300 秒内未退出。
 - 风险：需要后续定位测试/评测进程退出阻塞并更新鉴权 E2E；生产应用 migration `017` 前应备份重复 SQL Memory 数据。
 - 交付：主提交 `6d91afe` 已在保留远端两个脚本删除提交后成功推送到 `origin/main`。
+
+## PyCharm 启动配置（已完成）
+
+- 计划：`docs/plans/2026-08-12-pycharm-startup-configuration.md`。
+- 完成：修正 Python 解释器路径，新增 `Start All (Backend + Frontend)` 组合配置；详情见 `docs/modules/2026-08-12-pycharm-startup-configuration.md`。
+- 范围：仅修改 `.idea/runConfigurations/` 和本次计划/模块记录，不修改业务代码、数据库和本地密钥；`.idea` 被 Git 忽略，配置仅保存在本机。
+- 验证：运行配置 XML、旧路径检查、后端导入、前端生产构建和 `git diff --check` 均通过。
+- 风险：后端仍依赖 PostgreSQL、Redis（如启用）及模型/Embedding 服务；启动配置不能替代这些外部服务。
