@@ -55,6 +55,11 @@
 - 当前 `permission_hash` 直接用用户 ID，缓存命中率在多用户下会下降；后续可在行级权限稳定后改为权限范围哈希。
 - Redis 不可用时进程内 LRU 只对本进程有效，多进程部署时缓存命中率下降。
 
+## 提交
+
+- Commit：`9f7a2c9`（`feat: add query result cache and acceleration`）。
+- Push：已推送至 `origin/main`（`8ff4e6e..9f7a2c9`）。
+
 ## 后续工作
 
 - Phase 2：并发控制。

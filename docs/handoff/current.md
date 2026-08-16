@@ -14,6 +14,7 @@
   - 指标变更与 Context Refresh 后自动清空缓存。
   - Run Trace tool_calls 增加 `cache_hit` 字段。
 - Phase 1 验证：`test_cache_service.py` 5 passed；metrics/context refresh 合计 10 passed；`test_analysis_graph_sql_selection.py` 38 passed；`git diff --check` 通过。全量后端测试未在 180s 内跑完，`test_api.py` 3 条真实模型链路返回 503，属本地模型环境问题。
+- Phase 1 提交：`9f7a2c9` 已推送至 `origin/main`。
 - 下一步：Phase 2 并发控制。
 - 风险：缓存失效依赖显式清空；`permission_hash` 暂用用户 ID，多用户命中率会下降；Redis 不可用时 LRU 仅进程内有效。
 - 验证：后端测试、标准 eval、前端构建、缓存命中测试、并发 429 测试、API 401/403/404 隔离测试、飞书 Webhook/SSO 单测与手动验证。
