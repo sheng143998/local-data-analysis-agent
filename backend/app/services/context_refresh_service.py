@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Literal
 
+from backend.app.services.cache_service import get_cache_service
 from backend.app.services.embedding_sync_service import EmbeddingSyncResult, EmbeddingSyncService
 from backend.app.services.schema_sync_service import SchemaSyncResult, SchemaSyncService
 
@@ -56,6 +57,8 @@ class ContextRefreshService:
             if sync_embeddings
             else []
         )
+        # schema/合同/embedding 变化后旧查询结果可能不再准确，清空缓存保证口径一致。
+        get_cache_service().clear_all()
         return ContextRefreshResult(
             schema_result=schema_result,
             embedding_results=embedding_results,

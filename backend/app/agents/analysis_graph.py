@@ -11,6 +11,8 @@ from sqlglot.errors import ParseError
 from backend.app.core.background import submit_bookkeeping
 from backend.app.core.config import settings
 from backend.app.core.model_adapter import ModelAdapter
+from backend.app.services.cache_key_builder import build_query_cache_key
+from backend.app.services.cache_service import get_cache_service
 from backend.app.db.repositories.memory_repository import SqlMemoryRepository
 from backend.app.schemas.analysis import AnalyzeResponse
 from backend.app.schemas.retrieval import RetrievalContext
@@ -73,6 +75,8 @@ class AnalysisGraphState(TypedDict, total=False):
     explain: SqlExplainResult
     execution: SqlExecutionResult
     latency_ms: int
+    cache_key: str | None
+    cache_hit: bool
     updated_memory_id: Any
     response: AnalyzeResponse
 
@@ -535,8 +539,27 @@ def _execute_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
     started = perf_counter()
     _raise_if_cancelled(state)
     guard = state["guard"]
+
+    if state.get("cache_hit") and state.get("execution") is not None:
+        return {
+            "execution": state["execution"],
+            "latency_ms": state.get("latency_ms", int((perf_counter() - state["started"]) * 1000)),
+            "node_timings": _add_node_timing(state, "sql_execution", started),
+        }
+
     execution = execute_guarded_sql(guard)
     latency_ms = int((perf_counter() - state["started"]) * 1000)
+
+    if (
+        settings.query_cache_enabled
+        and execution.status == "success"
+        and state.get("cache_key")
+    ):
+        get_cache_service().set(
+            state["cache_key"],
+            {"execution": execution.model_dump(mode="json")},
+        )
+
     return {
         "execution": execution,
         "latency_ms": latency_ms,
@@ -545,11 +568,38 @@ def _execute_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
 
 
 def _explain_sql_node(state: AnalysisGraphState) -> AnalysisGraphState:
-    """Guard 之后先做受限 EXPLAIN，失败时以执行错误状态进入有限修复而非主查询。"""
+    """Guard 之后先查结果缓存；未命中再做受限 EXPLAIN。
+
+    缓存命中时跳过 EXPLAIN 和数据库主查询，直接复用已验证的成功结果。
+    EXPLAIN 失败时以执行错误状态进入有限修复而非主查询。
+    """
     started = perf_counter()
-    explain = explain_guarded_sql(state["guard"])
+    guard = state["guard"]
+    cache_key: str | None = None
+
+    if settings.query_cache_enabled:
+        cache_key = build_query_cache_key(
+            final_sql=guard.final_sql or state.get("selected_sql", ""),
+            query_plan=state.get("question_intent", {}).get("query_plan"),
+            app_user_id=state.get("app_user_id"),
+            resolved_contracts=state.get("question_intent", {}).get("resolved_contracts"),
+        )
+        cached = get_cache_service().get(cache_key)
+        if isinstance(cached, dict) and "execution" in cached:
+            execution = SqlExecutionResult.model_validate(cached["execution"])
+            return {
+                "execution": execution,
+                "cache_key": cache_key,
+                "cache_hit": True,
+                "explain": SqlExplainResult(status="success", latency_ms=0),
+                "node_timings": _add_node_timing(state, "sql_explain", started),
+            }
+
+    explain = explain_guarded_sql(guard)
     updates: AnalysisGraphState = {
         "explain": explain,
+        "cache_key": cache_key,
+        "cache_hit": False,
         "node_timings": _add_node_timing(state, "sql_explain", started),
     }
     if explain.status != "success":
@@ -707,6 +757,7 @@ def _log_run_work(state: AnalysisGraphState, updated_memory_id: Any) -> None:
         guard_warnings=guard.warnings,
         guard_errors=guard.errors,
         explain=state.get("explain"),
+        cache_hit=bool(state.get("cache_hit")),
         node_timings=state.get("node_timings", {}),
     )
 
@@ -746,6 +797,7 @@ def _log_analysis_run(
     guard_warnings: list[str],
     guard_errors: list[str],
     explain: SqlExplainResult | None,
+    cache_hit: bool,
     node_timings: dict[str, int],
 ) -> None:
     logger = QueryRunLogger()
@@ -846,6 +898,7 @@ def _log_analysis_run(
             "output_payload": {
                 "explain_status": explain.status if explain else "skipped",
                 "error_category": explain.error_category if explain else None,
+                "cache_hit": cache_hit,
             },
             "status": explain.status if explain else "skipped",
             "latency_ms": node_timings.get("sql_explain", 0),
@@ -853,7 +906,11 @@ def _log_analysis_run(
         {
             "tool_name": "sql_execution_tools.execute_guarded_sql",
             "input_payload": {"guard_status": guard_status},
-            "output_payload": {"execution_status": execution_status, "row_count": row_count},
+            "output_payload": {
+                "execution_status": execution_status,
+                "row_count": row_count,
+                "cache_hit": cache_hit,
+            },
             "status": execution_status,
             "latency_ms": node_timings.get("sql_execution", 0),
         },

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from backend.app.api.auth import router as auth_router
-from backend.app.api.dependencies import get_current_principal
+from backend.app.api.dependencies import get_current_principal, require_csrf, require_role
 from backend.app.api.conversations import router as conversations_router
 from backend.app.api.long_term_memories import router as long_term_memories_router
 from backend.app.api.memories import router as memories_router
@@ -15,6 +15,7 @@ from backend.app.api.runs import router as runs_router
 from backend.app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
 from backend.app.schemas.auth import AuthPrincipal
 from backend.app.services.agent_service import AgentService, AnalysisCancelledError, AnalysisUnavailableError
+from backend.app.services.cache_service import get_cache_service
 
 
 router = APIRouter()
@@ -30,6 +31,13 @@ router.include_router(runs_router)
 @router.get("/health")
 def health() -> dict[str, str | bool]:
     return {"ok": True, "service": "local-data-analysis-agent", "version": "0.1.0"}
+
+
+@router.post("/cache/clear", dependencies=[Depends(require_role("admin")), Depends(require_csrf)])
+def clear_query_cache() -> dict[str, int]:
+    """管理员手动清空查询结果缓存（schema/合同变更后也可自动失效）。"""
+    deleted = get_cache_service().clear_all()
+    return {"cleared": deleted}
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)

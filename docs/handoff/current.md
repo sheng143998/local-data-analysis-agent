@@ -1,4 +1,22 @@
-﻿# 当前 Handoff
+# 当前 Handoff
+
+## 查询加速/缓存、飞书集成、鉴权与数据隔离（Phase 1 已完成）
+
+- 计划：`docs/plans/2026-08-16-query-cache-feishu-auth-isolation.md`。
+- 目标：完成查询结果缓存与查询加速、20-90 人单实例并发控制、飞书机器人对话取数与身份绑定、鉴权登录增强和数据隔离。
+- 范围：仅单 PostgreSQL；不改 SQL Guard / EXPLAIN / 只读执行边界；不做多数据源、行级业务权限、飞书定时推送和飞书内指标编辑。
+- 当前状态：Phase 1 查询结果缓存与查询加速已完成；模块记录 `docs/modules/2026-08-16-query-cache-and-acceleration.md`。
+- Phase 1 已交付：
+  - Redis 结果缓存 + 内存 LRU fallback。
+  - 缓存 Key 绑定 SQL / Query Plan / 用户 / 合同版本 / schema 版本。
+  - 缓存接入 Guard 后、EXPLAIN 前，命中跳过 EXPLAIN 与 DB 执行。
+  - `POST /api/cache/clear` 管理员清理接口。
+  - 指标变更与 Context Refresh 后自动清空缓存。
+  - Run Trace tool_calls 增加 `cache_hit` 字段。
+- Phase 1 验证：`test_cache_service.py` 5 passed；metrics/context refresh 合计 10 passed；`test_analysis_graph_sql_selection.py` 38 passed；`git diff --check` 通过。全量后端测试未在 180s 内跑完，`test_api.py` 3 条真实模型链路返回 503，属本地模型环境问题。
+- 下一步：Phase 2 并发控制。
+- 风险：缓存失效依赖显式清空；`permission_hash` 暂用用户 ID，多用户命中率会下降；Redis 不可用时 LRU 仅进程内有效。
+- 验证：后端测试、标准 eval、前端构建、缓存命中测试、并发 429 测试、API 401/403/404 隔离测试、飞书 Webhook/SSO 单测与手动验证。
 
 ## SQL 生成成功率改进计划（进行中）
 

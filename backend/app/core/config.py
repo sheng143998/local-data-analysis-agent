@@ -131,6 +131,31 @@ class Settings(BaseModel):
     auth_cookie_secure: bool = Field(default_factory=lambda: _env_bool("AUTH_COOKIE_SECURE", default=False))
     auth_dev_user_email: str = Field(default_factory=lambda: os.getenv("AUTH_DEV_USER_EMAIL", "local-admin@localhost"))
     redis_url: str = Field(default_factory=lambda: os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
+    # --- 查询结果缓存与并发控制 ---
+    query_cache_enabled: bool = Field(default_factory=lambda: _env_bool("QUERY_CACHE_ENABLED", default=True))
+    query_cache_ttl_seconds: int = Field(
+        default_factory=lambda: int(os.getenv("QUERY_CACHE_TTL_SECONDS", "300")), ge=0, le=86400
+    )
+    query_cache_max_entries: int = Field(
+        default_factory=lambda: int(os.getenv("QUERY_CACHE_MAX_ENTRIES", "512")), ge=0, le=100000
+    )
+    query_cache_prefix: str = Field(default_factory=lambda: os.getenv("QUERY_CACHE_PREFIX", "query_cache"))
+    query_cache_schema_version: str = Field(default_factory=lambda: os.getenv("QUERY_CACHE_SCHEMA_VERSION", "v1"))
+    max_concurrent_analyses: int = Field(
+        default_factory=lambda: int(os.getenv("MAX_CONCURRENT_ANALYSES", "8")), ge=1
+    )
+    per_user_max_concurrent_analyses: int = Field(
+        default_factory=lambda: int(os.getenv("PER_USER_MAX_CONCURRENT_ANALYSES", "2")), ge=1
+    )
+    max_concurrent_model_calls: int = Field(
+        default_factory=lambda: int(os.getenv("MAX_CONCURRENT_MODEL_CALLS", "2")), ge=1
+    )
+    db_pool_acquire_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("DB_POOL_ACQUIRE_TIMEOUT_SECONDS", "5")), ge=0
+    )
+    db_pool_max_overflow: int = Field(
+        default_factory=lambda: int(os.getenv("DB_POOL_MAX_OVERFLOW", "5")), ge=0
+    )
     # --- 第二轮优化：记忆生命周期与编排 ---
     graph_memory_first: bool = Field(default_factory=lambda: _env_bool("GRAPH_MEMORY_FIRST", default=True))
     bookkeeping_async: bool = Field(default_factory=lambda: _env_bool("BOOKKEEPING_ASYNC", default=True))
